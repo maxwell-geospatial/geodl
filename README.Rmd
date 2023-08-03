@@ -1,7 +1,9 @@
 ---
 title: "geodl"
-output: html_document
 date: "2023-08-03"
+output:
+  md_document:
+    variant: markdown_github
 ---
 
 # geodl <img src="geodlHex.png" align="right" height="132"/>
