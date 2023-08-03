@@ -1,0 +1,112 @@
+describeChips <- function(folder, extension, mode="All", subSample=FALSE, sampsPerChip=100){
+  chipDF <- data.frame()
+  mskStats <- data.frame()
+  if(subSample == FALSE){
+    if(mode == "All" | model == "Positive"){
+      lstChips <- list.files(paste0(folder, "images/"), pattern=paste0("\\", extension, "$"))
+      lstMsk <- list.files(paste0(folder, "masks/"), pattern=paste0("\\", extension, "$"))
+      for(chip in lstChips){
+        chipIn <- rast(paste0(folder, "images/", chip1))
+        chipInDF <- data.frame(chipIn)
+        chipDF <- bind_rows(chipDF, chipInDF)
+      }
+      nCols <- ncol(chipDF)
+      colNames <- paste0("B", seq(1,nCols))
+      names(chipsDF) <- colNames
+      imgStats <- summary(chipsDF)
+      for(msk in lstMskP){
+        mskIn <- rast(paste0(folder, "masks/", chip1))
+        mskInDF <- freq(mskIn)
+        mskStats <- bind_cols(mskStats, maskIn)
+      }
+      mskStats2 <- mslStats %>% group_by(value) %>% summarize(cnt = Sum(count))
+    }else{
+      lstChipsB <- list.files(paste0(folder, "images/background/"), pattern=paste0("\\", extension, "$"))
+      lstChipsP <- list.files(paste0(folder, "images/positive/"), pattern=paste0("\\", extension, "$"))
+      lstMskB <- list.files(paste0(folder, "masks/background/"), pattern=paste0("\\", extension, "$"))
+      lstMskP <- list.files(paste0(folder, "masks/positive/"), pattern=paste0("\\", extension, "$"))
+      for(chip in lstChipsB){
+        chipIn <- rast(paste0(folder, "images/background/", chip1))
+        chipInDF <- data.frame(chipIn)
+        chipDF <- bind_rows(chipDF, chipInDF)
+      }
+      for(chip in lstChipsP){
+        chipIn <- rast(paste0(folder, "images/positive/", chip1))
+        chipInDF <- data.frame(chipIn)
+        chipDF <- bind_rows(chipDF, chipInDF)
+      }
+      nCols <- ncol(chipDF)
+      colNames <- paste0("B", seq(1,nCols))
+      names(chipsDF) <- colNames
+      imgStats <- summary(chipsDF)
+      for(msk in lstMskB){
+        mskIn <- rast(paste0(folder, "masks/background/", chip1))
+        mskInDF <- freq(mskIn)
+        mskStats <- bind_cols(mskStats, maskIn)
+      }
+      for(msk in lstMskP){
+        mskIn <- rast(paste0(folder, "masks/postive/", chip1))
+        mskInDF <- freq(mskIn)
+        mskStats <- bind_cols(mskStats, maskIn)
+      }
+      mskStats2 <- mslStats %>% group_by(value) %>% summarize(cnt = Sum(count))
+    }
+  }else{
+    if(mode == "All" | model == "Positive"){
+      lstChips <- list.files(paste0(folder, "images/"), pattern=paste0("\\", extension, "$"))
+      lstMsk <- list.files(paste0(folder, "masks/"), pattern=paste0("\\", extension, "$"))
+      for(chip in lstChips){
+        chipIn <- rast(paste0(folder, "images/", chip1))
+        chipInDF <- data.frame(chipIn)
+        chipInDF <- chipInDF %>% sample_n(sampsPerChip)
+        chipDF <- bind_rows(chipDF, chipInDF)
+      }
+      nCols <- ncol(chipDF)
+      colNames <- paste0("B", seq(1,nCols))
+      names(chipsDF) <- colNames
+      imgStats <- summary(chipsDF)
+
+      mskStats <- data.frame()
+      for(msk in lstMskP){
+        mskIn <- rast(paste0(folder, "masks/", chip1))
+        mskInDF <- freq(mskIn)
+        mskStats <- bind_cols(mskStats, maskIn)
+      }
+      mskStats2 <- mslStats %>% group_by(value) %>% summarize(cnt = Sum(count))
+    }else{
+      lstChipsB <- list.files(paste0(folder, "images/background/"), pattern=paste0("\\", extension, "$"))
+      lstChipsP <- list.files(paste0(folder, "images/positive/"), pattern=paste0("\\", extension, "$"))
+      lstMskB <- list.files(paste0(folder, "masks/background/"), pattern=paste0("\\", extension, "$"))
+      lstMskP <- list.files(paste0(folder, "masks/positive/"), pattern=paste0("\\", extension, "$"))
+      for(chip in lstChipsB){
+        chipIn <- rast(paste0(folder, "images/background/", chip1))
+        chipInDF <- data.frame(chipIn)
+        chipDF <- bind_rows(chipDF, chipInDF)
+      }
+      for(chip in lstChipsP){
+        chipIn <- rast(paste0(folder, "images/positive/", chip1))
+        chipInDF <- data.frame(chipIn)
+        chipDF <- bind_rows(chipDF, chipInDF)
+      }
+      nCols <- ncol(chipDF)
+      colNames <- paste0("B", seq(1,nCols))
+      names(chipsDF) <- colNames
+      imgStats <- summary(chipsDF)
+
+      mskStats <- data.frame()
+      for(msk in lstMskB){
+        mskIn <- rast(paste0(folder, "masks/background/", chip1))
+        mskInDF <- freq(mskIn)
+        mskStats <- bind_cols(mskStats, maskIn)
+      }
+      for(msk in lstMskP){
+        mskIn <- rast(paste0(folder, "masks/postive/", chip1))
+        mskInDF <- freq(mskIn)
+        mskStats <- bind_cols(mskStats, maskIn)
+      }
+      mskStats2 <- mslStats %>% group_by(value) %>% summarize(cnt = Sum(count))
+    }
+  }
+  outStats <- list(ImageStats=imgStats, mskStats=mskStats2)
+  return(outStats)
+}

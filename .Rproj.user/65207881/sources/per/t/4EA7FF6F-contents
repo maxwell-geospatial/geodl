@@ -1,0 +1,27 @@
+makeChipsDF <- function(folder, outCSV, extension, mode="All", shuffle=FALSE, saveCSV=FALSE){
+  if(mode == "All" | mode == "Positive"){
+    lstChps <- list.files(paste0(folder, "images/"), pattern=paste0("\\", extension, "$"))
+    lstChpsPth <- paste0(folder, "images/", lstChps)
+    lstMsksPth <- paste0(folder, "masks/", lstChps)
+    chpDF <- data.frame(chp=lstChips, chpPth=lstChpsPth, mskPth=lstMsksPth)
+  }else{
+    lstChpsB <- list.files(paste0(folder, "images/background/"), pattern=paste0("\\", extension, "$"))
+    lstChpsP <- list.files(paste0(folder, "images/positive/"), pattern=paste0("\\", extension, "$"))
+    lstChpsPthB <- paste0(folder, "images/background/", lstChpsB)
+    lstMsksPthB <- paste0(folder, "masks/background/", lstChpsB)
+    lstChpsPthP <- paste0(folder, "images/background/", lstChpsP)
+    lstMsksPthP <- paste0(folder, "masks/background/", lstChpsP)
+    chpDFB <- data.frame(chpN=lstChpsB, chpPath=lstChpsPthB, mskPth=lstMsksPthB)
+    chpDFP <- data.frame(chpN=lstChpsP, chpPath=lstChpsPthP, mskPth=lstMsksPthP)
+    chpDFP$division <- "Postive"
+    chpDFB$division <- "Backround"
+    chpDF <- bind_rows(chpDFB, chpDFP)
+  }
+  if(shuffle == TRUE){
+    chpDF <- chpDF %>% sample_n(nrow(chpDF), replace=FALSE)
+  }
+  if(saveCSV == TRUE){
+    write.csv(chpDF, outCSV)
+  }
+  return(chpDF)
+}

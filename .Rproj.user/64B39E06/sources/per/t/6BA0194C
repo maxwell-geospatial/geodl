@@ -1,0 +1,28 @@
+{
+    "id": "6BA0194C",
+    "path": "C:/Users/vidcg/Dropbox/code_dev/geodl/geodl/man/makeMasks.Rd",
+    "project_path": "man/makeMasks.Rd",
+    "type": "r_doc",
+    "hash": "2257919296",
+    "contents": "",
+    "dirty": false,
+    "created": 1691076696838.0,
+    "source_on_save": false,
+    "relative_order": 12,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "2,0",
+        "scrollLine": "0"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1691072459,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1691072459,
+    "read_only": true,
+    "read_only_alternatives": [
+        "R/makeMasks.R"
+    ]
+}

@@ -1,0 +1,756 @@
+#Read in libraries =================================
+library(dplyr)
+library(Metrics)
+library(stringr)
+library(forcats)
+library(caret)
+library(yardstick)
+library(rfUtilities)
+library(parallel)
+library(doParallel)
+library(multiROC)
+library(ggplot2)
+library(asbio)
+no_cores <- detectCores() - 1
+
+#Data Prep ==========================================
+
+#Read in data tables and make sure PLOT_CN is formatted correctly
+orG <- read.csv("D:/new_fia_experiments/FIA_NRS_IntersectData_CUI_052521/or_tables_NoCoords.csv", stringsAsFactors=TRUE)
+orG$PLOT_CN <- as.factor(format(orG$PLOT_CN, scientific=FALSE))
+miG <- read.csv("D:/new_fia_experiments/FIA_NRS_IntersectData_CUI_052521/mi_tables_NoCoords.csv", stringsAsFactors=TRUE)
+miG$PLOT_CN <- as.factor(format(miG$PLOT_CN, scientific=FALSE))
+wvG <- read.csv("D:/new_fia_experiments/FIA_NRS_IntersectData_CUI_052521/wv_tables_NoCoords.csv", stringsAsFactors=TRUE)
+wvG$PLOT_CN <- as.factor(format(wvG$PLOT_CN, scientific=FALSE))
+meG <- read.csv("D:/new_fia_experiments/FIA_NRS_IntersectData_CUI_052521/me_tables_NoCoords.csv", stringsAsFactors=TRUE)
+meG$PLOT_CN <- as.factor(format(meG$PLOT_CN, scientific=FALSE))
+
+#Replace forward slash with underscore in forest type names
+#Remove unused levels
+meG$TYPE <- as.factor(str_replace_all(meG$TYPE, "/","_"))
+meG$TYPE <- as.factor(str_replace_all(meG$TYPE, " ","_"))
+meG$TYPE <- droplevels(meG$TYPE )
+
+miG$TYPE <- as.factor(str_replace_all(miG$TYPE, "/","_"))
+miG$TYPE <- as.factor(str_replace_all(miG$TYPE, " ","_"))
+miG$TYPE <- droplevels(miG$TYPE )
+
+wvG$TYPE <- as.factor(str_replace_all(wvG$TYPE, "/","_"))
+wvG$TYPE <- as.factor(str_replace_all(wvG$TYPE, " ","_"))
+wvG$TYPE <- droplevels(wvG$TYPE )
+
+orG$TYPE <- as.factor(str_replace_all(orG$TYPE, "/","_"))
+orG$TYPE <- as.factor(str_replace_all(orG$TYPE, " ","_"))
+orG$TYPE <- (orG$TYPE)
+
+#Filter out records with no forest type defined
+meG <- meG %>% filter(TYPE != "")
+miG <- miG %>% filter(TYPE != "")
+wvG <- wvG %>% filter(TYPE != "")
+orG <- orG %>% filter(TYPE != "")
+
+#Recode and simply forest types for each state
+meG$TYPE <- recode(meG$TYPE, "Aspen_Birch" = "Aspen_Birch",
+                  "Elm_Ash_Cottonwood" =  "Elm_Ash",
+                  "Exotic_Softwood" =   "Other",
+                  "Maple_Beech_Birch" =  "Maple_Mix",
+                  "Oak_Hickory" = "Oak_Dominant",
+                  "Oak_Pine" = "Oak_Dominant",
+                  "Other" = "Other",
+                  "Other_Hardwood" = "Other",
+                  "Spruce_Fir" = "Spruce_Fir",
+                  "White_Red_Jack_Pine" = "Pine_Dominant")
+
+miG$TYPE <- recode(miG$TYPE, "Aspen_Birch" = "Aspen_Birch",
+                  "Douglas_Fir" = "Other",
+                  "Eastern_Softwoods" = "Other",
+                  "Elm_Ash_Cottonwood" = "Elm_Ash",
+                  "Exotic_Hardwood" = "Other",
+                  "Exotic_Softwood" = "Other",
+                  "Fir_Spruce_Mountain_Hemlock" = "Spruce_Fir",
+                  "Maple_Beech_Birch" = "Maple_Mix",
+                  "Oak_Gum_Cypress" = "Other",
+                  "Oak_Hickory" = "Oak_Dominant",
+                  "Oak_Pine" = "Oak_Dominant",
+                  "Other" = "Other",
+                  "Other_Hardwood" = "Other",
+                  "Spruce_Fir" = "Spruce_Fir",
+                  "White_Red_Jack_Pine" = "Pine_Dominant")
+
+wvG$TYPE <- recode(wvG$TYPE,  "Aspen_Birch" = "Other",
+                  "Eastern_Softwoods" = "Other",
+                  "Elm_Ash_Cottonwood" = "Elm_Ash",
+                  "Exotic_Hardwood" = "Other",
+                  "Loblolly_Shortleaf_Pine" = "Loblolly",
+                  "Maple_Beech_Birch" = "Maple_Mix",
+                  "Oak_Gum_Cypress" = "Other",
+                  "Oak_Hickory" = "Oak_Dominant",
+                  "Oak_Pine" = "Oak_Pine",
+                  "Other" = "Other",
+                  "Other_Hardwood" = "Other",
+                  "Spruce_Fir" = "Spruce_Fir",
+                  "White_Red_Jack_Pine" = "Pine_Dominant")
+
+orG$TYPE <- recode(orG$TYPE,  "Alder_Maple" = "Alder_Maple",
+                  "Aspen_Birch" = "Other",
+                  "Douglas_Fir" = "Douglas_Fir",
+                  "Elm_Ash_Cottonwood" = "Other",
+                  "Fir_Spruce_Mountain_Hemlock" = "Spruce_Fir",
+                  "Hemlock_Sitka" = "Hemlock_Sitka",
+                  "Lodgepole_Pine" = "Lodgepole",
+                  "Oak_Hickory" = "Oak_Dominant",
+                  "Other" = "Other",
+                  "Other_Hardwood" = "Other",
+                  "Pinyon_Juniper" = "Other",
+                  "Ponderosa_Pine" = "Other",
+                  "Redwood" = "Other",
+                  "Spruce_Fir" = "Other",
+                  "Tanoak_Laurel" = "Tanoak_Laurel",
+                  "Western_Larch" = "Larch",
+                  "Western_Oak" = "Oak_Dominant",
+                  "Western_Softwood" = "Other",
+                  "Western_White_Pine" = "Other",
+                  "Woodland_Hardwood" = "Other")
+
+#Remove unused levels for forest types
+meG$TYPE <- droplevels(meG$TYPE)
+miG$TYPE <- droplevels(miG$TYPE)
+wvG$TYPE <- droplevels(wvG$TYPE)
+orG$TYPE <- droplevels(orG$TYPE)
+
+#Count number of records for each forest type
+meG %>% group_by(TYPE) %>% count()
+miG %>% group_by(TYPE) %>% count()
+wvG %>% group_by(TYPE) %>% count()
+orG %>% group_by(TYPE) %>% count()
+
+#Read in new table with AGLBM data
+orH <- read.csv("D:/new_fia_experiments/Maxwell_AGB_test/or_table_AGB_test3.csv", stringsAsFactors=TRUE)
+orH$PLOT_CN <- as.factor(format(orH$PLOT_CN, scientific=FALSE))
+miH <- read.csv("D:/new_fia_experiments/Maxwell_AGB_test/mi_table_AGB_test.csv", stringsAsFactors=TRUE)
+miH$PLOT_CN <- as.factor(format(miH$PLOT_CN, scientific=FALSE))
+wvH <- read.csv("D:/new_fia_experiments/Maxwell_AGB_test/wv_table_AGB_test.csv", stringsAsFactors=TRUE)
+wvH$PLOT_CN <- as.factor(format(wvH$PLOT_CN, scientific=FALSE))
+meH <- read.csv("D:/new_fia_experiments/Maxwell_AGB_test/me_table_AGB_test.csv", stringsAsFactors=TRUE)
+meH$PLOT_CN <- as.factor(format(meH$PLOT_CN, scientific=FALSE))
+
+#Filter to only use plots that are:
+#forested (COND_STATU) AND
+#not non-stocked (FORTYPCD) AND
+#single condition (CONDPROP_U) AND
+#not missing total biomass data (Total)
+orH2 <- orH %>% filter(COND_STATU == 1 & FORTYPCD != 999 & CONDPROP_U==1 & !is.na(Total))
+miH2 <- miH %>% filter(COND_STATU == 1 & FORTYPCD != 999 & CONDPROP_U==1 & !is.na(Total))
+wvH2 <- wvH %>% filter(COND_STATU == 1 & FORTYPCD != 999 & CONDPROP_U==1 & !is.na(Total))
+meH2 <- meH %>% filter(COND_STATU == 1 & FORTYPCD != 999 & CONDPROP_U==1 & !is.na(Total))
+
+#Filter to make sure there are not multiple records for same plot
+#If multiple records exist, keep the most recent date
+orH2 <- orH2 %>% group_by(PLOT_CN) %>% slice(which.max(MEASYEAR))
+meH2 <- meH2 %>% group_by(PLOT_CN) %>% slice(which.max(MEASYEAR))
+miH2 <- miH2 %>% group_by(PLOT_CN) %>% slice(which.max(MEASYEAR))
+wvH2 <- wvH2 %>% group_by(PLOT_CN) %>% slice(which.max(MEASYEAR))
+
+#Join two tables based on PLOT_CN
+or <- inner_join(orG, orH2, by="PLOT_CN")
+mi <- inner_join(miG, miH2, by="PLOT_CN")
+wv <- inner_join(wvG, wvH2, by="PLOT_CN")
+me <- inner_join(meG, meH2, by="PLOT_CN")
+
+#Create dependent variable columns
+#Type = Forest Type
+#aglbm = Total Above Ground Level Biomass
+#aglbmS = Above Ground Level Biomass for specific species (Douglas Fir for Oregon, White Oak for all others)
+or$aglbm <- or$Total
+or$aglbmS <- or$SP202
+or$Type <- or$TYPE.x
+
+me$aglbm <- me$Total
+me$aglbmS <- me$SP802
+me$Type <- me$TYPE.x
+
+mi$aglbm <- mi$Total
+mi$aglbmS <- mi$SP802
+mi$Type <- mi$TYPE.x
+
+wv$aglbm <- wv$Total
+wv$aglbmS <- wv$SP802
+wv$Type <- wv$TYPE.x
+
+#Read in list of variables names
+#gladV = GLAD Phenoloy Metrics Type B (https://www.mdpi.com/2072-4292/12/3/426), (https://glad.umd.edu/ard/phenological-metrics)
+#terrV = terrain metrics
+#harmV = Harmonic regression coefficients (provided by Ty Wilson)
+gladV <- names(read.csv("D:/new_fia_experiments/glad_vars.csv", stringsAsFactors = TRUE))
+terrV <- names(read.csv("D:/new_fia_experiments/terr_vars.csv", stringsAsFactors = TRUE))
+harmV <- names(read.csv("D:/new_fia_experiments/harm_vars.csv", stringsAsFactors = TRUE))
+
+#Subset out the needed columns.
+allCols <- c("Type", "aglbm", "aglbmS", gladV, terrV, harmV)
+or <- or %>% select(allCols)
+me <- me %>% select(allCols)
+mi <- mi %>% select(allCols)
+wv <- wv %>% select(allCols)
+
+#Remove any rows with NA in any column
+me <- me[complete.cases(me),]
+mi <- mi[complete.cases(mi),]
+or <- or[complete.cases(or),]
+wv <- wv[complete.cases(wv),]
+
+#Count number of records by forest type
+me %>% group_by(Type) %>% count()
+mi %>% group_by(Type) %>% count()
+wv %>% group_by(Type) %>% count()
+or %>% group_by(Type) %>% count()
+
+#Create experiment functions=============================================
+
+#Function to calculate classification metrics
+#testDF == new data to predict
+#m1 = trained model to use
+#set = predictor variable set used
+#rep = number of replicates
+getMetrics <- function(testDF, m1, set, rep){
+  #Predict new data to obtain class probabilities
+  p1 <- pred_test <- predict(m1, testDF, type="prob", norm.votes=TRUE, predict.all=FALSE, proximity=FALSE, nodes=FALSE)
+  #Predict new data to obtain hard classification
+  c1 <- pred_test <- predict(m1, testDF, type="raw", norm.votes=TRUE, predict.all=FALSE, proximity=FALSE, nodes=FALSE)
+
+  #Generate a confusion matrix using caret
+  cf <- confusionMatrix(data=c1, reference=testDF$Type)
+  #Generate accuracy metrics using rfUtilities package
+  up <- accuracy(x=c1, y=testDF$Type)
+  #Extract out user's accuracies
+  up$users.accuracy[is.na(up$users.accuracy)] <- 0
+  #Extract out producer's accuracies
+  up$producers.accuracy[is.na(up$producers.accuracy)] <- 0
+  #Calculate F1-score
+  up$f <- (2*up$users.accuracy*up$producers.accuracy)/((up$users.accuracy+up$producers.accuracy)+.00001)
+
+  #Calculate Map Image Classification Efficacy (MICE) (replacement for Kappa statistic)
+  #https://ieeexplore.ieee.org/abstract/document/9551959
+  t1 <- cf$table
+  toa <- sum(diag(t1))/sum(t1)
+  t1row <- colSums(t1)
+  t1ra <- (up$users.accuracy/100)+.00001
+  t1njn <- (t1row/sum(t1row))+.00001
+  t1re <- ((t1ra-t1njn)/(1-t1njn))+.00001
+  t1njn2 <- t1njn*t1njn
+  mice <- (toa-sum(t1njn2))/(1-sum(t1njn2))
+
+  #Extract overall accuracy and associated upper- and lower- 95% confidence interval
+  OA=cf$overall[1]
+  OAU=cf$overall[3]
+  OAL=cf$overall[4]
+  #Merge class-level user's and producer's accuracy to obtain averages
+  aUA=mean(up$users.accuracy)
+  aPA=mean(up$producers.accuracy)
+  aFS=mean(up$f)
+  #Extract Kappa statistic
+  k=cf$overall[2]
+  mice=mice
+
+  #Calculate top3 metric
+  #How often was the correct class predicted with one of the top 3 highest predicted probabilities?
+  classP <- levels(testDF$Type)
+  probSub <- p1[,c(classP)]
+  ordered <- data.frame()
+  rank_names <- paste0("rank_", seq(1, length(classP)))
+  for(i in 1:nrow(probSub)){
+    v1 <- as.numeric(probSub[i,])
+    v2 <- order(v1, decreasing=TRUE)
+    names(v2) <- rank_names
+    ordered <- bind_rows(ordered, v2)
+  }
+
+  indxCodes <- seq(1, length(classP))
+  names <- levels(testDF$Type)
+
+  colSub <- factor(ordered[,1], levels=1:length(classP))
+  levels(colSub) <- names
+  ordered2 <- data.frame(colSub)
+  names(ordered2)  <- rank_names[1]
+
+  for(i in 2:ncol(ordered)){
+    colSubF <- factor(ordered[,i], levels=1:length(classP))
+    levels(colSubF) <- names
+    colSub2F <- data.frame(colSubF)
+    names(colSub2F)  <- rank_names[i]
+    ordered2 <- cbind(ordered2, colSub2F)
+  }
+
+  ordered2$actual <- testDF$Type
+
+  ordered2 <- ordered2 %>% mutate(top3 = case_when(actual == rank_1 | actual == rank_2 | actual == rank_3 ~ "Yes"))
+  topSub <- ordered2 %>% filter(top3=="Yes")
+  top3 <- nrow(topSub)/nrow(ordered2)
+
+  #Prepare results to be able to obtain Area Under the Receiver Operating Characteristic Curve (AUC ROC)
+  #Prepare results to be able to obtain Area Under the Precision-Recall Curve (AUC PR)
+  dum <- fastDummies::dummy_cols(testDF$Type, remove_first_dummy=FALSE)
+  dum <- dum[,2:ncol(dum)]
+  c <- names(dum)
+  c <- str_replace_all(c, ".data_", "")
+  c <- str_replace_all(c, "_", "")
+  c <- paste0(c, "_true")
+  names(dum) <- c
+
+  preds <- data.frame(p1)
+  predN <- names(preds)
+  predN <- str_replace_all(predN, "_", "")
+  predN <- paste0(predN, "_pred_RF")
+  names(preds) <- predN
+
+  rocDF <- data.frame(dum, preds)
+
+  res <- multi_roc(rocDF, force_diag=T)
+
+  auctest <- as.data.frame(res$AUC)
+
+  micAUC=auctest[,ncol(auctest)]
+  macAUC=auctest[,ncol(auctest)-1]
+
+  prres <- multi_pr(rocDF, force_diag=T)
+
+  prtest <- as.data.frame(prres$AUC)
+
+  micPR=prtest[,ncol(prtest)]
+  macPR=prtest[,ncol(prtest)-1]
+
+  #Merge resulting metrics into a data frame object
+  metricsOut <- data.frame(set=set,
+                            rep=rep,
+                            OA=OA,
+                            mice=mice,
+                            aUA=aUA,
+                            aPA=aPA,
+                            aFS=aFS,
+                            k=k,
+                            micAUC=micAUC,
+                            macAUC=macAUC,
+                            micPR=micPR,
+                            macPR=macPR,
+                            top3=top3)
+
+  #Return metrics set as data frame
+  return(metricsOut)
+}
+
+
+#Function to calculate regression metrics
+#testDF == new data to predict
+#m1 = trained model to use
+#set = predictor variable set used
+#rep = number of replicates
+#depVar = index for dependent variable; 2 or 3 (Total or Species)
+getRegMetrics <- function(testDF, m1, set, rep, depVar){
+  #Predict to new data using trained model
+  p1 <- predict(m1, testDF)
+  #Calculate RMSE using Metrics package
+  rmse <- Metrics::rmse(p1, testDF[,depVar])
+  #Cacluate R-squared metric
+  r2 <- cor(p1, testDF[,depVar])^2
+
+  #Merge metrics into a single data frame
+  metricsOut <- data.frame(set=set,
+                           rep=rep,
+                           depVar=depVar,
+                           rmse=rmse,
+                           r2=r2)
+
+  #Return data frame
+  return(metricsOut)
+}
+
+#Function to train multiple replicates of classification model
+#dfIn = input data frame with forest type and all predictor variables
+#reps = how many model replicates to perform
+#depVar = index for dependent variable; should be 1
+#gladV = list of GLAD metrics
+#harmV = list of harmonic regression metrics
+#terrV = list to terrain metrics
+#no_cores = number of cores for parallel processing (may need to change based on computational environment)
+myMods <- function(dfIn, reps, depVar, gladV, harmV, terrV, no_cores){
+  if(depVar == 1){
+    #Calculate class weights
+    #Classes are weighted based on inverse of their abundance to combat class imbalance
+    #Alternative methods include upsampling, downsampling, and SMOTE
+    wghtDF <- dfIn %>% group_by(Type) %>% count()
+    wghtDF$Wght <- sum(wghtDF$n)/(nrow(wghtDF)*wghtDF$n)
+    wghtDF$Wght2 <- wghtDF$Wght/sum(wghtDF$Wght)
+
+    #Create empty data frame in which to store assessment results
+    metricsOut <- data.frame(set=character(),
+                             rep=numeric(),
+                             OA=numeric(),
+                             mice=numeric(),
+                             aUA=numeric(),
+                             aPA=numeric(),
+                             aFS=numeric(),
+                             k=numeric(),
+                             micAUC=numeric(),
+                             macAUC=numeric(),
+                             micPR=numeric(),
+                             macPR=numeric(),
+                             top3=numeric())
+
+    for(i in 1:reps){
+      #Create training and testing partition for current replicate
+      train <- dfIn %>% group_by(Type) %>% sample_frac(.7, replace=FALSE)
+      test <- setdiff(dfIn, train)
+      #Perform PCA for the GLAD metrics using only training data so as not to cause data leakage
+      pcTrain <- train[,gladV]
+      pcTest <- test[,gladV]
+      preP <- preProcess(pcTrain, method=c("center", "scale", "pca"), pcaComp=15)
+      preTrain <- predict(preP, pcTrain)
+      preTest <- predict(preP, pcTest)
+      #Recreate training and testing sets to replace original GLAD metrics with first 15 principal components
+      preTrain2 <- train %>% select("Type", "aglbm", "aglbmS", all_of(terrV), all_of(harmV)) %>% bind_cols(preTrain)
+      preTest2 <- test %>% select("Type", "aglbm", "aglbmS", all_of(terrV), all_of(harmV)) %>% bind_cols(preTest)
+
+      #Create list of PCA columns
+      selected <- paste0("PC", seq(1,15,by=1))
+
+      #Convert to data frame (caret won't accept a tibble)
+      train <- data.frame(preTrain2)
+      test <- data.frame(preTest2)
+
+      #Initialize cluster for parallel computation
+      cl <- makePSOCKcluster(no_cores)
+      registerDoParallel(cl)
+
+      #Define training controls
+      #Hyperparameter optimization performed using 10-fold cross validation and a grid search
+      trainctrl <- trainControl(method = "cv", number = 10, verboseIter = TRUE, classProbs = TRUE, allowParallel=TRUE)
+
+      #Optimize and train GLAD Only Model
+      modG <- train(x=train[,c(selected)], y=train[,depVar], method = "ranger",
+                    tuneLength = 10,
+                    num.trees = 500,
+                    trControl = trainctrl,
+                    class.weights= wghtDF$Wght2,
+                    metric="Kappa")
+
+      #Optimize and train GLAD + Terrain Model
+      modGT <- train(x=train[,c(selected, terrV)], y=train[,depVar], method = "ranger",
+                    tuneLength = 10,
+                    num.trees = 500,
+                    trControl = trainctrl,
+                    class.weights= wghtDF$Wght2,
+                    metric="Kappa")
+
+      #Optimize and train Harmonic Only Model
+      modH <- train(x=train[,c(harmV)], y=train[,depVar], method = "ranger",
+                    tuneLength = 10,
+                    num.trees = 500,
+                    trControl = trainctrl,
+                    class.weights= wghtDF$Wght2,
+                    metric="Kappa")
+
+      #Optimize and train Harmonic + Terrain Model
+      modHT <- train(x=train[,c(harmV, terrV)], y=train[,depVar], method = "ranger",
+                    tuneLength = 10,
+                    num.trees = 500,
+                    trControl = trainctrl,
+                    class.weights= wghtDF$Wght2,
+                    metric="Kappa")
+
+      #Stop cluster
+      stopCluster(cl)
+      registerDoSEQ()
+
+      #Obtain assessment metrics for all four models
+      #Bind each result as a row into the main data frame
+      accG <- getMetrics(testDF=test, m1=modG, set="G", rep=i)
+      metricsOut <- bind_rows(metricsOut, accG)
+      accGT <- getMetrics(testDF=test, m1=modHT, set="GT", rep=i)
+      metricsOut <- bind_rows(metricsOut, accGT)
+      accH <- getMetrics(testDF=test, m1=modH, set="H", rep=i)
+      metricsOut <- bind_rows(metricsOut, accH)
+      accHT <- getMetrics(testDF=test, m1=modHT, set="HT", rep=i)
+      metricsOut <- bind_rows(metricsOut, accHT)
+    }
+  }
+  #Return assessment results
+  return(metricsOut)
+}
+
+#Function to train multiple replicates of regression model
+#dfIn = input data frame with forest type and all predictor variables
+#reps = how many model replicates to perform
+#depVar = index for dependent variable; should be 2 for total AGLBM or 3 for species AGLBM
+#gladV = list of GLAD metrics
+#harmV = list of harmonic regression metrics
+#terrV = list to terrain metrics
+#no_cores = number of cores for parallel processing (may need to change based on computational environment)
+myModsReg <- function(dfIn, reps, depVar, gladV, harmV, terrV, no_cores){
+  if(depVar == 2 | depVar == 3){
+    #Class weightings are not used for regression
+    wghtDF <- dfIn %>% group_by(Type) %>% count()
+    wghtDF$Wght <- sum(wghtDF$n)/(nrow(wghtDF)*wghtDF$n)
+    wghtDF$Wght2 <- wghtDF$Wght/sum(wghtDF$Wght)
+
+    metricsOut <- data.frame(set=character(),
+                             rep=numeric(),
+                             depVar=numeric(),
+                             rmse=numeric(),
+                             r2=numeric())
+
+    for(i in 1:reps){
+      #Stratified random sampling not used for regression
+      train <- dfIn %>% sample_frac(.7, replace=FALSE)
+      test <- setdiff(dfIn, train)
+
+      pcTrain <- train[,gladV]
+      pcTest <- test[,gladV]
+      preP <- preProcess(pcTrain, method=c("center", "scale", "pca"), pcaComp=15)
+      preTrain <- predict(preP, pcTrain)
+      preTest <- predict(preP, pcTest)
+      preTrain2 <- train %>% select("Type", "aglbm", "aglbmS", all_of(terrV), all_of(harmV)) %>% bind_cols(preTrain)
+      preTest2 <- test %>% select("Type", "aglbm", "aglbmS", all_of(terrV), all_of(harmV)) %>% bind_cols(preTest)
+
+      selected <- paste0("PC", seq(1,15,by=1))
+
+      train <- data.frame(preTrain2)
+      test <- data.frame(preTest2)
+
+      cl <- makePSOCKcluster(no_cores)
+      registerDoParallel(cl)
+
+      trainctrl <- trainControl(method = "cv", number = 10, verboseIter = TRUE, classProbs = TRUE, allowParallel=TRUE)
+
+      modG <- train(x=train[,c(selected)], y=train[,depVar], method = "ranger",
+                    tuneLength = 10,
+                    num.trees = 500,
+                    trControl = trainctrl,
+                    metric="RMSE")
+
+      modGT <- train(x=train[,c(selected, terrV)], y=train[,depVar], method = "ranger",
+                     tuneLength = 10,
+                     num.trees = 500,
+                     trControl = trainctrl,
+                     metric="RMSE")
+
+      modH <- train(x=train[,c(harmV)], y=train[,depVar], method = "ranger",
+                    tuneLength = 10,
+                    num.trees = 500,
+                    trControl = trainctrl,
+                    metric="RMSE")
+
+      modHT <- train(x=train[,c(harmV, terrV)], y=train[,depVar], method = "ranger",
+                     tuneLength = 10,
+                     num.trees = 500,
+                     trControl = trainctrl,
+                     metric="RMSE")
+
+
+      stopCluster(cl)
+      registerDoSEQ()
+
+      accG <- getRegMetrics(testDF=test, m1=modG, set="G", rep=i, depVar=depVar)
+      metricsOut <- bind_rows(metricsOut, accG)
+      accGT <- getRegMetrics(testDF=test, m1=modHT, set="GT", rep=i, depVar=depVar)
+      metricsOut <- bind_rows(metricsOut, accGT)
+      accH <- getRegMetrics(testDF=test, m1=modH, set="H", rep=i, depVar=depVar)
+      metricsOut <- bind_rows(metricsOut, accH)
+      accHT <- getRegMetrics(testDF=test, m1=modHT, set="HT", rep=i, depVar=depVar)
+      metricsOut <- bind_rows(metricsOut, accHT)
+    }
+  }
+  return(metricsOut)
+}
+
+
+#Run experiments======================================================
+
+#Use functions to execute forest type classification experiments for each state with 20 replicates
+miCls <- myMods(dfIn=mi, reps=20, depVar=1, gladV=gladV, harmV=harmV, terrV=terrV, no_cores=no_cores)
+wvCls <- myMods(dfIn=wv, reps=20, depVar=1, gladV=gladV, harmV=harmV, terrV=terrV, no_cores=no_cores)
+meCls <- myMods(dfIn=me, reps=20, depVar=1, gladV=gladV, harmV=harmV, terrV=terrV, no_cores=no_cores)
+orCls <- myMods(dfIn=or, reps=20, depVar=1, gladV=gladV, harmV=harmV, terrV=terrV, no_cores=no_cores)
+
+#Use functions to execute total AGLBM regression for each state with 20 replicates
+miReG2 <- myModsReg(dfIn=mi, reps=20, depVar=2, gladV=gladV, harmV=harmV, terrV=terrV, no_cores=no_cores)
+wvReG2 <- myModsReg(dfIn=wv, reps=20, depVar=2, gladV=gladV, harmV=harmV, terrV=terrV, no_cores=no_cores)
+meReG2 <- myModsReg(dfIn=me, reps=20, depVar=2, gladV=gladV, harmV=harmV, terrV=terrV, no_cores=no_cores)
+orReG2 <- myModsReg(dfIn=or, reps=20, depVar=2, gladV=gladV, harmV=harmV, terrV=terrV, no_cores=no_cores)
+
+#Use functions to execute species AGLBM regression for each state with 20 replicates
+miReG3 <- myModsReg(dfIn=mi, reps=20, depVar=3, gladV=gladV, harmV=harmV, terrV=terrV, no_cores=no_cores)
+wvReG3 <- myModsReg(dfIn=wv, reps=20, depVar=3, gladV=gladV, harmV=harmV, terrV=terrV, no_cores=no_cores)
+meReG3 <- myModsReg(dfIn=me, reps=20, depVar=3, gladV=gladV, harmV=harmV, terrV=terrV, no_cores=no_cores)
+orReG3 <- myModsReg(dfIn=or, reps=20, depVar=3, gladV=gladV, harmV=harmV, terrV=terrV, no_cores=no_cores)
+
+#Save assessment results to disk
+write.csv(orReG2, "D:\\fia_glad_harm\\or_tot_results.csv")
+write.csv(orReG3, "D:\\fia_glad_harm\\or_spec_results.csv")
+write.csv(orCls, "D:\\fia_glad_harm\\or_class_results.csv")
+write.csv(wvReG2, "D:\\fia_glad_harm\\wv_tot_results.csv")
+write.csv(wvReG3, "D:\\fia_glad_harm\\wv_spec_results.csv")
+write.csv(wvCls, "D:\\fia_glad_harm\\wv_class_results.csv")
+write.csv(miReG2, "D:\\fia_glad_harm\\mi_tot_results.csv")
+write.csv(miReG3, "D:\\fia_glad_harm\\mi_spec_results.csv")
+write.csv(miCls, "D:\\fia_glad_harm\\mi_class_results.csv")
+write.csv(meReG2, "D:\\fia_glad_harm\\me_tot_results.csv")
+write.csv(meReG3, "D:\\fia_glad_harm\\me_spec_results.csv")#This did not work; all species-specific AGLBM measures were 0 or NA.
+write.csv(meCls, "D:\\fia_glad_harm\\me_spec_results.csv")
+
+#Explore model results =====================================================
+
+#Read results from disk
+#Add state field to differentiate states
+#Add pred field to differentiate problem (AGLBM Total, AGLBM Species, Forest Type)
+orReG2 <- read.csv("D:\\fia_glad_harm\\or_tot_results.csv") %>% select(!X) %>% mutate(state = "Oregon") %>% mutate(pred = "AGLBM Total")
+orReG3 <- read.csv("D:\\fia_glad_harm\\or_spec_results.csv") %>% select(!X) %>% mutate(state = "Oregon") %>% mutate(pred = "AGLBM Species")
+orCls <- read.csv("D:\\fia_glad_harm\\or_class_results.csv") %>% select(!X) %>% mutate(state = "Oregon") %>% mutate(pred = "Forest Type")
+wvReG2 <- read.csv("D:\\fia_glad_harm\\wv_tot_results.csv") %>% select(!X) %>% mutate(state = "West Virginia") %>% mutate(pred = "AGLBM Total")
+wvReG3 <- read.csv("D:\\fia_glad_harm\\wv_spec_results.csv") %>% select(!X) %>% mutate(state = "West Virginia") %>% mutate(pred = "AGLBM Species")
+wvCls <- read.csv("D:\\fia_glad_harm\\wv_class_results.csv") %>% select(!X) %>% mutate(state = "West Virginia") %>% mutate(pred = "Forest Type")
+miReG2 <- read.csv( "D:\\fia_glad_harm\\mi_tot_results.csv") %>% select(!X) %>% mutate(state = "Michigan") %>% mutate(pred = "AGLBM Total")
+miReG3 <- read.csv("D:\\fia_glad_harm\\mi_spec_results.csv") %>% select(!X) %>% mutate(state = "Michigan") %>% mutate(pred = "AGLBM Species")
+miCls <- read.csv("D:\\fia_glad_harm\\mi_class_results.csv") %>% select(!X) %>% mutate(state = "Michigan") %>% mutate(pred = "Forest Type")
+meReG2 <- read.csv("D:\\fia_glad_harm\\me_tot_results.csv") %>% select(!X) %>% mutate(state = "Maine") %>% mutate(pred = "AGLBM Total")
+#meReG3 <- read.csv("D:\\fia_glad_harm\\me_spec_results.csv") %>% mutate(state == "Maine") %>% mutate(pred = "Forest Types")
+meCls <- read.csv("D:\\fia_glad_harm\\me_spec_results.csv") %>% select(!X) %>% mutate(state = "Maine") %>% mutate(pred = "Forest Type")
+
+#Bind all results into a single data frame
+#Convert characters to factors
+allResults <- bind_rows(orReG2, orReG3, orCls, wvReG2, wvReG3, wvCls, miReG2, miReG3, miCls, meReG2, meCls)
+allResults$state <- as.factor(allResults$state)
+allResults$set <- as.factor(allResults$set)
+allResults$pred <- as.factor(allResults$pred)
+
+#Drop Maine from the analysis
+allResults2 <- allResults %>% filter(state != "Maine")
+
+#Graph of R-squared results for total AGLBM by state
+allResults2 %>% filter(pred=="AGLBM Total") %>% ggplot(aes(x=set, y=r2, fill=set))+
+  geom_boxplot()+
+  facet_grid(~state)+
+  scale_y_continuous(breaks=c(0,.1,.2,.3,.4,.5,.6,.7,.8,.9,1), limits=c(0,1), labels=c("0.0", "0.1", "0.2", "0.3", "0.4", "0.5", "0.6", "0.7", "0.8", "0.9", "1.0"))+
+  scale_fill_manual(values=c("#90A19D","#196774", "#F0941F", "#EF6024"), labels=c("GLAD", "GLAD + Terrain", "Harmonic", "Harmonic + Terrain"))+
+  labs(x="Feature Sets", y="R-Squared", fill="Feature Sets")+
+  ggtitle("Prediction of Total AGLBM")+
+  theme_bw()
+
+#Graph of RMSE results for total AGLBM by state
+allResults2 %>% filter(pred=="AGLBM Total") %>% ggplot(aes(x=set, y=rmse, fill=set))+
+  geom_boxplot()+
+  facet_grid(~state)+
+  scale_y_continuous(breaks=c(0, 5, 10, 15, 20, 25), limits=c(0,25), labels=c("0.0", "5.0", "10.0", "15.0", "20.0", "25.0"))+
+  scale_fill_manual(values=c("#90A19D","#196774", "#F0941F", "#EF6024"), labels=c("GLAD", "GLAD + Terrain", "Harmonic", "Harmonic + Terrain"))+
+  labs(x="Feature Sets", y="RMSE", fill="Feature Sets")+
+  ggtitle("Prediction of Total AGLBM")+
+  theme_bw()
+
+#Graph of R-squared results for species AGLBM by state
+allResults2 %>% filter(pred=="AGLBM Species") %>% ggplot(aes(x=set, y=r2, fill=set))+
+  geom_boxplot()+
+  facet_grid(~state)+
+  scale_y_continuous(breaks=c(0,.1,.2,.3,.4,.5,.6,.7,.8,.9,1), limits=c(0,1), labels=c("0.0", "0.1", "0.2", "0.3", "0.4", "0.5", "0.6", "0.7", "0.8", "0.9", "1.0"))+
+  scale_fill_manual(values=c("#90A19D","#196774", "#F0941F", "#EF6024"), labels=c("GLAD", "GLAD + Terrain", "Harmonic", "Harmonic + Terrain"))+
+  labs(x="Feature Sets", y="R-Squared", fill="Feature Sets")+
+  ggtitle("Prediction of Species AGLBM")+
+  theme_bw()
+
+#Graph of RMSE results for species AGLBM by state
+allResults2 %>% filter(pred=="AGLBM Species") %>% ggplot(aes(x=set, y=rmse, fill=set))+
+  geom_boxplot()+
+  facet_grid(~state)+
+  scale_y_continuous(breaks=c(0, 5, 10, 15, 20, 25), limits=c(0,25), labels=c("0.0", "5.0", "10.0", "15.0", "20.0", "25.0"))+
+  scale_fill_manual(values=c("#90A19D","#196774", "#F0941F", "#EF6024"), labels=c("GLAD", "GLAD + Terrain", "Harmonic", "Harmonic + Terrain"))+
+  labs(x="Feature Sets", y="RMSE", fill="Feature Sets")+
+  ggtitle("Prediction of Species AGLBM")+
+  theme_bw()
+
+allResults2 %>% filter(pred=="Forest Type") %>% ggplot(aes(x=set, y=OA, fill=set))+
+  geom_boxplot()+
+  geom_boxplot(aes(y=mice), notch=TRUE, fill="gray")+
+  facet_grid(~state)+
+  scale_y_continuous(breaks=c(0,.1,.2,.3,.4,.5,.6,.7,.8,.9,1), limits=c(0,1), labels=c("0.0", "0.1", "0.2", "0.3", "0.4", "0.5", "0.6", "0.7", "0.8", "0.9", "1.0"))+
+  scale_fill_manual(values=c("#90A19D","#196774", "#F0941F", "#EF6024"), labels=c("GLAD", "GLAD + Terrain", "Harmonic", "Harmonic + Terrain"))+
+  labs(x="Feature Sets", y="Overall Accuracy", fill="Feature Sets")+
+  ggtitle("Prediction of Forest Type")+
+  theme_bw()
+
+#Use Pairwise Kruskal Wallace to Assess for difference in Mean RMSE or MICE for each feature space by state
+pairw.kw(orCls$mice, as.factor(orCls$set), conf=0.95)
+pairw.kw(miCls$mice, as.factor(miCls$set), conf=0.95)
+pairw.kw(wvCls$mice, as.factor(wvCls$set), conf=0.95)
+
+pairw.kw(orReG2$rmse, as.factor(orReG2$set), conf=0.95)
+pairw.kw(miReG2$rmse, as.factor(miReG2$set), conf=0.95)
+pairw.kw(wvReG2$rmse, as.factor(wvReG2$set), conf=0.95)
+
+pairw.kw(orReG3$rmse, as.factor(orReG3$set), conf=0.95)
+pairw.kw(miReG3$rmse, as.factor(miReG3$set), conf=0.95)
+pairw.kw(wvReG3$rmse, as.factor(wvReG3$set), conf=0.95)
+
+#Perform PCA for GLAD metrics in Oregon
+#Results were used to decide on including 15 principal components as this was enough to capture most of the variance in the original dataset
+orPCA <- or[,gladV]
+prOut <- prcomp(orPCA, scale=TRUE)
+summary(prOut)
+screeplot(prOut)
+biplot(prOut)
+
+#Explore dependent variables
+or$state = "Oregon"
+mi$state = "Michigan"
+wv$state = "West Virginia"
+mergeInput <- bind_rows(or, mi, wv)
+
+#Boxplots of distribution of Total AGLBM
+mergeInput %>% ggplot(aes(y=aglbm, x=state, fill=state))+
+  geom_violin()+
+  geom_boxplot(width=.1, fill="gray", outlier.shape=NA)+
+  stat_summary(fun.y="mean", color="red")+
+  scale_fill_manual(values=c("#FFD57E", "#89C7B6", "#7998C9"))+
+  scale_y_continuous(breaks=c(0,25,50,75,100,125,150,175, 200), limits=c(0,200), expand=c(0,0))+
+  labs(x="State", y="AGLBM", fill="State")+
+  ggtitle("Distribution of Total AGLBM for Used FIA Plots by State")+
+  theme_bw()
+
+#Boxplots of distribution of White Oak AGLBM
+mergeInput %>% filter(state=="Michigan" | state=="West Virginia") %>% ggplot(aes(y=aglbmS, x=state, fill=state))+
+  geom_violin()+
+  geom_boxplot(width=.1, fill="gray", outlier.shape=NA)+
+  stat_summary(fun.y="mean", color="red")+
+  scale_fill_manual(values=c("#FFD57E", "#7998C9"))+
+  scale_y_continuous(breaks=c(0,10,20,30,40,50), limits=c(0,50), expand=c(0,0))+
+  labs(x="State", y="AGLBM", fill="State")+
+  ggtitle("Distribution of White Oak AGLBM for Used FIA Plots by State")+
+  theme_bw()
+
+#Boxplot of distribution of Douglas Fir AGLBM
+mergeInput %>% filter(state=="Oregon") %>% ggplot(aes(y=aglbmS, x=state, fill=state))+
+  geom_violin()+
+  geom_boxplot(width=.1, fill="gray", outlier.shape=NA)+
+  stat_summary(fun.y="mean", color="red")+
+  scale_fill_manual(values=c("#89C7B6"))+
+  scale_y_continuous(breaks=c(0,25,50,75,100,125,150,175, 200), limits=c(0,200), expand=c(0,0))+
+  labs(x="State", y="AGLBM", fill="State")+
+  ggtitle("Distribution of Douglas Fir AGLBM for Used FIA Plots in Oregon")+
+  theme_bw()
+
+#Boxplot of species type by elevation for each state
+mergeInput %>% filter(state=="Oregon") %>% ggplot(aes(y=dem30m, x=Type))+
+  geom_boxplot(fill="gray")+
+  labs(x="Forest Type", y="Elevation (meters)")+
+  ggtitle("Elevation Distribution by Forest Type: Oregon")+
+  theme_bw()
+
+#Boxplot of species type by elevation for each state
+mergeInput %>% filter(state=="Michigan") %>% ggplot(aes(y=dem30m, x=Type))+
+  geom_boxplot(fill="gray")+
+  labs(x="Forest Type", y="Elevation (meters)")+
+  ggtitle("Elevation Distribution by Forest Type: Michigan")+
+  theme_bw()
+
+#Boxplot of species type by elevation for each state
+mergeInput %>% filter(state=="West Virginia") %>% ggplot(aes(y=dem30m, x=Type))+
+  geom_boxplot(fill="gray")+
+  labs(x="Forest Type", y="Elevation (meters)")+
+  ggtitle("Elevation Distribution by Forest Type: West Virginia")+
+  theme_bw()
