@@ -1,3 +1,5 @@
+#' makeMasks
+#'
 #' Make raster mask from input vector data
 #'
 #' This function creates a raster mask from input vector data. The cell value is

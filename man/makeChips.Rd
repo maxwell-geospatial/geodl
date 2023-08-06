@@ -2,7 +2,7 @@
 % Please edit documentation in R/makeChips.R
 \name{makeChips}
 \alias{makeChips}
-\title{Generate image chips from images and associated raster masks}
+\title{makeChips}
 \usage{
 makeChips(
   image,
@@ -46,6 +46,9 @@ Image and mask files written to disk in TIFF format. Spatial reference
 information is not maintained. No R object is returned.
 }
 \description{
+Generate image chips from images and associated raster masks
+}
+\details{
 This function will generate image and mask chips from an input image and
 associated raster mask. The chips are written into the defined directory.
 The number of rows and columns of pixels in each chip are equal to the
@@ -59,8 +62,7 @@ the positive case is indicated with a cell value of 1 and the background or
 negative case is indicated with a cell value of 0. If an irregular shaped raster
 grid is provided, only chips and masks that contain no NA or NoDATA cells will
 be produced.
-}
-\details{
+
 Three modes are available. If "All" is used, all image chips will be
 generated even if they do not contain pixels mapped to the positive case.
 Within the provided directory, image chips will be written to an "images" folder

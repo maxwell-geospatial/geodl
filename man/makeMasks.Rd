@@ -2,7 +2,7 @@
 % Please edit documentation in R/makeMasks.R
 \name{makeMasks}
 \alias{makeMasks}
-\title{Make raster mask from input vector data}
+\title{makeMasks}
 \usage{
 makeMasks(
   image,
@@ -65,6 +65,9 @@ a copy of the image written to disk. Cropping may be applied as specified.
 No R objects are returned.
 }
 \description{
+Make raster mask from input vector data
+}
+\details{
 This function creates a raster mask from input vector data. The cell value is
 indicated by the field parameter. A unique numeric code should be provided for
 each class. In the case of a binary classification, 0 should indicate background

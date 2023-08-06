@@ -1,3 +1,5 @@
+#' makeChipsDF
+#'
 #' Create data frame and CSV file listing image chips and associated masks
 #'
 #' This function creates a dataframe and, optionally, a CSV file that lists all

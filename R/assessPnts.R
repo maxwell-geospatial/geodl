@@ -1,3 +1,5 @@
+#' assessPnts
+#'
 #' Assess semantic segmentation model using point locations
 #'
 #' This function will generate a set of summary metrics when provided

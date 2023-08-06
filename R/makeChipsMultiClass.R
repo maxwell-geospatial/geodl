@@ -1,3 +1,5 @@
+#' makeChipsMultiClass
+#'
 #' Generate image chips from images and associated raster masks for multiclass classification
 #'
 #' This function will generate image and mask chips from an input image and

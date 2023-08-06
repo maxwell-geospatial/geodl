@@ -1,3 +1,5 @@
+#' makeTerrainDerivatives
+#'
 #' Make three band terrain stack from input digital terrain model
 #'
 #' This function creates a three-band raster stack from an input digital terrain

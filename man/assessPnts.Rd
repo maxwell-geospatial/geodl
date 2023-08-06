@@ -2,7 +2,7 @@
 % Please edit documentation in R/assessPnts.R
 \name{assessPnts}
 \alias{assessPnts}
-\title{Assess semantic segmentation model using point locations}
+\title{assessPnts}
 \usage{
 assessPnts(
   reference,
@@ -41,6 +41,9 @@ the classes are provided in the $Classes object, and the positive class label is
 provided in the $PositiveCase object.
 }
 \description{
+Assess semantic segmentation model using point locations
+}
+\details{
 This function will generate a set of summary metrics when provided
 reference and predicted classes. For a multiclass classification problem
 a confusion matrix is produced with the columns representing the reference
@@ -54,8 +57,7 @@ exchange disagreement (Exchange), and shift disagreement (shift). For average
 class user's accuracy, producer's accuracy, and F1-score, macro-averaging
 is used where all classes are equally weighted. For a multiclass classification
 all class user's and producer's accuracies are also returned.
-}
-\details{
+
 For a binary classification problem, a confusion matrix is returned
 along with the following metrics: overall accuracy (OA), overall accuracy
 95\% confidence interval (OAU and OAL), the Kappa statistic (Kappa), map

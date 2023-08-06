@@ -1,3 +1,5 @@
+#' assessRaster
+#'
 #' Assess semantic segmentation model using categorical raster grids (wall-to-wall
 #' reference data and predictions)
 #'

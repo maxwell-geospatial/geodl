@@ -1,3 +1,5 @@
+#' makeChips
+#'
 #' Generate image chips from images and associated raster masks
 #'
 #' This function will generate image and mask chips from an input image and

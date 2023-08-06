@@ -2,7 +2,7 @@
 % Please edit documentation in R/describeChips.R
 \name{describeChips}
 \alias{describeChips}
-\title{Generate data frame of band summary statistics and class pixel counts}
+\title{describeChips}
 \usage{
 describeChips(
   folder,
@@ -55,6 +55,9 @@ List object containing the summary metrics for each band in the
 $ImageStats object and the count of pixels by class in the $maskStats object.
 }
 \description{
+Generate data frame of band summary statistics and class pixel counts
+}
+\details{
 This function will generate a set of summary metrics from image chips and
 associated masks stored in a directory. For each band, the minimum, 1st
 quartile, median, mean, 3rd quartile, and maximum values are returned. For

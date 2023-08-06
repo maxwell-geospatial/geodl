@@ -144,24 +144,11 @@ myMetrics <- assessRaster(reference = refG2,
 
 # `assessPnts`
 
-Assess semantic segmentation model using point locations
+assessPnts
 
 ## Description
 
-This function will generate a set of summary metrics when provided
-reference and predicted classes. For a multiclass classification problem
-a confusion matrix is produced with the columns representing the
-reference data and the rows representing the predictions. The following
-metrics are calculated: overall accuracy (OA), 95% confidence interval
-for OA (OAU and OAL), the Kappa statistic, map image classification
-efficacy (MICE), average class user’s accuracy (aUA), average class
-producer’s accuracy (aPA), average class F1-score, overall error
-(Error), allocation disagreement (Allocation), quantity disagreement
-(Quantity), exchange disagreement (Exchange), and shift disagreement
-(shift). For average class user’s accuracy, producer’s accuracy, and
-F1-score, macro-averaging is used where all classes are equally
-weighted. For a multiclass classification all class user’s and
-producer’s accuracies are also returned.
+Assess semantic segmentation model using point locations
 
 ## Usage
 
@@ -186,6 +173,21 @@ assessPnts(
 | `positive_case` | Factor level associated with the positive case for a binary classification. Default is the second factor level. This argument is not used for multiclass classification.                                                |
 
 ## Details
+
+This function will generate a set of summary metrics when provided
+reference and predicted classes. For a multiclass classification problem
+a confusion matrix is produced with the columns representing the
+reference data and the rows representing the predictions. The following
+metrics are calculated: overall accuracy (OA), 95% confidence interval
+for OA (OAU and OAL), the Kappa statistic, map image classification
+efficacy (MICE), average class user’s accuracy (aUA), average class
+producer’s accuracy (aPA), average class F1-score, overall error
+(Error), allocation disagreement (Allocation), quantity disagreement
+(Quantity), exchange disagreement (Exchange), and shift disagreement
+(shift). For average class user’s accuracy, producer’s accuracy, and
+F1-score, macro-averaging is used where all classes are equally
+weighted. For a multiclass classification all class user’s and
+producer’s accuracies are also returned.
 
 For a binary classification problem, a confusion matrix is returned
 along with the following metrics: overall accuracy (OA), overall
@@ -214,25 +216,12 @@ provided in the $PositiveCase object.
 
 # `assessRaster`
 
-Assess semantic segmentation model using categorical raster grids
-(wall-to-wall reference data and predictions)
+assessRaster
 
 ## Description
 
-This function will generate a set of summary metrics when provided
-reference and predicted classes. For a multiclass classification problem
-a confusion matrix is produced with the columns representing the
-reference data and the rows representing the predictions. The following
-metrics are calculated: overall accuracy (OA), 95% confidence interval
-for OA (OAU and OAL), the Kappa statistic, map image classification
-efficacy (MICE), average class user’s accuracy (aUA), average class
-producer’s accuracy (aPA), average class F1-score, overall error
-(Error), allocation disagreement (Allocation), quantity disagreement
-(Quantity), exchange disagreement (Exchange), and shift disagreement
-(shift). For average class user’s accuracy, producer’s accuracy, and
-F1-score, macro-averaging is used where all classes are equally
-weighted. For a multiclass classification all class user’s and
-producer’s accuracies are also returned.
+Assess semantic segmentation model using categorical raster grids
+(wall-to-wall reference data and predictions)
 
 ## Usage
 
@@ -256,6 +245,21 @@ assessRaster(
 | `positive_case` | Factor level associated with the positive case for a binary classification. Default is the second factor level. This argument is not used for multiclass classification.                                                                                                                                                                                                  |
 
 ## Details
+
+This function will generate a set of summary metrics when provided
+reference and predicted classes. For a multiclass classification problem
+a confusion matrix is produced with the columns representing the
+reference data and the rows representing the predictions. The following
+metrics are calculated: overall accuracy (OA), 95% confidence interval
+for OA (OAU and OAL), the Kappa statistic, map image classification
+efficacy (MICE), average class user’s accuracy (aUA), average class
+producer’s accuracy (aPA), average class F1-score, overall error
+(Error), allocation disagreement (Allocation), quantity disagreement
+(Quantity), exchange disagreement (Exchange), and shift disagreement
+(shift). For average class user’s accuracy, producer’s accuracy, and
+F1-score, macro-averaging is used where all classes are equally
+weighted. For a multiclass classification all class user’s and
+producer’s accuracies are also returned.
 
 For a binary classification problem, a confusion matrix is returned
 along with the following metrics: overall accuracy (OA), overall
@@ -284,16 +288,11 @@ label is provided in the $PositiveCase object.
 
 # `describeChips`
 
-Generate data frame of band summary statistics and class pixel counts
+describeChips
 
 ## Description
 
-This function will generate a set of summary metrics from image chips
-and associated masks stored in a directory. For each band, the minimum,
-1st quartile, median, mean, 3rd quartile, and maximum values are
-returned. For mask data, the count of pixels in each class are returned.
-These summarizations can be useful for data normalization and
-determining class weightings in loss calculations.
+Generate data frame of band summary statistics and class pixel counts
 
 ## Usage
 
@@ -323,52 +322,28 @@ describeChips(
 | `subSamplePix` | TRUE or FALSE. Whether or not to calculate statistics using a subsample of pixels from each image chip as opposed to all pixels. If a large number of chips are available and/or each chip is large, we suggest setting this argument to TRUE to reduce the computational load. The default is TRUE. |
 | `sampsPerChip` | If subSamplePix is TRUE, this parameters specifies the number of random pixels to sample per chip. The default is 100. If subSamplePix is set to FALSE, this parameter is ignored.                                                                                                                   |
 
+## Details
+
+This function will generate a set of summary metrics from image chips
+and associated masks stored in a directory. For each band, the minimum,
+1st quartile, median, mean, 3rd quartile, and maximum values are
+returned. For mask data, the count of pixels in each class are returned.
+These summarizations can be useful for data normalization and
+determining class weightings in loss calculations.
+
 ## Value
 
 List object containing the summary metrics for each band in the
 $ImageStats object and the count of pixels by class in the $maskStats
 object.
 
-# `hello`
-
-Hello, World!
-
-## Description
-
-Prints ‘Hello, world!’.
-
-## Usage
-
-``` r
-hello()
-```
-
-## Examples
-
-``` r
-hello()
-```
-
 # `makeChips`
 
-Generate image chips from images and associated raster masks
+makeChips
 
 ## Description
 
-This function will generate image and mask chips from an input image and
-associated raster mask. The chips are written into the defined
-directory. The number of rows and columns of pixels in each chip are
-equal to the size argument. If a stride_x and/or stride_y is used that
-is different from the size argument, resulting chips will either overlap
-or have gaps between them. In order to not have overlap or gaps, the
-stride_x and stride_y arguments should be the same as the size argument.
-Both the image chips and associated masks are written to TIFF format
-(“.tif”). Input data are not limited to three band images. This function
-is specifically for a binary classification where the positive case is
-indicated with a cell value of 1 and the background or negative case is
-indicated with a cell value of 0. If an irregular shaped raster grid is
-provided, only chips and masks that contain no NA or NoDATA cells will
-be produced.
+Generate image chips from images and associated raster masks
 
 ## Usage
 
@@ -400,6 +375,21 @@ makeChips(
 
 ## Details
 
+This function will generate image and mask chips from an input image and
+associated raster mask. The chips are written into the defined
+directory. The number of rows and columns of pixels in each chip are
+equal to the size argument. If a stride_x and/or stride_y is used that
+is different from the size argument, resulting chips will either overlap
+or have gaps between them. In order to not have overlap or gaps, the
+stride_x and stride_y arguments should be the same as the size argument.
+Both the image chips and associated masks are written to TIFF format
+(“.tif”). Input data are not limited to three band images. This function
+is specifically for a binary classification where the positive case is
+indicated with a cell value of 1 and the background or negative case is
+indicated with a cell value of 0. If an irregular shaped raster grid is
+provided, only chips and masks that contain no NA or NoDATA cells will
+be produced.
+
 Three modes are available. If “All” is used, all image chips will be
 generated even if they do not contain pixels mapped to the positive
 case. Within the provided directory, image chips will be written to an
@@ -421,17 +411,11 @@ information is not maintained. No R object is returned.
 
 # `makeChipsDF`
 
-Create data frame and CSV file listing image chips and associated masks
+makeChipsDF
 
 ## Description
 
-This function creates a dataframe and, optionally, a CSV file that lists
-all of the image chips and associated masks in a directory. Three
-columns are produced. The chp column provides the name of the chip, the
-chpPth column provides the path to the chip, and the chpMsk provides the
-path to the associated mask. All paths are relative to the input folder
-as opposed to the full file path so that the results can still be used
-if the data are copied to a new location on disk or to a new computer.
+Create data frame and CSV file listing image chips and associated masks
 
 ## Usage
 
@@ -457,6 +441,16 @@ makeChipsDF(
 | `shuffle`   | TRUE or FALSE. Whether or not to shuffle the rows in the table. Rows can be shuffled to potentially reduced autocorrelation in the data. The default is FALSE.                                                                                              |
 | `saveCSV`   | TRUE or FALSE. Whether or not to save the CSV file or just return the dataframe. If this is set to FALSE then the outCSV parameter is ignored and no CSV file is generated. The default is FALSE.                                                           |
 
+## Details
+
+This function creates a dataframe and, optionally, a CSV file that lists
+all of the image chips and associated masks in a directory. Three
+columns are produced. The chp column provides the name of the chip, the
+chpPth column provides the path to the chip, and the chpMsk provides the
+path to the associated mask. All paths are relative to the input folder
+as opposed to the full file path so that the results can still be used
+if the data are copied to a new location on disk or to a new computer.
+
 ## Value
 
 Data frame with three columns (chp, chpPth, and mskPth) and, optionally,
@@ -464,24 +458,12 @@ a CSV file written to disk.
 
 # `makeChipsMultiClass`
 
-Generate image chips from images and associated raster masks for
-multiclass classification
+makeChipsMultiClass
 
 ## Description
 
-This function will generate image and mask chips from an input image and
-associated raster mask. The chips will be written into the defined
-directory. The number of rows and columns of pixels per chip are equal
-to the size argument. If a stride_x and/or stride_y is used that is
-different from the size argument, resulting chips will either overlap or
-have gaps between them. In order to not have overlap or gaps, the
-stride_x and stride_y arguments should be the same as the size argument.
-Both the image chips and associated masks are written to TIFF format
-(“.tif”). Input data are not limited to three band images. This function
-is specifically for a multiclass classification. For a binary
-classification, use the makeChips() function. If an irregular shaped
-raster grid is provided, only chips and masks that contain no NA or
-NoDATA cells will be produced.
+Generate image chips from images and associated raster masks for
+multiclass classification
 
 ## Usage
 
@@ -513,6 +495,20 @@ makeChipsMultiClass(
 
 ## Details
 
+This function will generate image and mask chips from an input image and
+associated raster mask. The chips will be written into the defined
+directory. The number of rows and columns of pixels per chip are equal
+to the size argument. If a stride_x and/or stride_y is used that is
+different from the size argument, resulting chips will either overlap or
+have gaps between them. In order to not have overlap or gaps, the
+stride_x and stride_y arguments should be the same as the size argument.
+Both the image chips and associated masks are written to TIFF format
+(“.tif”). Input data are not limited to three band images. This function
+is specifically for a multiclass classification. For a binary
+classification, use the makeChips() function. If an irregular shaped
+raster grid is provided, only chips and masks that contain no NA or
+NoDATA cells will be produced.
+
 Within the provided directory, image chips will be written to an
 “images” folder and masks will be written to a “masks” folder.
 
@@ -523,19 +519,11 @@ returned.
 
 # `makeMasks`
 
-Make raster mask from input vector data
+makeMasks
 
 ## Description
 
-This function creates a raster mask from input vector data. The cell
-value is indicated by the field parameter. A unique numeric code should
-be provided for each class. In the case of a binary classification, 0
-should indicate background and 1 should indicate positive. For a
-multiclass problem, values should be sequential from 0 to n-1, where n
-is the number of classes, or 1 to n. We recommend using 0 to n-1. If no
-cropping is applied, the generated raster mask should have the same
-spatial extent, number of rows of pixels, number of columns of pixels,
-cell size, and coordinate reference system as the input image.
+Make raster mask from input vector data
 
 ## Usage
 
@@ -567,6 +555,18 @@ makeMasks(
 | `outMask`    | Mask output name in TIFF format (“.tif”) with full path or path relative to working directory for image. Output will be a single-band raster grid of class numeric codes.                                                                                                                                                                                                                                    |
 | `mode`       | Either “Both” or “Mask”. If “Both”, a copy of the image will be made along with the generated raster mask. If “Mask”, only the mask is produced. If you are experiencing issues with alignment between the image and associated mask, setting the mode to “Both” can alleviate this issue. However, this will result in more data being written to disk.                                                     |
 
+## Details
+
+This function creates a raster mask from input vector data. The cell
+value is indicated by the field parameter. A unique numeric code should
+be provided for each class. In the case of a binary classification, 0
+should indicate background and 1 should indicate positive. For a
+multiclass problem, values should be sequential from 0 to n-1, where n
+is the number of classes, or 1 to n. We recommend using 0 to n-1. If no
+cropping is applied, the generated raster mask should have the same
+spatial extent, number of rows of pixels, number of columns of pixels,
+cell size, and coordinate reference system as the input image.
+
 ## Value
 
 Single-band raster mask written to disk in TIFF format and, optionally,
@@ -575,20 +575,11 @@ specified. No R objects are returned.
 
 # `makeTerrainDerivatives`
 
-Make three band terrain stack from input digital terrain model
+makeTerrainDerivatives
 
 ## Description
 
-This function creates a three-band raster stack from an input digital
-terrain model (DTM) of bare earth surface elevations. The first band is
-a topographic position index (TPI) calculated using a moving window with
-a 50 m circular radius. The second band is the square root of slope
-calculated in degrees. The third band is a TPI calculated using an
-annulus moving window with an inner radius of 2 and outer radius of 5
-meters. The TPI values are clamped to a range of -10 to 10 then linearly
-rescaled from 0 and 1. The square root of slope is clamped to a range of
-0 to 10 then linearly rescaled from 0 to 1. Values are provided in
-floating point.
+Make three band terrain stack from input digital terrain model
 
 ## Usage
 
@@ -605,6 +596,17 @@ makeTerrainDerivatives(dtm, res, filename)
 | `filename` | Name and full path or path relative to working directory for output terrain stack. We recommend saving the data to either TIFF (“.tif”) or Image (“.img”) format. |
 
 ## Details
+
+This function creates a three-band raster stack from an input digital
+terrain model (DTM) of bare earth surface elevations. The first band is
+a topographic position index (TPI) calculated using a moving window with
+a 50 m circular radius. The second band is the square root of slope
+calculated in degrees. The third band is a TPI calculated using an
+annulus moving window with an inner radius of 2 and outer radius of 5
+meters. The TPI values are clamped to a range of -10 to 10 then linearly
+rescaled from 0 and 1. The square root of slope is clamped to a range of
+0 to 10 then linearly rescaled from 0 to 1. Values are provided in
+floating point.
 
 The stack is described in the following publication:
 

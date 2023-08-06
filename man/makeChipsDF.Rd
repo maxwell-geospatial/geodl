@@ -2,7 +2,7 @@
 % Please edit documentation in R/makeChipsDF.R
 \name{makeChipsDF}
 \alias{makeChipsDF}
-\title{Create data frame and CSV file listing image chips and associated masks}
+\title{makeChipsDF}
 \usage{
 makeChipsDF(
   folder,
@@ -43,6 +43,9 @@ Data frame with three columns (chp, chpPth, and mskPth) and, optionally,
 a CSV file written to disk.
 }
 \description{
+Create data frame and CSV file listing image chips and associated masks
+}
+\details{
 This function creates a dataframe and, optionally, a CSV file that lists all
 of the image chips and associated masks in a directory. Three columns are
 produced. The chp column provides the name of the chip, the chpPth column

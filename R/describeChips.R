@@ -1,3 +1,5 @@
+#' describeChips
+#'
 #' Generate data frame of band summary statistics and class pixel counts
 #'
 #' This function will generate a set of summary metrics from image chips and

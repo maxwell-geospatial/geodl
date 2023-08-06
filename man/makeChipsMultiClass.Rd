@@ -2,7 +2,7 @@
 % Please edit documentation in R/makeChipsMultiClass.R
 \name{makeChipsMultiClass}
 \alias{makeChipsMultiClass}
-\title{Generate image chips from images and associated raster masks for multiclass classification}
+\title{makeChipsMultiClass}
 \usage{
 makeChipsMultiClass(
   image,
@@ -52,6 +52,9 @@ Image and mask files written to disk in TIFF format. No R object is
 returned.
 }
 \description{
+Generate image chips from images and associated raster masks for multiclass classification
+}
+\details{
 This function will generate image and mask chips from an input image and
 associated raster mask. The chips will be written into the defined directory.
 The number of rows and columns of pixels per chip are equal to the size argument.
@@ -64,8 +67,7 @@ band images. This function is specifically for a multiclass classification.
 For a binary classification, use the makeChips() function. If an irregular shaped
 raster grid is provided, only chips and masks that contain no NA or NoDATA
 cells will be produced.
-}
-\details{
+
 Within the provided directory, image chips will be written to an "images" folder
 and masks will be written to a "masks" folder.
 }

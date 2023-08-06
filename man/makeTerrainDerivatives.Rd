@@ -2,7 +2,7 @@
 % Please edit documentation in R/makeTerrainDerivatives.R
 \name{makeTerrainDerivatives}
 \alias{makeTerrainDerivatives}
-\title{Make three band terrain stack from input digital terrain model}
+\title{makeTerrainDerivatives}
 \usage{
 makeTerrainDerivatives(dtm, res, filename)
 }
@@ -20,6 +20,9 @@ Image (".img") format.}
 Three-band raster mask written to disk in TIFF format and spatRaster object.
 }
 \description{
+Make three band terrain stack from input digital terrain model
+}
+\details{
 This function creates a three-band raster stack from an input digital terrain
 model (DTM) of bare earth surface elevations. The first band is a topographic
 position index (TPI) calculated using a moving window with a 50 m circular radius.
@@ -29,8 +32,7 @@ and outer radius of 5 meters. The TPI values are clamped to a range of -10 to 10
 then linearly rescaled from 0 and 1. The square root of slope is clamped to a
 range of 0 to 10 then  linearly rescaled from 0 to 1. Values are provided in
 floating point.
-}
-\details{
+
 The stack is described in the following publication:
 
 Maxwell, A.E., W.E. Odom, C.M. Shobe, D.H. Doctor, M.S. Bester, and T. Ore,
