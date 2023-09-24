@@ -23,7 +23,7 @@ for the resulting CSV file with a ".csv" extension.}
 
 \item{extension}{The extension of the image and mask raster data (e.g., ".tif",
 ".png", ".jpeg", or ".img"). The default is ".tif" since this is the file
-format used by the functions in this package. This option is provided if chips
+format used by the utilities in this package. This option is provided if chips
 are generated using another method.}
 
 \item{mode}{Either "All", "Positive", or "Divided". This should match the setting
@@ -35,7 +35,7 @@ Rows can be shuffled to potentially reduced autocorrelation in the data. The
 default is FALSE.}
 
 \item{saveCSV}{TRUE or FALSE. Whether or not to save the CSV file or just
-return the dataframe. If this is set to FALSE then the outCSV parameter is
+return the data frame. If this is set to FALSE then the outCSV parameter is
 ignored and no CSV file is generated. The default is FALSE.}
 }
 \value{
@@ -46,10 +46,10 @@ a CSV file written to disk.
 Create data frame and CSV file listing image chips and associated masks
 }
 \details{
-This function creates a dataframe and, optionally, a CSV file that lists all
+This function creates a data frame and, optionally, a CSV file that lists all
 of the image chips and associated masks in a directory. Three columns are
-produced. The chp column provides the name of the chip, the chpPth column
-provides the path to the chip, and the chpMsk provides the path to the
+produced. The chpN column provides the name of the chip, the chpPth column
+provides the path to the chip, and the chpMsk column provides the path to the
 associated mask. All paths are relative to the input folder as opposed to
 the full file path so that the results can still be used if the data are copied
 to a new location on disk or to a new computer.

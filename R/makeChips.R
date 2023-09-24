@@ -112,12 +112,18 @@ makeChips <- function(image,
           chip_data2 <- c(stack(chip_data)[,1])
           chip_array <- array(chip_data2, c(size,size,n_channels))
           image1 <- terra::rast(chip_array)
-          terra::writeRaster(image1, paste0(outDir, "/images/", substr(fName, 1, nchar(fName)-4), "_", c1, "_", r1, ".tif"))
+          terra::writeRaster(image1,
+                             paste0(outDir,
+                                    "/images/",
+                                    substr(fName, 1, nchar(fName)-4), "_", c1, "_", r1, ".tif"))
           names(mask_data) <- c("C")
           Cx <- as.vector(mask_data$C)
           mask_array <- array(Cx, c(size,size,1))
           msk1 <-terra::rast(mask_array)
-          terra::writeRaster(msk1, paste0(outDir, "/masks/", substr(fName, 1, nchar(fName)-4), "_", c1, "_", r1, ".tif"))
+          terra::writeRaster(msk1,
+                             paste0(outDir,
+                                    "/masks/",
+                                    substr(fName, 1, nchar(fName)-4), "_", c1, "_", r1, ".tif"))
         }
       }
     }
@@ -181,8 +187,14 @@ makeChips <- function(image,
           mask_array <- array(Cx, c(size,size,1))
           msk1 <-terra::rast(mask_array)
           if(max(mask_array) > 0){
-            terra::writeRaster(image1, paste0(outDir, "/images/", substr(fName, 1, nchar(fName)-4), "_", c1, "_", r1, ".tif"))
-            terra::writeRaster(msk1, paste0(outDir, "/masks/", substr(fName, 1, nchar(fName)-4), "_", c1, "_", r1, ".tif"))
+            terra::writeRaster(image1,
+                               paste0(outDir,
+                                      "/images/",
+                                      substr(fName, 1, nchar(fName)-4), "_", c1, "_", r1, ".tif"))
+            terra::writeRaster(msk1,
+                               paste0(outDir,
+                                      "/masks/",
+                                      substr(fName, 1, nchar(fName)-4), "_", c1, "_", r1, ".tif"))
           }
         }
       }
@@ -252,11 +264,23 @@ makeChips <- function(image,
           mask_array <- array(Cx, c(size,size,1))
           msk1 <- terra::rast(mask_array)
           if(max(mask_array) > 0){
-            terra::writeRaster(image1, paste0(outDir, "/images/positive/", substr(fName, 1, nchar(fName)-4), "_", c1, "_", r1, ".tif"))
-            terra::writeRaster(msk1, paste0(outDir, "/masks/positive/", substr(fName, 1, nchar(fName)-4), "_", c1, "_", r1, ".tif"))
+            terra::writeRaster(image1,
+                               paste0(outDir,
+                                      "/images/positive/",
+                                      substr(fName, 1, nchar(fName)-4), "_", c1, "_", r1, ".tif"))
+            terra::writeRaster(msk1,
+                               paste0(outDir,
+                                      "/masks/positive/",
+                                      substr(fName, 1, nchar(fName)-4), "_", c1, "_", r1, ".tif"))
           }else{
-            terra::writeRaster(image1, paste0(outDir, "/images/background/", substr(fName, 1, nchar(fName)-4), "_", c1, "_", r1, ".tif"))
-            terra::writeRaster(msk1, paste0(outDir, "/masks/background/", substr(fName, 1, nchar(fName)-4), "_", c1, "_", r1, ".tif"))
+            terra::writeRaster(image1,
+                               paste0(outDir,
+                                      "/images/background/",
+                                      substr(fName, 1, nchar(fName)-4), "_", c1, "_", r1, ".tif"))
+            terra::writeRaster(msk1,
+                               paste0(outDir,
+                                      "/masks/background/",
+                                      substr(fName, 1, nchar(fName)-4), "_", c1, "_", r1, ".tif"))
           }
         }
       }

@@ -12,7 +12,7 @@
 #' cell size, and coordinate reference system as the input image.
 #'
 #' @param image File name and full path or path relative to working directory for image.
-#' Image are converted to a spatRaster internally.
+#' Image is converted to a spatRaster internally.
 #' @param features File name and full path or path relative to working directory
 #' for vector mask or label data. A field should be provided that differentiates
 #' classes using unique numeric codes as explained above. If the input features

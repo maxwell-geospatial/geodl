@@ -25,7 +25,7 @@
 #' object internally. The image and mask must have the same extent, number of
 #' rows and columns of pixels, cell size, and coordinate reference system.
 #' @param n_channels Number of channels in the input image. Default is 3.
-#' @param hasZero If the class codes begin at 0 as opposed to 1, this shouls be
+#' @param hasZero If the class codes begin at 0 as opposed to 1, this should be
 #' set to TRUE. If the class codes start at 1 as opposed to 0, this should be set
 #' to FALSE. In the case where the class codes start at 1, each code will be
 #' reduced by 1 so that codes start at 0. For example, codes 1,2,3,4 would be

@@ -1,0 +1,6 @@
+url: ~
+template:
+  bootstrap: 5
+  bootswatch: superhero
+  theme: arrow-dark
+

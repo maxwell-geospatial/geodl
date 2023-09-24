@@ -13,7 +13,7 @@
 #' directory that holds the image chips and associated masks. You must include
 #' the final forward slash in the folder path (e.g., "C:/data/chips/").
 #' @param extension raster file extension (e.g., ".tif", ".png", ".jpeg", or ".img").
-#' The tools in this package generate files in ".tif" format, so this is the default.
+#' The utilities in this package generate files in ".tif" format, so this is the default.
 #' This option is provided if chips are generated using another method.
 #' @param mode Either "All", "Positive", or "Divided". This should match the settings
 #' used in the makeChips() function or be set to "All" if makeChipsMultiClass() is
@@ -75,7 +75,7 @@ describeChips <- function(folder,
         lstMskB <- list.files(paste0(folder, "masks/background/"), pattern=paste0("\\", extension, "$"))
         lstMskP <- list.files(paste0(folder, "masks/positive/"), pattern=paste0("\\", extension, "$"))
         for(chip in lstChipsB){
-          chipIn <- terra::rast(paste0(folder, "images/background/", msk))
+          chipIn <- terra::rast(paste0(folder, "images/background/", chip))
           chipInDF <- data.frame(chipIn)
           nCols <- ncol(chipInDF)
           colNames <- paste0("B", seq(1,nCols))
@@ -83,7 +83,7 @@ describeChips <- function(folder,
           chipDF <- dplyr::bind_rows(chipDF, chipInDF)
         }
         for(chip in lstChipsP){
-          chipIn <- terra::rast(paste0(folder, "images/positive/", msk))
+          chipIn <- terra::rast(paste0(folder, "images/positive/", chip))
           chipInDF <- data.frame(chipIn)
           nCols <- ncol(chipInDF)
           colNames <- paste0("B", seq(1,nCols))
@@ -98,7 +98,7 @@ describeChips <- function(folder,
           mskStats <- dplyr::bind_rows(mskStats, mskInDF)
         }
         for(msk in lstMskP){
-          mskIn <- terra::rast(paste0(folder, "masks/postive/", msk))
+          mskIn <- terra::rast(paste0(folder, "masks/positive/", msk))
           mskInDF <- terra::freq(mskIn)
           mskStats <- dplyr::bind_rows(mskStats, mskInDF)
         }
@@ -130,7 +130,7 @@ describeChips <- function(folder,
         lstMskB <- list.files(paste0(folder, "masks/background/"), pattern=paste0("\\", extension, "$"))
         lstMskP <- list.files(paste0(folder, "masks/positive/"), pattern=paste0("\\", extension, "$"))
         for(chip in lstChipsB){
-          chipIn <- terra::rast(paste0(folder, "images/background/", msk))
+          chipIn <- terra::rast(paste0(folder, "images/background/", chip))
           chipInDF <- data.frame(chipIn)
           chipInDF <- chipInDF |> dplyr::sample_n(sampsPerChip)
           nCols <- ncol(chipInDF)
@@ -139,7 +139,7 @@ describeChips <- function(folder,
           chipDF <- dplyr::bind_rows(chipDF, chipInDF)
         }
         for(chip in lstChipsP){
-          chipIn <- terra::rast(paste0(folder, "images/positive/", msk))
+          chipIn <- terra::rast(paste0(folder, "images/positive/", chip))
           chipInDF <- data.frame(chipIn)
           chipInDF <- chipInDF |> dplyr::sample_n(sampsPerChip)
           nCols <- ncol(chipInDF)
@@ -155,7 +155,7 @@ describeChips <- function(folder,
           mskStats <- dplyr::bind_rows(mskStats, mskInDF)
         }
         for(msk in lstMskP){
-          mskIn <- terra::rast(paste0(folder, "masks/postive/", msk))
+          mskIn <- terra::rast(paste0(folder, "masks/positive/", msk))
           mskInDF <- terra::freq(mskIn)
           mskStats <- dplyr::bind_rows(mskStats, mskInDF)
         }
@@ -197,7 +197,7 @@ describeChips <- function(folder,
         lstChipsP <- lstChipsP[c(sampsP)]
         lstMskP <- lstMskP[c(sampsP)]
         for(chip in lstChipsB){
-          chipIn <- terra::rast(paste0(folder, "images/background/", msk))
+          chipIn <- terra::rast(paste0(folder, "images/background/", chip))
           chipInDF <- data.frame(chipIn)
           nCols <- ncol(chipInDF)
           colNames <- paste0("B", seq(1,nCols))
@@ -205,7 +205,7 @@ describeChips <- function(folder,
           chipDF <- dplyr::bind_rows(chipDF, chipInDF)
         }
         for(chip in lstChipsP){
-          chipIn <- terra::rast(paste0(folder, "images/positive/", msk))
+          chipIn <- terra::rast(paste0(folder, "images/positive/", chip))
           chipInDF <- data.frame(chipIn)
           nCols <- ncol(chipInDF)
           colNames <- paste0("B", seq(1,nCols))
@@ -220,7 +220,7 @@ describeChips <- function(folder,
           mskStats <- dplyr::bind_rows(mskStats, mskInDF)
         }
         for(msk in lstMskP){
-          mskIn <- terra::rast(paste0(folder, "masks/postive/", msk))
+          mskIn <- terra::rast(paste0(folder, "masks/positive/", msk))
           mskInDF <- terra::freq(mskIn)
           mskStats <- dplyr::bind_rows(mskStats, mskInDF)
         }
@@ -261,7 +261,7 @@ describeChips <- function(folder,
         lstChipsP <- lstChipsP[c(sampsP)]
         lstMskP <- lstMskP[c(sampsP)]
         for(chip in lstChipsB){
-          chipIn <- terra::rast(paste0(folder, "images/background/", msk))
+          chipIn <- terra::rast(paste0(folder, "images/background/", chip))
           chipInDF <- data.frame(chipIn)
           chipInDF <- chipInDF |> dplyr::sample_n(sampsPerChip)
           nCols <- ncol(chipInDF)
@@ -270,7 +270,7 @@ describeChips <- function(folder,
           chipDF <- dplyr::bind_rows(chipDF, chipInDF)
         }
         for(chip in lstChipsP){
-          chipIn <- terra::rast(paste0(folder, "images/positive/", msk))
+          chipIn <- terra::rast(paste0(folder, "images/positive/", chip))
           chipInDF <- data.frame(chipIn)
           chipInDF <- chipInDF |> dplyr::sample_n(sampsPerChip)
           nCols <- ncol(chipInDF)
@@ -286,7 +286,7 @@ describeChips <- function(folder,
           mskStats <- dplyr::bind_rows(mskStats, mskInDF)
         }
         for(msk in lstMskP){
-          mskIn <- terra::rast(paste0(folder, "masks/postive/", msk))
+          mskIn <- terra::rast(paste0(folder, "masks/positive/", msk))
           mskInDF <- terra::freq(mskIn)
           mskStats <- dplyr::bind_rows(mskStats, mskInDF)
         }

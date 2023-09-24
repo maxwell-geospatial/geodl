@@ -21,7 +21,7 @@ directory that holds the image chips and associated masks. You must include
 the final forward slash in the folder path (e.g., "C:/data/chips/").}
 
 \item{extension}{raster file extension (e.g., ".tif", ".png", ".jpeg", or ".img").
-The tools in this package generate files in ".tif" format, so this is the default.
+The utilities in this package generate files in ".tif" format, so this is the default.
 This option is provided if chips are generated using another method.}
 
 \item{mode}{Either "All", "Positive", or "Divided". This should match the settings

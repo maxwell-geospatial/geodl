@@ -9,7 +9,7 @@ assessRaster(
   predicted,
   multiclass = TRUE,
   mappings,
-  positive_case = mappings[1]
+  positive_case = mappings[2]
 )
 }
 \arguments{

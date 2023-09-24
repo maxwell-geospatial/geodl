@@ -1,11 +1,23 @@
 Package: geodl
 Type: Package
-Title: Utility functions for geospatial deep learning
+Title: Geospatial semantic segmentation with torch and terra
 Version: 0.1.0
 Date: 2023-08-03
-Author: c(person(family="Maxwell", given="Aaron", email="Aaron.Maxwell@mail.wvu.edu", role=c("aut", "cre"))
+Author: c(person(family="Maxwell", given="Aaron", 
+  email="Aaron.Maxwell@mail.wvu.edu", role=c("aut", "cre"))
 Maintainer: Aaron E. Maxwell <Aaron.Maxwell@mail.wvu.edu>
-Description: Provides a set of utility functions for geospatial deep learning for generating raster masks from vector data, image chips and masks from larger spatial extents, chip summary metrics, lists of chips and masks, and accuracy assessment metrics. This package relies heavily on the terra package. 
+Description: This package provides utilities and functions for semantic segmentation
+  of geospatial data using convolutional neural network-based deep learning. Functions
+  allow for creating masks, image chips, data frames listing image chips in a directory, 
+  and datasets for use within data loaders. A basic UNet architecture is provided, and more
+  UNet-like architectures will be made available in later releases. Dice and Dice-like
+  loss metrics are also avaialble along with F1-score, recall, and precision assessment
+  metrics implemented with luz. Trained models can be used to predict to spatial data 
+  without the need to generate chips from larger spatial extents. The package relies on 
+  torch for implementing deep learning, which does not require the installation or a 
+  Pyton environment. Raster geospatial data are handled with terra. Models can be 
+  trained using a CUDA-enabled GPU; however, multi-GPU training is not supported by 
+  terra. Both binary and multiclass models can be trained. 
 Depends: R (>= 4.1)
 Imports:
   dplyr,

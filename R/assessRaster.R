@@ -57,7 +57,7 @@ assessRaster <- function(reference,
                          predicted,
                          multiclass=TRUE,
                          mappings,
-                         positive_case=mappings[1]){
+                         positive_case=mappings[2]){
 
     stackG <- c(reference, predicted)
     ctab <- terra::crosstab(stackG, long = FALSE, useNA = FALSE)
