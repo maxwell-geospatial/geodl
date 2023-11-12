@@ -6,7 +6,7 @@
 #' data generated using the makeChips() or makeChipsMultiClass() functions. Can also
 #' define random augmentations to combat overfitting. Note that horizontal and vertical
 #' flips will effect the alignment of the image and associated mask chips. As a result,
-#' the same augmentation will be applied to both the image in the mask. Changes in
+#' the same augmentation will be applied to both the image and the mask. Changes in
 #' brightness, contrast, gamma, hue, and saturation will not be applied to the masks
 #' since alignment is not impacted by these transformations.
 #'
@@ -23,6 +23,9 @@
 #' @param mskRescale Can be used to rescale binary masks that are not scaled from
 #' 0 to 1. For example, if masks are scaled from 0 and 255, you can divide by 255 to
 #' obtain a 0 to 1 scale. Default is 1 or no rescaling.
+#' @param mskAdd Value to add to mask class numeric codes. For example, if class indices
+#' start are zero, once can be added so that indices start at one. Default is zero (return
+#' original class codes).
 #' @param bands Vector of bands to include. The default is to only include the
 #' first 3 bands. If you want to use a different subset of bands, you must provide
 #' a vector of band indices here to override the default.
@@ -91,6 +94,7 @@ defineSegDataSet <- torch::dataset(
                         normalize = FALSE,
                         rescaleFactor = 1,
                         mskRescale=1,
+                        mskAdd=0,
                         bands = c(1,2,3),
                         bMns=1,
                         bSDs=1,
@@ -115,6 +119,7 @@ defineSegDataSet <- torch::dataset(
      self$normalize <- normalize
      self$rescaleFactor <- rescaleFactor
      self$mskRescale <- mskRescale
+     self$mskAdd <- mskAdd
      self$bands <- bands
      self$bMns <- bMns
      self$bSDs <- bSDs
@@ -146,6 +151,7 @@ defineSegDataSet <- torch::dataset(
 
      image <- terra::as.array(image)
      mask <- terra::as.array(mask)/self$mskRescale
+     mask <- mask+self$mskAdd
 
      image <- torch::torch_tensor(image, dtype=torch_float32())
      image <- image$permute(c(3,1,2))
@@ -163,7 +169,7 @@ defineSegDataSet <- torch::dataset(
      image <- torch::torch_div(image,self$rescaleFactor)
 
      if(self$chnDim == FALSE){
-       mask <- mask$unsqueeze(dim=1)
+       mask <- mask$squeeze()
      }
 
      if(self$doAugs == TRUE){

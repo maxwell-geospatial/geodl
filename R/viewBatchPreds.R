@@ -33,6 +33,8 @@
 #' shown. For a binary problem, the positive class logit is transformed using a sigmoid
 #' function. For multiclass, softmax is used to transform the class logits to probabilities
 #' that sum to 1.
+#' @param useDS TRUE or FALSE. Should be set to TRUE if deep supervision was implemented. Only
+#' the data and predictions at the original spatial resolution are visualized. Default is FALSE.
 #' @return Image grids of example chips and masks loaded from a batch produced by the DataLoader.
 #' @export
 viewBatchPreds <- function(dataLoader,
@@ -47,7 +49,8 @@ viewBatchPreds <- function(dataLoader,
                           cNames,
                           cColors,
                           useCUDA=FALSE,
-                          probs=FALSE){
+                          probs=FALSE,
+                          usedDS=FALSE){
 
   batch1 <- dataLoader$.iter()$.next()
 
@@ -59,6 +62,10 @@ viewBatchPreds <- function(dataLoader,
   }
 
   preds <- predict(model, batch1$image)
+
+  if(usedDS == TRUE){
+    preds <- preds[1]
+  }
 
   if(chnDim == FALSE){
     masks <- mask$unsqueeze(2)

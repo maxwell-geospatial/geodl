@@ -59,8 +59,8 @@ Generate data frame of band summary statistics and class pixel counts
 }
 \details{
 This function will generate a set of summary metrics from image chips and
-associated masks stored in a directory. For each band, the minimum, 1st
-quartile, median, mean, 3rd quartile, and maximum values are returned. For
+associated masks stored in a directory. For each band, the minimum, median, mean,
+maximum, and standard deviation are returned (along with some other metrics). For
 mask data, the count of pixels in each class are returned. These summarizations
 can be useful for data normalization and determining class weightings in loss
 calculations.

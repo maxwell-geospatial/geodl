@@ -5,7 +5,9 @@
 \title{defineDiceLossFamily}
 \usage{
 defineDiceLossFamily(
-  nCls,
+  nCls = 1,
+  chnDim = TRUE,
+  zeroStart = TRUE,
   smooth = 1,
   mode = "multiclass",
   alpha = 0.5,
@@ -18,11 +20,15 @@ defineDiceLossFamily(
   useWghts = FALSE,
   wghts = c(1, 1),
   ceWght = 1,
-  chnDim = TRUE,
   mskLong = TRUE
 )
 }
 \arguments{
+\item{chnDim}{TRUE or FALSE. Default is TRUE. If TRUE, assumes the target tensor includes the
+channel dimension: \link{Batch, Channel, Height, Width}. If FALSE, assumes the target tensor does not include the
+channel dimension: \link{Channel, Height, Width}. The script is written such that it expects the channel dimension.
+So, if FALSE, the script will add the channel dimension as needed.}
+
 \item{smooth}{Smooth factor to aid in stability and to prevent divide-by-zero errors.
 Default is 1.}
 
@@ -74,11 +80,6 @@ does not impact micro-averaged Dice or Tversky loss. If TRUE, the wght argument 
 cross entropy in the loss as (Dice/Tversky) + ceWght*(binary cross entropy/
 cross entropy). Ignored if combo is FALSE. Default is 1, or equal weighting in
 the calculation between the two losses.}
-
-\item{chnDim}{TRUE or FALSE. Default is TRUE. If TRUE, assumes the target tensor includes the
-channel dimension: \link{Batch, Channel, Height, Width}. If FALSE, assumes the target tensor does not include the
-channel dimension: \link{Channel, Height, Width}. The script is written such that it expects the channel dimension.
-So, if FALSE, the script will add the channel dimension as needed.}
 
 \item{mskLong}{TRUE or FALSE. Default is TRUE. Data type of target or mask. If the provided target
 has a data type other than torch_long, this parameter should be set to FALSE. This will cause the

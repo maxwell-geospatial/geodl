@@ -10,6 +10,7 @@ defineSegDataSet(
   normalize = FALSE,
   rescaleFactor = 1,
   mskRescale = 1,
+  mskAdd = 0,
   bands = c(1, 2, 3),
   bMns = 1,
   bSDs = 1,
@@ -49,6 +50,10 @@ rescaling.}
 \item{mskRescale}{Can be used to rescale binary masks that are not scaled from
 0 to 1. For example, if masks are scaled from 0 and 255, you can divide by 255 to
 obtain a 0 to 1 scale. Default is 1 or no rescaling.}
+
+\item{mskAdd}{Value to add to mask class numeric codes. For example, if class indices
+start are zero, once can be added so that indices start at one. Default is zero (return
+original class codes).}
 
 \item{bands}{Vector of bands to include. The default is to only include the
 first 3 bands. If you want to use a different subset of bands, you must provide
@@ -137,7 +142,7 @@ This function instantiates a subclass of the torch dataset() function that loads
 data generated using the makeChips() or makeChipsMultiClass() functions. Can also
 define random augmentations to combat overfitting. Note that horizontal and vertical
 flips will effect the alignment of the image and associated mask chips. As a result,
-the same augmentation will be applied to both the image in the mask. Changes in
+the same augmentation will be applied to both the image and the mask. Changes in
 brightness, contrast, gamma, hue, and saturation will not be applied to the masks
 since alignment is not impacted by these transformations.
 }

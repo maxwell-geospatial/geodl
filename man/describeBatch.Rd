@@ -4,10 +4,14 @@
 \alias{describeBatch}
 \title{describeBatch}
 \usage{
-describeBatch(dataLoader)
+describeBatch(dataLoader, usedDS = FALSE)
 }
 \arguments{
 \item{dataLoader}{Instantiated instance of a DataLoader created using torch::dataloader().}
+
+\item{usedDS}{TRUE or FALSE. If deep supervision was implemented and masks are produced at varying scales using
+the defineSegDataSetDS() function, this should be set to TRUE. Only statistics for the mask at the
+original spatial resolution will be returned. The default is FALSE. Default is FALSE.}
 }
 \value{
 List object summarizing a batch of image chips and masks.

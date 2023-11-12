@@ -20,7 +20,8 @@ predictSpatial(
   normalize = FALSE,
   bMns,
   bSDs,
-  rescaleFactor = 1
+  rescaleFactor = 1,
+  usedDS = FALSE
 )
 }
 \arguments{
@@ -83,6 +84,9 @@ the function. This should match the setting used in defineSegDataSet().}
 \item{rescaleFactor}{A rescaling factor to rescale the bands to 0 to 1. For
 example, this could be set to 255 to rescale 8-bit data. Default is 1 or no
 rescaling. This should match the setting used in defineSegDataSet().}
+
+\item{useDS}{TRUE or FALSE. Should be set to TRUE if deep supervision was implemented. Only
+the prediction at the original spatial resolution is returned. Default is FALSE.}
 }
 \value{
 A spatRast object and a raster grid saved to disk of either predicted

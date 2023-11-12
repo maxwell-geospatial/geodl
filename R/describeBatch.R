@@ -11,11 +11,18 @@
 #' and maximum (max) class indices; and count of pixels in each class in the batch (mskCnts).
 #'
 #' @param dataLoader Instantiated instance of a DataLoader created using torch::dataloader().
+#' @param usedDS TRUE or FALSE. If deep supervision was implemented and masks are produced at varying scales using
+#' the defineSegDataSetDS() function, this should be set to TRUE. Only statistics for the mask at the
+#' original spatial resolution will be returned. The default is FALSE. Default is FALSE.
 #' @return List object summarizing a batch of image chips and masks.
 #' @export
-describeBatch <- function(dataLoader){
+describeBatch <- function(dataLoader, usedDS=FALSE){
 
   batch1 <- dataLoader$.iter()$.next()
+
+  if(usedDS == TRUE){
+    batch1 <- list(batch1$image, batch1$mask[1])
+  }
 
   imgDims <- batch1$image$shape %>% as.character()
   mskDims <- batch1$mask$shape %>% as.character()

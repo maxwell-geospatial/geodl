@@ -3,8 +3,8 @@
 #' Generate data frame of band summary statistics and class pixel counts
 #'
 #' This function will generate a set of summary metrics from image chips and
-#' associated masks stored in a directory. For each band, the minimum, 1st
-#' quartile, median, mean, 3rd quartile, and maximum values are returned. For
+#' associated masks stored in a directory. For each band, the minimum, median, mean,
+#' maximum, and standard deviation are returned (along with some other metrics). For
 #' mask data, the count of pixels in each class are returned. These summarizations
 #' can be useful for data normalization and determining class weightings in loss
 #' calculations.
@@ -61,7 +61,7 @@ describeChips <- function(folder,
           names(chipInDF) <- colNames
           chipDF <- dplyr::bind_rows(chipDF, chipInDF)
         }
-        imgStats <- summary(chipDF)
+        imgStats <- psych::describe(chipDF)
         for(msk in lstMsk){
           mskIn <- terra::rast(paste0(folder, "masks/", msk))
           mskInDF <- terra::freq(mskIn)
@@ -91,7 +91,7 @@ describeChips <- function(folder,
           chipDF <- dplyr::bind_rows(chipDF, chipInDF)
         }
 
-        imgStats <- summary(chipDF)
+        imgStats <- psych::describe(chipDF)
         for(msk in lstMskB){
           mskIn <- terra::rast(paste0(folder, "masks/background/", msk))
           mskInDF <- terra::freq(mskIn)
@@ -117,7 +117,7 @@ describeChips <- function(folder,
           names(chipInDF) <- colNames
           chipDF <- dplyr::bind_rows(chipDF, chipInDF)
         }
-        imgStats <- summary(chipDF)
+        imgStats <- psych::describe(chipDF)
         for(msk in lstMsk){
           mskIn <- terra::rast(paste0(folder, "masks/", msk))
           mskInDF <- terra::freq(mskIn)
@@ -148,7 +148,7 @@ describeChips <- function(folder,
           chipDF <- dplyr::bind_rows(chipDF, chipInDF)
         }
 
-        imgStats <- summary(chipDF)
+        imgStats <- psych::describe(chipDF)
         for(msk in lstMskB){
           mskIn <- terra::rast(paste0(folder, "masks/background/", msk))
           mskInDF <- terra::freq(mskIn)
@@ -160,7 +160,7 @@ describeChips <- function(folder,
           mskStats <- dplyr::bind_rows(mskStats, mskInDF)
         }
         mskStats2 <- mskStats |> dplyr::group_by(value) |> dplyr::summarize(cnt = sum(count))
-        }
+      }
     }
   }else{
     if(subSamplePix == FALSE){
@@ -178,7 +178,7 @@ describeChips <- function(folder,
           names(chipInDF) <- colNames
           chipDF <- dplyr::bind_rows(chipDF, chipInDF)
         }
-        imgStats <- summary(chipDF)
+        imgStats <- psych::describe(chipDF)
         for(msk in lstMsk){
           mskIn <- terra::rast(paste0(folder, "masks/", msk))
           mskInDF <- terra::freq(mskIn)
@@ -213,7 +213,7 @@ describeChips <- function(folder,
           chipDF <- dplyr::bind_rows(chipDF, chipInDF)
         }
 
-        imgStats <- summary(chipDF)
+        imgStats <- psych::describe(chipDF)
         for(msk in lstMskB){
           mskIn <- terra::rast(paste0(folder, "masks/background/", msk))
           mskInDF <- terra::freq(mskIn)
@@ -242,7 +242,7 @@ describeChips <- function(folder,
           names(chipInDF) <- colNames
           chipDF <- dplyr::bind_rows(chipDF, chipInDF)
         }
-        imgStats <- summary(chipDF)
+        imgStats <- psych::describe(chipDF)
         for(msk in lstMsk){
           mskIn <- terra::rast(paste0(folder, "masks/", msk))
           mskInDF <- terra::freq(mskIn)
@@ -279,7 +279,7 @@ describeChips <- function(folder,
           chipDF <- dplyr::bind_rows(chipDF, chipInDF)
         }
 
-        imgStats <- summary(chipDF)
+        imgStats <- psych::describe(chipDF)
         for(msk in lstMskB){
           mskIn <- terra::rast(paste0(folder, "masks/background/", msk))
           mskInDF <- terra::freq(mskIn)

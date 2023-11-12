@@ -17,7 +17,8 @@ viewBatchPreds(
   cNames,
   cColors,
   useCUDA = FALSE,
-  probs = FALSE
+  probs = FALSE,
+  usedDS = FALSE
 )
 }
 \arguments{
@@ -62,6 +63,9 @@ shown as opposed to the hard classification. If FALSE, hard classification will 
 shown. For a binary problem, the positive class logit is transformed using a sigmoid
 function. For multiclass, softmax is used to transform the class logits to probabilities
 that sum to 1.}
+
+\item{useDS}{TRUE or FALSE. Should be set to TRUE if deep supervision was implemented. Only
+the data and predictions at the original spatial resolution are visualized. Default is FALSE.}
 }
 \value{
 Image grids of example chips and masks loaded from a batch produced by the DataLoader.

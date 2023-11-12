@@ -62,7 +62,9 @@
 #' @export
 dice_loss_family <- function(pred,
                              target,
-                             nCls,
+                             nCls=1,
+                             chnDim=TRUE,
+                             zeroStart=TRUE,
                              smooth = 1,
                              mode = "multiclass",
                              alpha = 0.5,
@@ -75,7 +77,6 @@ dice_loss_family <- function(pred,
                              useWghts=FALSE,
                              wghts,
                              ceWght,
-                             chnDim=TRUE,
                              mskLong = TRUE){
   if(chnDim == FALSE){
     target <- target$unsqueeze(dim=2)
@@ -90,14 +91,19 @@ dice_loss_family <- function(pred,
       torch::nnf_log_softmax(dim = 2) |>
       torch::torch_exp()
 
-    target1 <- torch::tensor(target+1, dtype=torch::torch_long())
+    target1 <- torch::torch_tensor(target, dtype=torch::torch_long())
 
-    target_one_hot <- torch::nnf_one_hot(target1$flatten(), num_classes = nCls)
-    target_one_hot <- target_one_hot$permute(c(2,1))$reshape(c(1,2,pred$shape[3],pred$shape[4]))
+    if(zeroStart == TRUE){
+      target1 <- torch::torch_tensor(target+1, dtype=torch::torch_long())
+    }
+
+    target_one_hot <- torch::nnf_one_hot(target1, num_classes = nCls)
+    target_one_hot <- target_one_hot$squeeze()
+    target_one_hot <- target_one_hot$permute(c(1,4,2,3))
 
     dims <- c(3, 4)
     if(average == "micro"){
-      dims <- c(2, dims)
+      dims <- c(2,3,4)
     }
 
     tps <- torch::torch_sum(input_soft * target_one_hot, dims)
@@ -106,7 +112,7 @@ dice_loss_family <- function(pred,
 
     if(tversky == TRUE){
       numerator <- tps
-      denominator <- tps + (alpha * fps) + (beta * fns)
+      denominator <- tps + (beta * fps) + (alpha * fns)
     }else{
       numerator <- 2.0 * tps
       denominator <- (2.0 * tps) + fps + fns
@@ -148,7 +154,7 @@ dice_loss_family <- function(pred,
 
     if(tversky == TRUE){
       numerator <- tps
-      denominator <- tps + (alpha * fps) + (beta * fns)
+      denominator <- tps + (beta * fps) + (alpha * fns)
     }else{
       numerator <- 2.0 * tps
       denominator <- (2.0 * tps) + fps + fns
@@ -234,7 +240,9 @@ dice_loss_family <- function(pred,
 #' @return Loss metric for us in training process.
 #' @export
 defineDiceLossFamily <- torch::nn_module(
-  initialize = function(nCls,
+  initialize = function(nCls=1,
+                        chnDim=TRUE,
+                        zeroStart=TRUE,
                         smooth = 1,
                         mode = "multiclass",
                         alpha = 0.5,
@@ -247,9 +255,11 @@ defineDiceLossFamily <- torch::nn_module(
                         useWghts=FALSE,
                         wghts = c(1,1),
                         ceWght=1,
-                        chnDim=TRUE,
                         mskLong = TRUE){
+
     self$nCls <- nCls
+    self$chnDim <- chnDim
+    self$zeroStart <- zeroStart
     self$smooth <- smooth
     self$mode <- mode
     self$alpha <- alpha
@@ -262,7 +272,6 @@ defineDiceLossFamily <- torch::nn_module(
     self$useWghts <- useWghts
     self$wghts <- wghts
     self$ceWght <- ceWght
-    self$chnDim <- chnDim
     self$mskLong <- mskLong
 
   },
@@ -271,6 +280,8 @@ defineDiceLossFamily <- torch::nn_module(
     return(dice_loss_family(pred,
                             target,
                             self$nCls,
+                            self$chnDim,
+                            self$zeroStart,
                             self$smooth,
                             self$mode,
                             self$alpha,
@@ -283,7 +294,6 @@ defineDiceLossFamily <- torch::nn_module(
                             self$useWghts,
                             self$wghts,
                             self$ceWght,
-                            self$chnDim,
                             self$mskLong))
   }
 )

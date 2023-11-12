@@ -12,7 +12,8 @@ makeChips(
   stride_x = 256,
   stride_y = 256,
   outDir,
-  mode = "All"
+  mode = "All",
+  useExistingDir = FALSE
 )
 }
 \arguments{
@@ -40,6 +41,11 @@ the function. You must include the final forward slash in the file path
 
 \item{mode}{Either "All", "Positive", or "Divided". Please see the explanations
 provided above. The default is "All".}
+
+\item{useExistingDir}{TRUE or FALSE. Write chips into an existing directory
+with subfolders already defined as opposed to using a new directory. This can be used
+if you want to add chips to an existing set of chips. However, the "mode" should
+be the same as that used to generated the original chips. Default is FALSE.}
 }
 \value{
 Image and mask files written to disk in TIFF format. Spatial reference

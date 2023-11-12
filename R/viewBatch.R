@@ -23,6 +23,8 @@
 #' @param cNames Vector of class names. Must be the same length as number of classes.
 #' @param cColors Vector of color values to use to display the masks. Colors are applied based on the
 #' order of class indices. Length of vector must be the same as the number of classes.
+#' @param useDS TRUE or FALSE. Should be set to TRUE if deep supervision was implemented. Only
+#' the data at the original spatial resolution are visualized. Default is FALSE.
 #' @return Image grids of example chips and masks loaded from a batch produced by the DataLoader.
 #' @export
 viewBatch <- function(dataLoader,
@@ -33,9 +35,14 @@ viewBatch <- function(dataLoader,
                       g = 2,
                       b = 3,
                       cNames,
-                      cColors){
+                      cColors,
+                      usedDS = FALSE){
 
   batch1 <- dataLoader$.iter()$.next()
+
+  if(usedDS == TRUE){
+    batch1 <- list(batch1$image, batch1$mask[1])
+  }
 
   nSamps <- dataLoader$batch_size
   masks <- batch1$mask

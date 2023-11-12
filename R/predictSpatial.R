@@ -50,8 +50,11 @@
 #' @param rescaleFactor A rescaling factor to rescale the bands to 0 to 1. For
 #' example, this could be set to 255 to rescale 8-bit data. Default is 1 or no
 #' rescaling. This should match the setting used in defineSegDataSet().
+#' @param useDS TRUE or FALSE. Should be set to TRUE if deep supervision was implemented. Only
+#' the prediction at the original spatial resolution is returned. Default is FALSE.
 #' @return A spatRast object and a raster grid saved to disk of either predicted
 #' class indices or predicted class probabilities.
+
 #' @export
 predictSpatial <- function(imgIn,
                            model,
@@ -68,8 +71,8 @@ predictSpatial <- function(imgIn,
                            normalize=FALSE,
                            bMns,
                            bSDs,
-                           rescaleFactor=1
-                           ){
+                           rescaleFactor=1,
+                           usedDS=FALSE){
 
 
   image <- terra::rast(imgIn)
@@ -180,6 +183,10 @@ predictSpatial <- function(imgIn,
       ten1 <- torch::torch_unsqueeze(ten1, 1)
 
       preds <- predict(model, ten1)
+
+      if(usedDS == TRUE){
+        preds <- preds[1]
+      }
 
       if(mode == "multiclass"){
         preds <- torch::nnf_sofmax(preds, dim=2)

@@ -37,23 +37,15 @@ baseUNet <- torch::nn_module(
                         useLeaky = FALSE,
                         negative_slope = 0.01){
 
-    #self$nChn <- nChn
-    #self$nCls <- nCls
-    #self$encoderChn <- encoderChn
-    #self$decoderChn <- decoderChn
-    #self$botChn <- botChn
-    #self$useLeaky <- useLeaky
-    #self$negative_slope <- negative_slope
-
     self$up_conv <- function(inChannels, outChannels, useLeaky=FALSE, negative_slope=0.01) {
       return(
         torch::nn_sequential(
           torch::nn_conv_transpose2d(inChannels, outChannels, kernel_size=c(2,2), stride=2),
           torch::nn_batch_norm2d(outChannels),
-          if(useLeaky == TRUE){
+          if(useLeaky == FALSE){
             torch::nn_relu(inplace=TRUE)
           }else{
-            torch::nn_leaky_relu(inplace=TRUE)
+            torch::nn_leaky_relu(inplace=TRUE, negative_slope=negative_slope)
           }
         )
       )
@@ -64,23 +56,24 @@ baseUNet <- torch::nn_module(
         torch::nn_sequential(
           torch::nn_conv2d(inChannels, outChannels, kernel_size=c(3,3), stride=1, padding=1),
           torch::nn_batch_norm2d(outChannels),
-          if(useLeaky == TRUE){
+          if(useLeaky == FALSE){
             torch::nn_relu(inplace=TRUE)
           }else{
-            torch::nn_leaky_relu(inplace=TRUE)
+            torch::nn_leaky_relu(inplace=TRUE, negative_slope=negative_slope)
           },
           torch::nn_conv2d(outChannels, outChannels, kernel_size=c(3,3), stride=1, padding=1),
           torch::nn_batch_norm2d(outChannels),
-          if(useLeaky == TRUE){
+          if(useLeaky == FALSE){
             torch::nn_relu(inplace=TRUE)
           }else{
-            torch::nn_leaky_relu(inplace=TRUE)
+            torch::nn_leaky_relu(inplace=TRUE, negative_slope=negative_slope)
           }
         )
       )
     }
 
-    self$encoder1 <- self$double_conv(nChn, encoderChn[1])
+    self$encoder1 <- self$double_conv(nChn, encoderChn[1],
+                                      useLeaky=useLeaky,negative_slope=negative_slope)
 
     self$encoder2 <- torch::nn_sequential(
       torch::nn_max_pool2d(kernel_size=c(2,2), stride=2),
@@ -106,25 +99,41 @@ baseUNet <- torch::nn_module(
                          useLeaky=useLeaky, negative_slope=negative_slope)
     )
 
-    self$decoder1up <- self$up_conv(botChn, botChn, useLeaky=useLeaky)
-    self$decoder1 <- self$double_conv(encoderChn[4] + botChn, decoderChn[1],
+    self$decoder1up <- self$up_conv(botChn,
+                                    botChn,
+                                    useLeaky=useLeaky,
+                                    negative_slope=negative_slope)
+    self$decoder1 <- self$double_conv(encoderChn[4] + botChn,
+                                      decoderChn[1],
                                         useLeaky=useLeaky,
                                         negative_slope=negative_slope)
 
-    self$decoder2up <- self$up_conv(decoderChn[1], decoderChn[1],
-                                      useLeaky=useLeaky, negative_slope=negative_slope)
-    self$decoder2 <- self$double_conv(encoderChn[3] + decoderChn[1], decoderChn[2],
-                                        useLeaky=useLeaky, negative_slope=negative_slope)
-
-    self$decoder3up <- self$up_conv(decoderChn[2], decoderChn[2], useLeaky=useLeaky,
+    self$decoder2up <- self$up_conv(decoderChn[1],
+                                    decoderChn[1],
+                                      useLeaky=useLeaky,
+                                    negative_slope=negative_slope)
+    self$decoder2 <- self$double_conv(encoderChn[3] + decoderChn[1],
+                                      decoderChn[2],
+                                        useLeaky=useLeaky,
                                       negative_slope=negative_slope)
-    self$decoder3 <- self$double_conv(encoderChn[2] + decoderChn[2], decoderChn[3],
-                                        useLeaky=useLeaky, negative_slope=negative_slope)
 
-    self$decoder4up <- self$up_conv(decoderChn[3], decoderChn[3],
-                                      useLeaky=useLeaky, negative_slope=negative_slope)
-    self$decoder4 <- self$double_conv(encoderChn[1] + decoderChn[3], decoderChn[4],
-                                        useLeaky=useLeaky, negative_slope=negative_slope)
+    self$decoder3up <- self$up_conv(decoderChn[2],
+                                    decoderChn[2],
+                                    useLeaky=useLeaky,
+                                      negative_slope=negative_slope)
+    self$decoder3 <- self$double_conv(encoderChn[2] + decoderChn[2],
+                                      decoderChn[3],
+                                        useLeaky=useLeaky,
+                                      negative_slope=negative_slope)
+
+    self$decoder4up <- self$up_conv(decoderChn[3],
+                                    decoderChn[3],
+                                      useLeaky=useLeaky,
+                                    negative_slope=negative_slope)
+    self$decoder4 <- self$double_conv(encoderChn[1] + decoderChn[3],
+                                      decoderChn[4],
+                                        useLeaky=useLeaky,
+                                      negative_slope=negative_slope)
 
     self$classifier <- torch::nn_conv2d(decoderChn[4], nCls, kernel_size=c(1,1))
   },

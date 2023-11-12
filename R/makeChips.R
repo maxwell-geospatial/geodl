@@ -46,6 +46,10 @@
 #' (e.g., "C:/data/chips/").
 #' @param mode Either "All", "Positive", or "Divided". Please see the explanations
 #' provided above. The default is "All".
+#' @param useExistingDir TRUE or FALSE. Write chips into an existing directory
+#' with subfolders already defined as opposed to using a new directory. This can be used
+#' if you want to add chips to an existing set of chips. However, the "mode" should
+#' be the same as that used to generated the original chips. Default is FALSE.
 #' @return Image and mask files written to disk in TIFF format. Spatial reference
 #' information is not maintained. No R object is returned.
 #' @export
@@ -56,15 +60,18 @@ makeChips <- function(image,
                       stride_x = 256,
                       stride_y = 256,
                       outDir,
-                      mode = "All"){
+                      mode = "All",
+                      useExistingDir = FALSE){
   if(mode == "All"){
     img1 <- terra::rast(image)
     mask1 <- terra::rast(mask)
 
     fName = basename(image)
 
-    dir.create(paste0(outDir, "/images"))
-    dir.create(paste0(outDir, "/masks"))
+    if(useExistingDir == FALSE){
+      dir.create(paste0(outDir, "/images"))
+      dir.create(paste0(outDir, "/masks"))
+    }
 
     across_cnt = terra::ncol(img1)
     down_cnt = terra::nrow(img1)
@@ -133,8 +140,10 @@ makeChips <- function(image,
 
     fName = basename(image)
 
-    dir.create(paste0(outDir, "/images"))
-    dir.create(paste0(outDir, "/masks"))
+    if(useExistingDir == FALSE){
+      dir.create(paste0(outDir, "/images"))
+      dir.create(paste0(outDir, "/masks"))
+    }
 
     across_cnt = terra::ncol(img1)
     down_cnt = terra::nrow(img1)
@@ -205,13 +214,17 @@ makeChips <- function(image,
 
     fName = basename(image)
 
-    dir.create(paste0(outDir, "/images"))
-    dir.create(paste0(outDir, "/masks"))
+    if(useExistingDir == FALSE){
 
-    dir.create(paste0(outDir, "/images/positive"))
-    dir.create(paste0(outDir, "/images/background"))
-    dir.create(paste0(outDir, "/masks/positive"))
-    dir.create(paste0(outDir, "/masks/background"))
+      dir.create(paste0(outDir, "/images"))
+      dir.create(paste0(outDir, "/masks"))
+
+      dir.create(paste0(outDir, "/images/positive"))
+      dir.create(paste0(outDir, "/images/background"))
+      dir.create(paste0(outDir, "/masks/positive"))
+      dir.create(paste0(outDir, "/masks/background"))
+
+    }
 
     across_cnt <- terra::ncol(img1)
     down_cnt <- terra::nrow(img1)

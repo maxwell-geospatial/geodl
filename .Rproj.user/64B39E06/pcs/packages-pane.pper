@@ -1,7 +1,0 @@
-{
-    "installOptions": {
-        "installFromRepository": true,
-        "libraryPath": "C:/Users/vidcg/AppData/Local/R/win-library/4.2",
-        "installDependencies": true
-    }
-}
