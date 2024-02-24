@@ -3,8 +3,9 @@
 #' Apply a trained semantic segmentation model to predict back to geospatial raster data
 #'
 #' This function generates a pixel-by-pixel prediction using input data and a
-#' trained semantic segmentation model. Can return either hard classifications or
-#' class probabilities. Result is written to disk and provided as a spatRaster object.
+#' trained semantic segmentation model. Can return either hard classifications, logits, or
+#' rescaled logits with a sigmoid or softmax activation applied. Result is written
+#' to disk and provided as a spatRaster object.
 #'
 #' @param imgIn Input image to classify. Can be a file path (full or relative to
 #' current working directory) or a spatRaster object. Should have the same number
@@ -14,15 +15,20 @@
 #' @param predOut Name of output prediction with full path or path relative to
 #' the working directory. Must also include the file extension (e.g., ".tif).
 #' @param mode Either "multiclass" or "binary". Default is "multiclass". If model
-#' returns a single logit for the positive case, sould be "binary". If two or more
-#' class logits are returned, this shoud be "multiclass".
-#' @param probs TRUE OR FALSE. Whether to generate a "hard" classification or
-#' return probabilities for each class. If TRUE and for a binary classification,
-#' the positive class probability is returned as a single-band raster grid. If
-#' TRUE and for a multiclass classification, all class probabilities are returned as
-#' a multiband raster. Probabilities will sum to 1, ignoring rounding error. If
-#' FALSE, the predicted class index value is returned. This is the class with
-#' the largest predicted logit or softmax/sigmoid probability. Default is FALSE.
+#' returns a single logit for the positive case, should be "binary". If two or more
+#' class logits are returned, this should be "multiclass".
+#' @param predType "class", "logit", or "prob". Default is "class". Whether to generate a "hard"
+#' classification ("class"), logit(s) ("logit"), or rescaled logit(s) ("prob") with a
+#' sigmoid or softmax activation applied for the positive class or each predicted class.
+#' If "class", a single-band raster of class indices is returned. If "logit" or "prob",
+#' the positive class probability is returned as a single-band raster grid for a binary
+#' classification. If "logit" or "prob" for a multiclass problem, a multiband raster grid
+#' is returned with a channel for each class.
+#' @param biThresh When mode = "binary" and predType = "class", threshold to use to indicate
+#' the presence class. This threshold is applied to the rescaled logits after a sigmoid
+#' activation is applied. Default is 0.5. If rescaled logit is greater than or equal
+#' to this threshold, pixel will be mapped to the positive case. Otherwise, it will be
+#' mapped to the negative or background class.
 #' @param useCUDA TRUE or FALSE. Whether or not to perform the inference on a GPU.
 #' If TRUE, the GPU is used. If FALSE, the CPU is used. Must have access to a CUDA-
 #' enabled graphics card. Default is FALSE. Note that using a GPU significantly
@@ -43,24 +49,27 @@
 #' and bSDs. This should match the setting used in defineSegDataSet().
 #' @param bMns Vector of band means. Length should be the same as the number of bands.
 #' Normalization is applied before any rescaling within the function. This should
-#' match the setting used in defineSegDataSet().
+#' match the setting used in defineSegDataSet() when model was trained.
 #' @param bSDs Vector of band standard deviations. Length should be the same
 #' as the number of bands. Normalization is applied before any rescaling within
 #' the function. This should match the setting used in defineSegDataSet().
 #' @param rescaleFactor A rescaling factor to rescale the bands to 0 to 1. For
 #' example, this could be set to 255 to rescale 8-bit data. Default is 1 or no
 #' rescaling. This should match the setting used in defineSegDataSet().
-#' @param useDS TRUE or FALSE. Should be set to TRUE if deep supervision was implemented. Only
-#' the prediction at the original spatial resolution is returned. Default is FALSE.
-#' @return A spatRast object and a raster grid saved to disk of either predicted
-#' class indices or predicted class probabilities.
+#' @param usedDS TRUE or FALSE. If model is configured to use deep supervision,
+#' this must be set to TRUE. Default is FALSE, or it is assumed that deep supervision
+#' is not used.
+#' @return A spatRast object and a raster grid saved to disk of predicted class
+#' indices (predType = "class"), logits (predType = "logit"), or rescaled logits
+#' (predType = "prob").
 
 #' @export
 predictSpatial <- function(imgIn,
                            model,
                            predOut,
                            mode="multiclass",
-                           probs=FALSE,
+                           predType="class",
+                           biThresh = 0.5,
                            useCUDA=FALSE,
                            nCls,
                            chpSize,
@@ -72,14 +81,14 @@ predictSpatial <- function(imgIn,
                            bMns,
                            bSDs,
                            rescaleFactor=1,
-                           usedDS=FALSE){
+                           useDS=FALSE){
 
 
   image <- terra::rast(imgIn)
 
   p_arr <- image
 
-  if(probs == FALSE){
+  if(predType == "class"){
     p_arr <- terra::subset(image, 1)
   }
 
@@ -184,22 +193,27 @@ predictSpatial <- function(imgIn,
 
       preds <- predict(model, ten1)
 
-      if(usedDS == TRUE){
+      if(useDS==TRUE){
         preds <- preds[1]
       }
 
       if(mode == "multiclass"){
-        preds <- torch::nnf_sofmax(preds, dim=2)
+        if(predType == "prob"){
+          preds <- torch::nnf_sofmax(preds, dim=2)
+        }else if(predType == "logit"){
+          preds <- preds
+        }else{
+          preds = torch::torch_argmax(preds, dim=2)
+        }
       }else{
-        preds <- torch::nnf_sigmoid(preds)
-      }
-
-      if(probs == FALSE & mode == "multiclass"){
-        preds = torch::torch_argmax(preds, dim=2)
-      }
-
-      if(probs == FALSE & mode == "binary"){
-        preds <- torch::torch_round(preds)
+        if(predType == "prob"){
+          preds <- torch::nnf_sigmoid(preds)
+        }else if(predType == "logit"){
+          preds <- preds
+        }else{
+          preds <- torch::nnf_sigmoid(preds)
+          preds <- preds >= biThresh
+        }
       }
 
       preds <- torch::torch_squeeze(preds, dim=1)

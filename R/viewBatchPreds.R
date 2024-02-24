@@ -33,8 +33,8 @@
 #' shown. For a binary problem, the positive class logit is transformed using a sigmoid
 #' function. For multiclass, softmax is used to transform the class logits to probabilities
 #' that sum to 1.
-#' @param useDS TRUE or FALSE. Should be set to TRUE if deep supervision was implemented. Only
-#' the data and predictions at the original spatial resolution are visualized. Default is FALSE.
+#' @param usedDS TRUE or FALSE. Must be set to TRUE when using defineSegDataSetDS(). Default is FALSE,
+#' or it is assumed that deep supervision is not used.
 #' @return Image grids of example chips and masks loaded from a batch produced by the DataLoader.
 #' @export
 viewBatchPreds <- function(dataLoader,
@@ -55,16 +55,12 @@ viewBatchPreds <- function(dataLoader,
   batch1 <- dataLoader$.iter()$.next()
 
   nSamps <- dataLoader$batch_size
-  masks <- batch1$mask
-
-  if(useCUDA == TRUE){
-    imgs <- batch1$image$to(device="cuda")
-  }
-
-  preds <- predict(model, batch1$image)
-
   if(usedDS == TRUE){
-    preds <- preds[1]
+    masks <- batch1$mask[1]
+    images <- batch1$image
+  }else{
+    masks <- batch1$mask
+    images <- batch1$image
   }
 
   if(chnDim == FALSE){
@@ -73,6 +69,27 @@ viewBatchPreds <- function(dataLoader,
 
   if(mskLong == TRUE){
     masks <- torch::torch_tensor(masks, dtype=torch_float32())
+  }
+
+  theImgGrid <- torchvision::vision_make_grid(images, num_rows=nRows)$permute(c(2,3,1))
+  theMskGrid <- torchvision::vision_make_grid(masks, num_rows=nRows)$permute(c(2,3,1))
+
+  img1 <- terra::rast(as.array(theImgGrid)*255)
+  msk1 <- terra::rast(as.array(theMskGrid))
+
+  terra::plotRGB(img1, r=r, g=g, b=b, scale=1, axes=FALSE, stretch="lin")
+  terra::plot(msk1, type="classes", axes=FALSE, levels=cNames, col=cColors)
+
+  batch1 <- dataLoader$.iter()$.next()
+
+  if(useCUDA == TRUE){
+    imgs <- batch1$image$to(device="cuda")
+  }
+
+  preds <- predict(model, batch1$image)
+
+  if(useDS==TRUE){
+    preds <- preds[1]
   }
 
   theImgGrid <- torchvision::vision_make_grid(batch1$image, num_rows=nRows)$permute(c(2,3,1))$to(device="cpu")

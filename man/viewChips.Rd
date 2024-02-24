@@ -74,6 +74,6 @@ Plot a grid of image and/or mask chips
 }
 \details{
 This function generates a plot of image chips and/or image masks. It serves
-as a means to visualize chips generated with the makeChips() or makeChipsDF()
-function. It can used as a check to make sure chips were generated as expected.
+as a means to visualize chips generated with the makeChips() or makeChipsMultiClass()
+function. It can be used as a check to make sure chips were generated as expected.
 }

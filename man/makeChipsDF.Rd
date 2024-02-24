@@ -40,7 +40,8 @@ ignored and no CSV file is generated. The default is FALSE.}
 }
 \value{
 Data frame with three columns (chp, chpPth, and mskPth) and, optionally,
-a CSV file written to disk.
+a CSV file written to disk. If mode = "Divided", a division column is added to
+differentiate "positive" and "background" samples.
 }
 \description{
 Create data frame and CSV file listing image chips and associated masks

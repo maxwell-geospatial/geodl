@@ -28,8 +28,9 @@
 #' @param saveCSV TRUE or FALSE. Whether or not to save the CSV file or just
 #' return the data frame. If this is set to FALSE then the outCSV parameter is
 #' ignored and no CSV file is generated. The default is FALSE.
-#' @return Data frame with three columns (chp, chpPth, and mskPth) and, optionally,
-#' a CSV file written to disk.
+#' @return Data frame with three columns (chpN, chpPth, and mskPth) and, optionally,
+#' a CSV file written to disk. If mode = "Divided", a division column is added to
+#' differentiate "positive" and "background" samples.
 #' @export
 makeChipsDF <- function(folder,
                         outCSV,

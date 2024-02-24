@@ -3,8 +3,8 @@
 #' Plot a grid of image and/or mask chips
 #'
 #' This function generates a plot of image chips and/or image masks. It serves
-#' as a means to visualize chips generated with the makeChips() or makeChipsDF()
-#' function. It can used as a check to make sure chips were generated as expected.
+#' as a means to visualize chips generated with the makeChips() or makeChipsMultiClass()
+#' function. It can be used as a check to make sure chips were generated as expected.
 #'
 #' @param chpDF Data frame of chip paths created with the makeChipsDF() function.
 #' @param folder Full path or path relative to the working directory to the

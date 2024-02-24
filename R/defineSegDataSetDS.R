@@ -1,6 +1,6 @@
 #' defineSegDataSet
 #'
-#' Instantiate a subclass of torch dataset() function for semantic segmentation
+#' Instantiate a subclass of torch dataset() function for semantic segmentation with rescaled masks for deep supervision
 #'
 #' This function instantiates a subclass of the torch dataset() function that loads
 #' data generated using the makeChips() or makeChipsMultiClass() functions. Can also
@@ -8,8 +8,9 @@
 #' flips will effect the alignment of the image and associated mask chips. As a result,
 #' the same augmentation will be applied to both the image and the mask. Changes in
 #' brightness, contrast, gamma, hue, and saturation will not be applied to the masks
-#' since alignment is not impacted by these transformations. If you plan to implement
-#' deep supervision, you must use the defineSegDataSetDS() method instead.
+#' since alignment is not impacted by these transformations. This version of the function
+#' generates masks at the original, original/2, original/4, and original/8 spatial scales
+#' to support deep supervision.
 #'
 #' @param chpDF Data frame of image chip paths created using makeChipsDF().
 #' @param folder Full path or path relative to the working directory to the
@@ -116,117 +117,121 @@ defineSegDataSet <- torch::dataset(
                         gammaFactor = c(.8, 1.2, 1),
                         hueFactor = c(-.2, .2),
                         saturationFactor = c(.8, 1.2)){
-     self$chpDF <- chpDF
-     self$folder <- folder
-     self$normalize <- normalize
-     self$rescaleFactor <- rescaleFactor
-     self$mskRescale <- mskRescale
-     self$mskAdd <- mskAdd
-     self$bands <- bands
-     self$bMns <- bMns
-     self$bSDs <- bSDs
-     self$mskLong <- mskLong
-     self$chnDim <- chnDim
-     self$doAugs <- doAugs
-     self$maxAugs <- maxAugs
-     self$probVFlip <- probVFlip
-     self$probHFlip <- probHFlip
-     self$probBrightness <- probBrightness
-     self$probContrast <- probContrast
-     self$probGamma <- probGamma
-     self$probHue <- probHue
-     self$probSaturation <- probSaturation
-     self$brightFactor <- brightFactor
-     self$contrastFactor <- contrastFactor
-     self$gammaFactor <- gammaFactor
-     self$hueFactor <- hueFactor
-     self$saturationFactor <- saturationFactor
-   },
+    self$chpDF <- chpDF
+    self$folder <- folder
+    self$normalize <- normalize
+    self$rescaleFactor <- rescaleFactor
+    self$mskRescale <- mskRescale
+    self$mskAdd <- mskAdd
+    self$bands <- bands
+    self$bMns <- bMns
+    self$bSDs <- bSDs
+    self$mskLong <- mskLong
+    self$chnDim <- chnDim
+    self$doAugs <- doAugs
+    self$maxAugs <- maxAugs
+    self$probVFlip <- probVFlip
+    self$probHFlip <- probHFlip
+    self$probBrightness <- probBrightness
+    self$probContrast <- probContrast
+    self$probGamma <- probGamma
+    self$probHue <- probHue
+    self$probSaturation <- probSaturation
+    self$brightFactor <- brightFactor
+    self$contrastFactor <- contrastFactor
+    self$gammaFactor <- gammaFactor
+    self$hueFactor <- hueFactor
+    self$saturationFactor <- saturationFactor
+  },
 
   .getitem = function(i){
-     image_name <- unlist(self$chpDF[i, "chpPth"], use.names=FALSE)
-     mask_name <- unlist(self$chpDF[i, "mskPth"], use.names=FALSE)
-     image <- terra::rast(paste0(self$folder, image_name))
-     mask <- terra::rast(paste0(self$folder, mask_name))
+    image_name <- unlist(self$chpDF[i, "chpPth"], use.names=FALSE)
+    mask_name <- unlist(self$chpDF[i, "mskPth"], use.names=FALSE)
+    image <- terra::rast(paste0(self$folder, image_name))
+    mask <- terra::rast(paste0(self$folder, mask_name))
 
-     image <- terra::subset(image, self$bands)
+    image <- terra::subset(image, self$bands)
 
-     image <- terra::as.array(image)
-     mask <- terra::as.array(mask)/self$mskRescale
-     mask <- mask+self$mskAdd
+    image <- terra::as.array(image)
+    mask <- terra::as.array(mask)/self$mskRescale
+    mask <- mask+self$mskAdd
 
-     image <- torch::torch_tensor(image, dtype=torch_float32())
-     image <- image$permute(c(3,1,2))
-     if(self$mskLong == TRUE){
-       mask <- torch::torch_tensor(mask, dtype=torch_long())
-     }else{
-       mask <- torch::torch_tensor(mask, dtype=torch_float32())
-     }
-     mask <- mask$permute(c(3,1,2))
+    image <- torch::torch_tensor(image, dtype=torch_float32())
+    image <- image$permute(c(3,1,2))
+    if(self$mskLong == TRUE){
+      mask <- torch::torch_tensor(mask, dtype=torch_long())
+    }else{
+      mask <- torch::torch_tensor(mask, dtype=torch_float32())
+    }
+    mask <- mask$permute(c(3,1,2))
 
-     if(self$normalize == TRUE){
-       image <- torchvision::transform_normalize(image, self$bMns, self$bSDs, inplace = FALSE)
-     }
+    if(self$normalize == TRUE){
+      image <- torchvision::transform_normalize(image, self$bMns, self$bSDs, inplace = FALSE)
+    }
 
-     image <- torch::torch_div(image,self$rescaleFactor)
+    image <- torch::torch_div(image,self$rescaleFactor)
 
-     if(self$chnDim == FALSE){
-       mask <- mask$squeeze()
-     }
-
-     if(self$doAugs == TRUE){
-
-       probVFlipX <- runif(1) < self$probVFlip
-       probHFlipX <- runif(1) < self$probHFlip
-       probBrightnessX <- runif(1) < self$probBrightness
-       probContrastX <- runif(1) < self$probContrast
-       probGammaX <- runif(1) < self$probGamma
-       probHueX <- runif(1) < self$probHue
-       probSaturationX <- runif(1) < self$probSaturation
-
-       augIndex <- sample(c(1:7), self$maxAugs, replace=FALSE)
+    if(self$chnDim == FALSE){
+      mask <- mask$squeeze()
+    }
 
 
-       if(probVFlipX == TRUE & 1 %in% augIndex){
-         image <- torchvision::transform_vflip(image)
-         mask <- torchvision::transform_vflip(mask)
-       }
+    if(self$doAugs == TRUE){
 
-       if(probHFlipX == TRUE & 2 %in% augIndex){
-         image <- torchvision::transform_hflip(image)
-         mask <- torchvision::transform_hflip(mask)
-       }
+      probVFlipX <- runif(1) < self$probVFlip
+      probHFlipX <- runif(1) < self$probHFlip
+      probBrightnessX <- runif(1) < self$probBrightness
+      probContrastX <- runif(1) < self$probContrast
+      probGammaX <- runif(1) < self$probGamma
+      probHueX <- runif(1) < self$probHue
+      probSaturationX <- runif(1) < self$probSaturation
 
-       if(probBrightnessX == TRUE & 3 %in% augIndex){
-         brightFactor = runif(1, self$brightFactor[1], self$brightFactor[2])
-         image <- torchvision::transform_adjust_brightness(image, brightness_factor=brightFactor)
-       }
+      augIndex <- sample(c(1:7), self$maxAugs, replace=FALSE)
 
-       if(probContrastX == TRUE & 4 %in% augIndex){
-         contrastFactor = runif(1, self$contrastFactor[1], self$contrastFactor[2])
-         image <- torchvision::transform_adjust_contrast(image, contrast_factor=contrastFactor)
-       }
 
-       if(probGammaX == TRUE & 5 %in% augIndex){
-         gainIn = self$gammaFactor[3]
-         gammaFactor = runif(1, self$gammaFactor[1], self$gammaFactor[2])
-         image <- torchvision::transform_adjust_gamma(image, gamma=gammaFactor, gain=gainIn)
-       }
+      if(probVFlipX == TRUE & 1 %in% augIndex){
+        image <- torchvision::transform_vflip(image)
+        mask <- torchvision::transform_vflip(mask)
+      }
 
-       if(probHueX == TRUE & 6 %in% augIndex){
-         hueFactor = runif(1, self$hueFactor[1], self$hueFactor[2])
-         image <-torchvision::transform_adjust_hue(image, hue_factor=hueFactor)
-       }
+      if(probHFlipX == TRUE & 2 %in% augIndex){
+        image <- torchvision::transform_hflip(image)
+        mask <- torchvision::transform_hflip(mask)
+      }
 
-       if(probSaturationX == TRUE & 7 %in% augIndex){
-         saturationFactor = runif(1, self$saturationFactor[1], self$saturationFactor[2])
-         image <- torchvision::transform_adjust_saturation(image, saturation_factor=saturationFactor)
-       }
-     }
-     return(list(image = image, mask = mask))
-   },
+      if(probBrightnessX == TRUE & 3 %in% augIndex){
+        brightFactor = runif(1, self$brightFactor[1], self$brightFactor[2])
+        image <- torchvision::transform_adjust_brightness(image, brightness_factor=brightFactor)
+      }
 
-   .length = function(){
-     return(nrow(self$chpDF))
-   }
+      if(probContrastX == TRUE & 4 %in% augIndex){
+        contrastFactor = runif(1, self$contrastFactor[1], self$contrastFactor[2])
+        image <- torchvision::transform_adjust_contrast(image, contrast_factor=contrastFactor)
+      }
+
+      if(probGammaX == TRUE & 5 %in% augIndex){
+        gainIn = self$gammaFactor[3]
+        gammaFactor = runif(1, self$gammaFactor[1], self$gammaFactor[2])
+        image <- torchvision::transform_adjust_gamma(image, gamma=gammaFactor, gain=gainIn)
+      }
+
+      if(probHueX == TRUE & 6 %in% augIndex){
+        hueFactor = runif(1, self$hueFactor[1], self$hueFactor[2])
+        image <-torchvision::transform_adjust_hue(image, hue_factor=hueFactor)
+      }
+
+      if(probSaturationX == TRUE & 7 %in% augIndex){
+        saturationFactor = runif(1, self$saturationFactor[1], self$saturationFactor[2])
+        image <- torchvision::transform_adjust_saturation(image, saturation_factor=saturationFactor)
+      }
+    }
+    mask2 <- terra::aggregate(mask, fact=2, fun="modal")
+    mask4 <- terra::aggregate(mask, fact=4, fun="modal")
+    mask8 <- terra::aggregate(mask, fact=8, fun="modal")
+    return(list(image = image, list(mask1 = mask, mask2=mask2, mask4=mask4, mask8=mask8)))
+  },
+
+  .length = function(){
+    return(nrow(self$chpDF))
+  }
 )

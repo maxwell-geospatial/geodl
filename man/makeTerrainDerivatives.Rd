@@ -30,7 +30,7 @@ The second band is the square root of slope calculated in degrees. The third ban
 is a TPI calculated using an annulus moving window with an inner radius of 2
 and outer radius of 5 meters. The TPI values are clamped to a range of -10 to 10
 then linearly rescaled from 0 and 1. The square root of slope is clamped to a
-range of 0 to 10 then  linearly rescaled from 0 to 1. Values are provided in
+range of 0 to 10 then linearly rescaled from 0 to 1. Values are provided in
 floating point.
 
 The stack is described in the following publication:

@@ -23,8 +23,8 @@
 #' @param cNames Vector of class names. Must be the same length as number of classes.
 #' @param cColors Vector of color values to use to display the masks. Colors are applied based on the
 #' order of class indices. Length of vector must be the same as the number of classes.
-#' @param useDS TRUE or FALSE. Should be set to TRUE if deep supervision was implemented. Only
-#' the data at the original spatial resolution are visualized. Default is FALSE.
+#' @param usedDS TRUE or FALSE. Must be set to TRUE when using defineSegDataSetDS(). Default is FALSE,
+#' or it is assumed that deep supervision is not used.
 #' @return Image grids of example chips and masks loaded from a batch produced by the DataLoader.
 #' @export
 viewBatch <- function(dataLoader,
@@ -40,12 +40,14 @@ viewBatch <- function(dataLoader,
 
   batch1 <- dataLoader$.iter()$.next()
 
-  if(usedDS == TRUE){
-    batch1 <- list(batch1$image, batch1$mask[1])
-  }
-
   nSamps <- dataLoader$batch_size
-  masks <- batch1$mask
+  if(usedDS == TRUE){
+    masks <- batch1$mask[1]
+    images <- batch1$image
+  }else{
+    masks <- batch1$mask
+    images <- batch1$image
+  }
 
   if(chnDim == FALSE){
     masks <- mask$unsqueeze(2)
@@ -55,7 +57,7 @@ viewBatch <- function(dataLoader,
     masks <- torch::torch_tensor(masks, dtype=torch_float32())
   }
 
-  theImgGrid <- torchvision::vision_make_grid(batch1$image, num_rows=nRows)$permute(c(2,3,1))
+  theImgGrid <- torchvision::vision_make_grid(images, num_rows=nRows)$permute(c(2,3,1))
   theMskGrid <- torchvision::vision_make_grid(masks, num_rows=nRows)$permute(c(2,3,1))
 
   img1 <- terra::rast(as.array(theImgGrid)*255)

@@ -5,13 +5,13 @@
 \title{luz_metric_precision}
 \usage{
 luz_metric_precision(
-  nCls = 1,
-  smooth = 1,
+  nCls = 3,
+  smooth = 1e-08,
   mode = "multiclass",
   average = "macro",
   zeroStart = TRUE,
   chnDim = TRUE,
-  usedDS = FALSE
+  useDS = FALSE
 )
 }
 \arguments{
@@ -36,10 +36,6 @@ TRUE. This is required  to implement one-hot encoding since R starts indexing at
 \link{Batch, Channel, Height, Width} as opposed to \link{Batch, Channel, Height, Width}. If the channel dimension
 is included, this should be set to TRUE. If it is not, this should be set to FALSE. Default is TRUE.}
 
-\item{usedDS}{TRUE or FALSE. If deep supervision was implemented and masks are produced at varying scales using
-the defineSegDataSetDS() function, this should be set to TRUE. Only the original resolution is used
-to calculate assessment metrics. Default is FALSE.}
-
 \item{preds}{Tensor of class predicted probabilities with shape
 \link{Batch, Class Logits, Height, Width} for a multiclass classification. For a
 binary classification, you can provide logits for the positive class as
@@ -54,6 +50,10 @@ binary classification, the class index must be 1 for the positive class and
 
 \item{nCLs}{number of classes being differentiated. Should be 1 for a binary classification
 where only the postive case logit is returned. Default is 1.}
+
+\item{usedDS}{TRUE or FALSE. If deep supervision was implemented and masks are produced at varying scales using
+the defineSegDataSetDS() function, this should be set to TRUE. Only the original resolution is used
+to calculate assessment metrics. Default is FALSE.}
 }
 \value{
 Calculated metric return as a base-R vector as opposed to tensor.

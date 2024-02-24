@@ -11,7 +11,7 @@ luz_metric_f1score(
   average = "micro",
   zeroStart = TRUE,
   chnDim = TRUE,
-  usedDS = FALSE
+  useDS = FALSE
 )
 }
 \arguments{
@@ -34,9 +34,8 @@ TRUE. This is required  to implement one-hot encoding since R starts indexing at
 
 \item{chnDim}{TRUE or FALSE. Whether the channel dimension is included in the target tensor:
 \link{Batch, Channel, Height, Width} as opposed to \link{Batch, Channel, Height, Width}. If the channel dimension
-is included, this should be set to TRUE. If it is not, this should be set to FALSE. Default is TRUE.}
-
-\item{usedDS}{TRUE or FALSE. If deep supervision was implemented and masks are produced at varying scales using
+is included, this should be set to TRUE. If it is not, this should be set to FALSE. Default is TRUE.
+#' @param usedDS TRUE or FALSE. If deep supervision was implemented and masks are produced at varying scales using
 the defineSegDataSetDS() function, this should be set to TRUE. Only the original resolution is used
 to calculate assessment metrics. Default is FALSE.}
 

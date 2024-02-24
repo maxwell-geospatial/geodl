@@ -9,7 +9,8 @@ predictSpatial(
   model,
   predOut,
   mode = "multiclass",
-  probs = FALSE,
+  predType = "class",
+  biThresh = 0.5,
   useCUDA = FALSE,
   nCls,
   chpSize,
@@ -21,7 +22,7 @@ predictSpatial(
   bMns,
   bSDs,
   rescaleFactor = 1,
-  usedDS = FALSE
+  useDS = FALSE
 )
 }
 \arguments{
@@ -36,16 +37,22 @@ order.}
 the working directory. Must also include the file extension (e.g., ".tif).}
 
 \item{mode}{Either "multiclass" or "binary". Default is "multiclass". If model
-returns a single logit for the positive case, sould be "binary". If two or more
-class logits are returned, this shoud be "multiclass".}
+returns a single logit for the positive case, should be "binary". If two or more
+class logits are returned, this should be "multiclass".}
 
-\item{probs}{TRUE OR FALSE. Whether to generate a "hard" classification or
-return probabilities for each class. If TRUE and for a binary classification,
-the positive class probability is returned as a single-band raster grid. If
-TRUE and for a multiclass classification, all class probabilities are returned as
-a multiband raster. Probabilities will sum to 1, ignoring rounding error. If
-FALSE, the predicted class index value is returned. This is the class with
-the largest predicted logit or softmax/sigmoid probability. Default is FALSE.}
+\item{predType}{"class", "logit", or "prob". Default is "class". Whether to generate a "hard"
+classification ("class"), logit(s) ("logit"), or rescaled logit(s) ("prob") with a
+sigmoid or softmax activation applied for the positive class or each predicted class.
+If "class", a single-band raster of class indices is returned. If "logit" or "prob",
+the positive class probability is returned as a single-band raster grid for a binary
+classification. If "logit" or "prob" for a multiclass problem, a multiband raster grid
+is returned with a channel for each class.}
+
+\item{biThresh}{When mode = "binary" and predType = "class", threshold to use to indicate
+the presence class. This threshold is applied to the rescaled logits after a sigmoid
+activation is applied. Default is 0.5. If rescaled logit is greater than or equal
+to this threshold, pixel will be mapped to the positive case. Otherwise, it will be
+mapped to the negative or background class.}
 
 \item{useCUDA}{TRUE or FALSE. Whether or not to perform the inference on a GPU.
 If TRUE, the GPU is used. If FALSE, the CPU is used. Must have access to a CUDA-
@@ -75,7 +82,7 @@ and bSDs. This should match the setting used in defineSegDataSet().}
 
 \item{bMns}{Vector of band means. Length should be the same as the number of bands.
 Normalization is applied before any rescaling within the function. This should
-match the setting used in defineSegDataSet().}
+match the setting used in defineSegDataSet() when model was trained.}
 
 \item{bSDs}{Vector of band standard deviations. Length should be the same
 as the number of bands. Normalization is applied before any rescaling within
@@ -85,18 +92,21 @@ the function. This should match the setting used in defineSegDataSet().}
 example, this could be set to 255 to rescale 8-bit data. Default is 1 or no
 rescaling. This should match the setting used in defineSegDataSet().}
 
-\item{useDS}{TRUE or FALSE. Should be set to TRUE if deep supervision was implemented. Only
-the prediction at the original spatial resolution is returned. Default is FALSE.}
+\item{usedDS}{TRUE or FALSE. If deep supervision was implemented and masks are produced at varying scales using
+the defineSegDataSetDS() function, this should be set to TRUE. Only the original resolution is used
+to calculate assessment metrics. Default is FALSE.}
 }
 \value{
-A spatRast object and a raster grid saved to disk of either predicted
-class indices or predicted class probabilities.
+A spatRast object and a raster grid saved to disk of predicted class
+indices (predType = "class"),logits (predType = "logit"), or rescaled logits
+(predType = "prob").
 }
 \description{
 Apply a trained semantic segmentation model to predict back to geospatial raster data
 }
 \details{
 This function generates a pixel-by-pixel prediction using input data and a
-trained semantic segmentation model. Can return either hard classifications or
-class probabilities. Result is written to disk and provided as a spatRaster object.
+trained semantic segmentation model. Can return either hard classifications, logits, or
+rescaled logits with a sigmoid or softmax activation applied. Result is written
+to disk and provided as a spatRaster object.
 }
