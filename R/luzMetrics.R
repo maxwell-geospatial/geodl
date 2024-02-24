@@ -48,7 +48,7 @@ luz_metric_recall <- luz::luz_metric(
                         average="macro",
                         zeroStart=TRUE,
                         chnDim=TRUE,
-                        useDS=FALSE){
+                        usedDS=FALSE){
 
     self$nCls <- nCls
     self$smooth <- smooth
@@ -56,7 +56,7 @@ luz_metric_recall <- luz::luz_metric(
     self$average <- average
     self$zeroStart <- zeroStart
     self$chnDim <- chnDim
-    self$useDS <- useDS
+    self$usedDS <- usedDS
 
     if(self$mode == "multiclass" & self$average == "macro"){
       self$tps <- rep(0.0, nCls)
@@ -70,7 +70,7 @@ luz_metric_recall <- luz::luz_metric(
   },
 
   update = function(preds, target){
-    if(usedDS == TRUE){
+    if(self$usedDS == TRUE){
       pred <- pred[1]
       target <- target[1]
     }
@@ -184,7 +184,7 @@ luz_metric_precision <- luz::luz_metric(
                         average="macro",
                         zeroStart=TRUE,
                         chnDim=TRUE,
-                        useDS=FALSE){
+                        usedDS=FALSE){
 
     self$nCls <- nCls
     self$smooth <- smooth
@@ -192,7 +192,7 @@ luz_metric_precision <- luz::luz_metric(
     self$average <- average
     self$zeroStart <- zeroStart
     self$chnDim <- chnDim
-    self$useDS <- useDS
+    self$usedDS <- usedDS
 
     #initialize R vectors to store true positive, false negative, and false positive counts
     #For a binary and micro-averaged multiclass metric, will obtain a vector with a length of one.
@@ -210,7 +210,7 @@ luz_metric_precision <- luz::luz_metric(
 
   update = function(preds, target){
 
-    if(usedDS == TRUE){
+    if(self$usedDS == TRUE){
       pred <- pred[1]
       target <- target[1]
     }
@@ -345,7 +345,7 @@ luz_metric_f1score <- luz::luz_metric(
                         average="micro",
                         zeroStart=TRUE,
                         chnDim=TRUE,
-                        useDS=FALSE){
+                        usedDS=FALSE){
 
     self$nCls <- nCls
     self$smooth <- smooth
@@ -353,7 +353,7 @@ luz_metric_f1score <- luz::luz_metric(
     self$average <- average
     self$zeroStart <- zeroStart
     self$chnDim <- chnDim
-    self$useDS <- useDS
+    self$usedDS <- usedDS
 
     if(self$mode == "multiclass" & self$average == "macro"){
       self$tps <- rep(0.0, nCls)
@@ -367,7 +367,7 @@ luz_metric_f1score <- luz::luz_metric(
   },
 
   update = function(preds, target){
-    if(usedDS == TRUE){
+    if(self$usedDS == TRUE){
       pred <- pred[1]
       target <- target[1]
     }

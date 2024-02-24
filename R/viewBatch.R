@@ -54,7 +54,7 @@ viewBatch <- function(dataLoader,
   }
 
   if(mskLong == TRUE){
-    masks <- torch::torch_tensor(masks, dtype=torch_float32())
+    masks <- torch::torch_tensor(masks, dtype=torch::torch_float32())
   }
 
   theImgGrid <- torchvision::vision_make_grid(images, num_rows=nRows)$permute(c(2,3,1))

@@ -6,9 +6,21 @@
 <!-- badges: start -->
 <!-- badges: end -->
 
-This package provides utilities and functions for semantic segmentation of geospatial data using convolutional neural network-based deep learning. Functions allow for creating masks, image chips, data frames listing image chips in a directory, and datasets for use within DataLoaders. A basic UNet architecture is provided, and more UNet-like architectures will be made available in later releases. Dice and Dice-like loss metrics are also available along with F1-score, recall, and precision assessment metrics implemented with luz. Trained models can be used to predict to spatial data without the need to generate chips from larger spatial extents. The package relies on torch for implementing deep learning, which does not require the installation of a Python environment. Raster geospatial data are handled with terra. Models can be trained using a CUDA-enabled GPU; however, multi-GPU training is not supported by torch. Both binary and multiclass models can be trained. 
+This package provides tools for semantic segmentation of geospatial data using convolutional neural network-based deep learning. Utility functions allow for creating masks, image chips, data frames listing image chips in a directory, and DataSets for use within DataLoaders. Additional functions are provided to serve as checks during the data preparation and training process. 
 
-This package is still experimental and is a work-in-progress. We hope to add additional semantic segmentation architectures in future releases. 
+A UNet architecture can be defined with 4 blocks in the encoder, a bottleneck block, and 4 blocks in the decoder. The UNet can accept a variable number of input channels, and the user can define the number of feature maps produced in each encoder and decoder block and the bottleneck. Users can also choose to (1) replace all ReLU activation functions with leaky ReLU or swish, (2) implement attention gates along the skip connections, (3) implement squeeze and excitation modules within the encoder blocks, (4) add residual connections within all blocks, (5) replace the bottleneck with a modified atrous spatial pyramid pooling (ASPP) module, and/or (6) implement deep supervision using predictions generated at each stage in the decoder. 
+
+A unified focal loss framework is implemented after:
+
+Yeung, M., Sala, E., Schönlieb, C.B. and Rundo, L., 2022. Unified focal loss: Generalising dice and cross entropy-based losses to handle class imbalanced medical image segmentation. *Computerized Medical Imaging and Graphics*, 95, p.102026.
+
+We have also implemented assessment metrics using the luz package including F1-score, recall, and precision. 
+
+Trained models can be used to predict to spatial data without the need to generate chips from larger spatial extents. Functions are available for performing accuracy assessment. 
+
+The package relies on torch for implementing deep learning, which does not require the installation of a Python environment. Raster geospatial data are handled with terra. Models can be trained using a CUDA-enabled GPU; however, multi-GPU training is not supported by torch in R. Both binary and multiclass models can be trained. 
+
+This package is still experimental and is a work-in-progress. 
 
 ## Installation
 
@@ -19,100 +31,165 @@ You can install the development version of geodl from
 # install.packages("devtools")
 devtools::install_github("maxwell-geospatial/geodl")
 ```
-
-## Some considerations
-
-1. Input data should generally be scaled from 0 to 1. defineSegDataSet() provides options for rescaling and normalizing data. 
-2. A binary classification problem can be framed to predict a single, positive case logit or to predict both a positive and negative class logit. When both positive and negative case logits are predicted, you should use multiclass assessment metrics and losses. 
-3. The model will return logits as opposed to probabilities for both binary classification and multiclass classification. The loss and assessment metrics provided as part of the package expect logits as opposed to probabilities. If you use binary cross entropy as a loss metric for a binary classification problem in which only the positive-case logit is returned, you should use torch::nn_bce_with_logits_loss() as opposed to torch:: nn_bce_loss(). For multiclass classification, you should use torch::nn_cross_entropy_loss(). 
-4. If you want to use the dice-like loss metrics provided as part of this package (Dice, Focal Dice, Tversky, and Focal Tversky), please consult the documentation for the correct configuration. 
-5. If using the overall accuracy metrics provided by luz for a binary classification where only the positive-case logit is returned, use luz::luz_metric_binary_accuracy_with_logits(). For multiclass classification, use luz::luz_metric_accuracy(). 
-6. When using our Dice-based losses and/or the F1-score, recall, and precision assessment metrics in macro-averaging mode, you can assign class weights to control the relative impact of each class in the calculations. Weights can be set to 0 to ignore a specific class, such as when labels are sparse or incomplete. 
-7. If a Dice-like loss is used as a means to combat class imbalance in a multiclass classification, we recommend a macro-averaging as opposed to micro-averaging method.
-8. Our chip generation routines will only return chips in which all cells contain values. Any chips with NULL or NoData cells are not produced. So, when extents are not rectangular, the full spatial extent will not be chipped. 
-9. Chips can be generated such that presence and background-only chips are written to separate folders. 
-10. It is a good idea to check your data using the provided utility functions: decribeBatch(), describeChips(), viewBatch(), and viewChips().
-11. The predictSpatial() function allows for returning both predicted class indices and predicted class probabilities following the application of a sigmoid or softmax activation. 
-12. Care should be taken when generating target masks. Our loss and assessment metrics assume that targets are created using a torch_long datatype as opposed to a torch_float32 datatype. However, some other loss metrics may expected a torch_float32 data type. The mskLong parameter, provided for several functions, can be used to deal with this issue. 
-
 ## Data Preparation Examples
 
 ```r
 library(geodl)
-#Create terrain derivatives from DTM
+setwd("Your Working Directory")
+
+# Make terrain derivatives ------------------------------------------------
+
 inDTM <- terra::rast("data/elev/dtm.tif")
-terrOut <- makeTerrainDerivatives(dtm=inDTM, res=2, filename="data/elev/stack.tif")
+terrOut <- makeTerrainDerivatives(dtm=inDTM,
+                                  res=2,
+                                  filename="data/elev/tstack.tif")
 terra::plotRGB(terrOut*255)
 
-#Make mask
-makeMasks(image = "data/toChip/image/KY_Saxton_709705_1970_24000_geo.tif",
-          features = "data/toChip/msks/KY_Saxton_709705_1970_24000_geo.shp",
+# Make masks from vector data ---------------------------------------------
+
+makeMasks(image = "data/toChipBinary/image/KY_Saxton_709705_1970_24000_geo.tif",
+          features = "data/toChipBinary/msks/KY_Saxton_709705_1970_24000_geo.shp",
           crop = TRUE,
-          extent = "data/toChip/extent/KY_Saxton_709705_1970_24000_geo.shp",
+          extent = "data/toChipBinary/extent/KY_Saxton_709705_1970_24000_geo.shp",
           field = "classvalue",
           background = 0,
-          outImage = "data/toChip/output/topoOut.tif",
-          outMask = "data/toChip/output/mskOut.tif",
+          outImage = "data/toChipBinary/output/topoOut.tif",
+          outMask = "data/toChipBinary/output/mskOut.tif",
           mode = "Both")
 
-terra::plotRGB(terra::rast("data/toChip/output/topoOut.tif"))
-terra::plot(terra::rast("data/toChip/output/mskOut.tif"))
+terra::plotRGB(terra::rast("data/toChipBinary/output/topoOut.tif"))
+terra::plot(terra::rast("data/toChipBinary/output/mskOut.tif"))
 
-#Make chips
-makeChips(image = "data/toChip/output/topoOut.tif",
-          mask = "data/toChip/output/mskOut.tif",
+# Make, describe, and view chips (binary) ---------------------------------
+
+makeChips(image = "data/toChipBinary/output/topoOut.tif",
+          mask = "data/toChipBinary/output/mskOut.tif",
           n_channels = 3,
           size = 256,
           stride_x = 256,
           stride_y = 256,
-          outDir = "data/toChip/chips/",
-          mode = "Positive")
+          outDir = "data/toChipBinary/chips/",
+          mode = "Positive",
+          useExistingDir=FALSE)
 
-makeChipsMultiClass(image = "data/toChip/output/topoOut.tif",
-                    mask = "data/toChip/output/mskOut.tif",
+chpDF <- makeChipsDF(folder = "data/toChipBinary/chips/",
+                     outCSV = "data/toChipBinary/chips/chipsDF.csv",
+                     extension = ".tif",
+                     mode="Positive",
+                     shuffle=FALSE,
+                     saveCSV=TRUE)
+head(chpDF)
+
+chpDescript <- describeChips(folder= "data/toChipBinary/chips/",
+                             extension = ".tif",
+                             mode = "Positive",
+                             subSample = TRUE,
+                             numChips = 100,
+                             numChipsBack = 100,
+                             subSamplePix = TRUE,
+                             sampsPerChip = 400)
+
+print(chpDescript)
+
+viewChips(chpDF=chpDF,
+          folder= "data/toChipBinary/chips/",
+          nSamps = 16,
+          mode = "both",
+          justPositive = FALSE,
+          cCnt = 4,
+          rCnt = 4,
+          r = 1,
+          g = 2,
+          b = 3,
+          rescale = FALSE,
+          rescaleVal = 1,
+          cNames=c("Background", "Mine"),
+          cColor=c("#D4C2AD","#BA8E7A"),
+          useSeed = FALSE,
+          seed = 42)
+
+
+# Make, describe, and view chips (multiclass) -----------------------------
+
+makeChipsMultiClass(image = "data/toChipMultiClass/multiclassLCAI.tif",
+                    mask = "data/toChipMultiClass/multiclass_reference.tif",
                     n_channels = 3,
-                    hasZero = TRUE,
                     size = 256,
-                    stride_x = 256,
-                    stride_y = 256,
-                    outDir = "data/toChip/chips/")
+                    stride_x = 512,
+                    stride_y = 512,
+                    outDir = "data/toChipMultiClass/chips/",
+                    useExistingDir=FALSE)
 
-#Describe chips
-lstOut <- describeChips(folder = "data/toChip/chips/",
-              extension = ".tif",
-              mode="Positive",
-              subSample = TRUE,
-              numChips=200,
-              subSamplePix=TRUE,
-              sampsPerChip=100)
+chpDF <- makeChipsDF(folder = "data/toChipMultiClass/chips/",
+                     outCSV = "data/toChipMultiClass/chips/chipsDF.csv",
+                     extension = ".tif",
+                     mode="All",
+                     shuffle=FALSE,
+                     saveCSV=TRUE)
+head(chpDF)
 
-print(lstOut$ImageStats)
-print(lstOut$mskStats)
+chpDescript <- describeChips(folder= "data/toChipMultiClass/chips/",
+                             extension = ".tif",
+                             mode = "All",
+                             subSample = TRUE,
+                             numChips = 50,
+                             numChipsBack = 100,
+                             subSamplePix = TRUE,
+                             sampsPerChip = 400)
 
-#Describe chips
-chpDF <- makeChipsDF(folder = "data/toChip/chips/",
-                    outCSV = "data/toChip/chips/chipsDF.csv",
-                    extension = ".tif",
-                    mode="Positive",
-                    shuffle=FALSE,
-                    saveCSV=TRUE)
+print(chpDescript)
 
-#Assess using point locations
+viewChips(chpDF=chpDF,
+          folder= "data/toChipMultiClass/chips/",
+          nSamps = 16,
+          mode = "both",
+          justPositive = FALSE,
+          cCnt = 4,
+          rCnt = 4,
+          r = 1,
+          g = 2,
+          b = 3,
+          rescale = FALSE,
+          rescaleVal = 1,
+          cNames=c("Background",
+                   "Building",
+                   "Woodland",
+                   "Water",
+                   "Road"),
+          cColor=c("gray",
+                   "darksalmon",
+                   "forestgreen",
+                   "lightblue",
+                   "black"),
+          useSeed = FALSE,
+          seed = 42)
+
+```
+
+## Accuracy Assessment Examples
+
+```r
+library(geodl)
+setwd("Your Working Directory")
+
+# Accuracy assessment examples --------------------------------------------
 
 #Example 1: table that already has the reference and predicted labels for a multiclass classification
 mcIn <- readr::read_csv("data/tables/multiClassExample.csv")
 myMetrics <- assessPnts(reference=mcIn$ref,
-                       predicted=mcIn$pred,
-                       multiclass=TRUE)
+                        predicted=mcIn$pred,
+                        multiclass=TRUE)
+print(myMetrics)
 
 #Example 2: table that already has the reference and predicted labels for a binary classification
 bIn <- readr::read_csv("data/tables/binaryExample.csv")
 myMetrics <- assessPnts(reference=bIn$ref,
-                       predicted=bIn$pred,
-                       multiclass=FALSE,
-                       positive_case = "Mine")
+                        predicted=bIn$pred,
+                        multiclass=FALSE,
+                        positive_case = "Mine")
+print(myMetrics)
 
-#Example 3: Read in point layer and intersect with rater output
+#Example 3: Read in point layer and intersect with raster output
 pntsIn <- terra::vect("data/topoResult/topoPnts.shp")
 refG <- terra::rast("data/topoResult/topoRef.tif")
 predG <- terra::rast("data/topoResult/topoPred.tif")
@@ -122,23 +199,426 @@ predIsect <- terra::extract(predG, pntsIn2)
 resultsIn <- data.frame(ref=as.factor(refIsect$topoRef),
                         pred=as.factor(predIsect$topoPred))
 myMetrics <- assessPnts(reference=bIn$ref,
-                       predicted=bIn$pred,
-                       multiclass=FALSE,
-                       mappings=c("Mine", "Not Mine"),
-                       positive_case = "Mine")
+                        predicted=bIn$pred,
+                        multiclass=FALSE,
+                        mappings=c("Mine", "Not Mine"),
+                        positive_case = "Mine")
+print(myMetrics)
 
 #Assess using raster grids
 refG <- terra::rast("data/topoResult/topoRef.tif")
 predG <- terra::rast("data/topoResult/topoPred.tif")
-refG2 <- crop(project(refG, predG), predG)
+refG2 <- terra::crop(terra::project(refG, predG), predG)
 myMetrics <- assessRaster(reference = refG2,
                           predicted = predG,
                           multiclass = FALSE,
                           mappings = c("Not Mine", "Mine"),
                           positive_case = "Mine")
+print(myMetrics)
+
 ```
 
-## Semantic Segmentation Workflow
+## DataSets and DataLoaders Examples
+
+``` r
+library(geodl)
+setwd("Your Working Directory")
+
+# Binary Example ----------------------------------------------------------
+
+#Get chips dataframe
+chpDF <- makeChipsDF(folder = "data/toChipBinary/chips/",
+                     outCSV = "data/toChipBinary/chips/chipsDF.csv",
+                     extension = ".tif",
+                     mode="Positive",
+                     shuffle=FALSE,
+                     saveCSV=FALSE)
+head(chpDF)
+
+#Get chips description
+chpDescript <- describeChips(folder= "data/toChipBinary/chips/",
+                             extension = ".tif",
+                             mode = "Positive",
+                             subSample = TRUE,
+                             numChips = 100,
+                             numChipsBack = 100,
+                             subSamplePix = TRUE,
+                             sampsPerChip = 400)
+
+#Create dataset with transforms
+myDS <- defineSegDataSet(chpDF,
+                         folder="data/toChipBinary/chips/",
+                         normalize = TRUE,
+                         rescaleFactor = 255,
+                         mskRescale=1,
+                         mskAdd=0,
+                         bands = c(1,2,3),
+                         bMns=c(214,206,163),
+                         bSDs=c(33,50,51),
+                         mskLong = TRUE,
+                         chnDim = TRUE,
+                         doAugs = TRUE,
+                         maxAugs = 2,
+                         probVFlip = .3,
+                         probHFlip = .3,
+                         probBrightness = .1,
+                         probContrast = 0,
+                         probGamma = 0,
+                         probHue = 0,
+                         probSaturation = ,1,
+                         brightFactor = c(.8,1.2),
+                         contrastFactor = c(.8,1.2),
+                         gammaFactor = c(.8, 1.2, 1),
+                         hueFactor = c(-.2, .2),
+                         saturationFactor = c(.8, 1.2))
+
+#Instantiate dataloader
+myDL <- torch::dataloader(myDS,
+                          batch_size=4,
+                          shuffle=TRUE,
+                          drop_last = TRUE)
+
+#View a batch as a check
+viewBatch(dataLoader=myDL,
+          chnDim = TRUE,
+          mskLong = TRUE,
+          nRows = 2,
+          r = 1,
+          g = 2,
+          b = 3,
+          cNames=c("Background", "Mine"),
+          cColor=c("#D4C2AD","#BA8E7A"),
+          usedDS=FALSE)
+
+#Get batch stats as a check
+myBatchStats <- describeBatch(myDL, usedDS=FALSE)
+print(myBatchStats)
+
+# Multiclass Example ------------------------------------------------------
+
+#Get chips dataframe
+chpDF <- makeChipsDF(folder = "data/toChipMultiClass/chips/",
+                     outCSV = "data/toChipMultiClass/chips/chipsDF.csv",
+                     extension = ".tif",
+                     mode="All",
+                     shuffle=FALSE,
+                     saveCSV=FALSE)
+head(chpDF)
+
+#Get chips description
+chpDescript <- describeChips(folder= "data/toChipMultiClass/chips/",
+                             extension = ".tif",
+                             mode = "All",
+                             subSample = TRUE,
+                             numChips = 50,
+                             numChipsBack = 100,
+                             subSamplePix = TRUE,
+                             sampsPerChip = 400)
+print(chpDescript)
+
+#Create dataset with transforms
+myDS <- defineSegDataSet(chpDF,
+                         folder="data/toChipMultiClass/chips/",
+                         normalize = TRUE,
+                         rescaleFactor = 255,
+                         mskRescale=1,
+                         mskAdd=0,
+                         bands = c(1,2,3),
+                         bMns=c(90,92,90),
+                         bSDs=c(50,41,31),
+                         mskLong = TRUE,
+                         chnDim = TRUE,
+                         doAugs = TRUE,
+                         maxAugs = 2,
+                         probVFlip = .3,
+                         probHFlip = .3,
+                         probBrightness = .1,
+                         probContrast = 0,
+                         probGamma = 0,
+                         probHue = 0,
+                         probSaturation = ,1,
+                         brightFactor = c(.8,1.2),
+                         contrastFactor = c(.8,1.2),
+                         gammaFactor = c(.8, 1.2, 1),
+                         hueFactor = c(-.2, .2),
+                         saturationFactor = c(.8, 1.2))
+
+#Instantiate dataloader
+myDL <- torch::dataloader(myDS,
+                          batch_size=6,
+                          shuffle=TRUE,
+                          drop_last = TRUE)
+
+#View a batch as a check
+viewBatch(dataLoader=myDL,
+          chnDim = TRUE,
+          mskLong = TRUE,
+          nRows = 2,
+          r = 1,
+          g = 2,
+          b = 3,
+          cNames=c("Background",
+                   "Building",
+                   "Woodland",
+                   "Water",
+                   "Road"),
+          cColor=c("gray",
+                   "darksalmon",
+                   "forestgreen",
+                   "lightblue",
+                   "black"),
+          usedDS=FALSE)
+
+#Get batch stats as a check
+myBatchStats <- describeBatch(myDL, usedDS=FALSE)
+print(myBatchStats)
+```
+
+## luz Metrics Examples
+
+
+``` r
+library(geodl)
+setwd("Your Working Directory")
+
+# Binary examples ---------------------------------------------------------
+
+refC <- terra::rast("data/metricCheck/binary_reference.tif")
+predL <- terra::rast("data/metricCheck/binary_logits.tif")
+predC <- terra::rast("data/metricCheck/binary_prediction.tif")
+names(refC) <- "reference"
+names(predC) <- "prediction"
+cm <- terra::crosstab(c(predC, refC))
+yardstick::f_meas(cm, estimator="binary", event_level="second")
+yardstick::accuracy(cm, estimator="binary", event_level="second")
+yardstick::recall(cm, estimator="binary", event_level="second")
+yardstick::precision(cm, estimator="binary", event_level="second")
+
+predL <- terra::as.array(predL)
+refC <- terra::as.array(refC)
+
+target <- torch::torch_tensor(refC, dtype=torch::torch_long())
+pred <- torch::torch_tensor(predL, dtype=torch::torch_float32())
+target <- target$permute(c(3,1,2))
+pred <- pred$permute(c(3,1,2))
+
+target <- target$unsqueeze(1)
+pred <- pred$unsqueeze(1)
+
+target <- torch::torch_cat(list(target, target), dim=1)
+pred <- torch::torch_cat(list(pred, pred), dim=1)
+
+metric<-luz_metric_f1score(nCls=1,
+                           smooth=1e-8,
+                           mode = "binary",
+                           average="macro",
+                           zeroStart=TRUE,
+                           chnDim=TRUE,
+                           usedDS=FALSE)
+metric<-metric$new()
+metric$update(pred,target)
+metric$compute()
+
+metric<-luz_metric_recall(nCls=1,
+                          smooth=1e-8,
+                          mode = "binary",
+                          average="macro",
+                          zeroStart=TRUE,
+                          chnDim=TRUE,
+                          usedDS=FALSE)
+metric<-metric$new()
+metric$update(pred,target)
+metric$compute()
+
+metric<-luz_metric_precision(nCls=1,
+                             smooth=1e-8,
+                             mode = "binary",
+                             average="macro",
+                             zeroStart=TRUE,
+                             chnDim=TRUE,
+                             usedDS=FALSE)
+metric<-metric$new()
+metric$update(pred,target)
+metric$compute()
+
+# Multiclass examples -----------------------------------------------------
+
+refC <- terra::rast("data/metricCheck/multiclass_reference.tif")
+predL <- terra::rast("data/metricCheck/multiclass_logits.tif")
+predC <- terra::rast("data/metricCheck/multiclass_prediction.tif")
+names(refC) <- "reference"
+names(predC) <- "prediction"
+cm <- terra::crosstab(c(predC, refC))
+yardstick::f_meas(cm, estimator="macro")
+yardstick::accuracy(cm, estimator="micro")
+yardstick::recall(cm, estimator="macro")
+yardstick::precision(cm, estimator="macro")
+
+predL <- terra::as.array(predL)
+refC <- terra::as.array(refC)
+
+target <- torch::torch_tensor(refC, dtype=torch::torch_long())
+pred <- torch::torch_tensor(predL, dtype=torch::torch_float32())
+target <- target$permute(c(3,1,2))
+pred <- pred$permute(c(3,1,2))
+
+target <- target$unsqueeze(1)
+pred <- pred$unsqueeze(1)
+
+target <- torch::torch_cat(list(target, target), dim=1)
+pred <- torch::torch_cat(list(pred, pred), dim=1)
+
+#F1-Score
+metric<-luz_metric_f1score(nCls=5,
+                           smooth=1e-8,
+                           mode = "multiclass",
+                           average="macro",
+                           zeroStart=TRUE,
+                           chnDim=TRUE,
+                           usedDS=FALSE)
+metric<-metric$new()
+metric$update(pred,target)
+metric$compute()
+
+#Recall
+metric<-luz_metric_recall(nCls=5,
+                          smooth=1e-8,
+                          mode = "multiclass",
+                          average="macro",
+                          zeroStart=TRUE,
+                          chnDim=TRUE,
+                          usedDS=FALSE)
+metric<-metric$new()
+metric$update(pred,target)
+metric$compute()
+
+#Precision
+metric<-luz_metric_precision(nCls=5,
+                             smooth=1e-8,
+                             mode = "multiclass",
+                             average="macro",
+                             zeroStart=TRUE,
+                             chnDim=TRUE,
+                             usedDS=FALSE)
+metric<-metric$new()
+metric$update(pred,target)
+metric$compute()
+```
+## Unified Focal Loss Examples (still working on binary classification version)
+
+``` r
+library(geodl)
+setwd("C:/Users/vidcg/Dropbox/code_dev/geodl/")
+
+# Multiclass examples -----------------------------------------------------
+
+refC <- terra::rast("C:/Users/vidcg/Dropbox/code_dev/geodl/data/metricCheck/multiclass_reference.tif")
+predL <- terra::rast("C:/Users/vidcg/Dropbox/code_dev/geodl/data/metricCheck/multiclass_logits.tif")
+
+predL <- terra::as.array(predL)
+refC <- terra::as.array(refC)
+
+#Dice loss example
+target <- torch::torch_tensor(refC, dtype=torch::torch_long())
+pred <- torch::torch_tensor(predL, dtype=torch::torch_float32())
+target <- target$permute(c(3,1,2))
+pred <- pred$permute(c(3,1,2))
+
+target <- target$unsqueeze(1)
+pred <- pred$unsqueeze(1)
+
+target <- torch::torch_cat(list(target, target), dim=1)
+pred <- torch::torch_cat(list(pred, pred), dim=1)
+
+define_unified_focal_loss(pred=pred,
+                          target=target,
+                          nCls=5,
+                          lambda=0, #Only use region-based loss
+                          gamma= 1,
+                          delta= 0.5, #Equal weights for FP and FN
+                          smooth = 1e-8,
+                          chnDim=TRUE,
+                          zeroStart=TRUE,
+                          clsWghtsDist=1,
+                          clsWghtsReg=1,
+                          useLogCosH =FALSE)
+
+
+#Tversky loss example
+target <- torch::torch_tensor(refC, dtype=torch::torch_long())
+pred <- torch::torch_tensor(predL, dtype=torch::torch_float32())
+target <- target$permute(c(3,1,2))
+pred <- pred$permute(c(3,1,2))
+
+target <- target$unsqueeze(1)
+pred <- pred$unsqueeze(1)
+target <- torch::torch_cat(list(target, target), dim=1)
+pred <- torch::torch_cat(list(pred, pred), dim=1)
+
+define_unified_focal_loss(pred=pred,
+                          target=target,
+                          nCls=5,
+                          lambda=0, #Only use region-based loss
+                          gamma= 1,
+                          delta= 0.6, #FP and FN not equally weighted
+                          smooth = 1e-8,
+                          chnDim=TRUE,
+                          zeroStart=TRUE,
+                          clsWghtsDist=1,
+                          clsWghtsReg=1,
+                          useLogCosH =FALSE)
+
+#CE loss example
+target <- torch::torch_tensor(refC, dtype=torch::torch_long())
+pred <- torch::torch_tensor(predL, dtype=torch::torch_float32())
+target <- target$permute(c(3,1,2))
+pred <- pred$permute(c(3,1,2))
+
+target <- target$unsqueeze(1)
+pred <- pred$unsqueeze(1)
+target <- torch::torch_cat(list(target, target), dim=1)
+pred <- torch::torch_cat(list(pred, pred), dim=1)
+
+define_unified_focal_loss(pred=pred,
+                          target=target,
+                          nCls=5,
+                          lambda=1, #Only used distribution-based loss
+                          gamma= 1,
+                          delta= 0.5,
+                          smooth = 1e-8,
+                          chnDim=TRUE,
+                          zeroStart=TRUE,
+                          clsWghtsDist=1,
+                          clsWghtsReg=1,
+                          useLogCosH =FALSE)
+
+#Combo loss example
+target <- torch::torch_tensor(refC, dtype=torch::torch_long())
+pred <- torch::torch_tensor(predL, dtype=torch::torch_float32())
+target <- target$permute(c(3,1,2))
+pred <- pred$permute(c(3,1,2))
+
+target <- target$unsqueeze(1)
+pred <- pred$unsqueeze(1)
+target <- torch::torch_cat(list(target, target), dim=1)
+pred <- torch::torch_cat(list(pred, pred), dim=1)
+
+define_unified_focal_loss(pred=pred,
+                          target=target,
+                          nCls=5,
+                          lambda=.5, #Use both distribution and region-based losses
+                          gamma= 1,
+                          delta= 0.6,
+                          smooth = 1e-8,
+                          chnDim=TRUE,
+                          zeroStart=TRUE,
+                          clsWghtsDist=1,
+                          clsWghtsReg=1,
+                          useLogCosH =FALSE)
+```
+
+
+## Semantic Segmentation Workflow (Needs updated to reflect most recent version)
 
 ``` r
 #=================Preparation===================================================

@@ -42,7 +42,7 @@ makeChipsDF <- function(folder,
     lstChps <- list.files(paste0(folder, "images/"), pattern=paste0("\\", extension, "$"))
     lstChpsPth <- paste0("images/", lstChps)
     lstMsksPth <- paste0("masks/", lstChps)
-    chpDF <- data.frame(chp=lstChps, chpPth=lstChpsPth, mskPth=lstMsksPth)
+    chpDF <- data.frame(chpN=lstChps, chpPth=lstChpsPth, mskPth=lstMsksPth)
   }else{
     lstChpsB <- list.files(paste0(folder, "images/background/"), pattern=paste0("\\", extension, "$"))
     lstChpsP <- list.files(paste0(folder, "images/positive/"), pattern=paste0("\\", extension, "$"))

@@ -18,7 +18,7 @@ knitr::opts_chunk$set(
 <!-- badges: start -->
 <!-- badges: end -->
 
-The goal of geodl is to ...
+The goal of geodl is to (to complete)
 
 ## Installation
 

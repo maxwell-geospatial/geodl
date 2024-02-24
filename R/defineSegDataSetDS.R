@@ -1,4 +1,4 @@
-#' defineSegDataSet
+#' defineSegDataSetDS
 #'
 #' Instantiate a subclass of torch dataset() function for semantic segmentation with rescaled masks for deep supervision
 #'
@@ -88,7 +88,7 @@
 #' enhance the saturation by a factor of 2.
 #' @return A dataset object that can be provided to torch::dataloader().
 #' @export
-defineSegDataSet <- torch::dataset(
+defineSegDataSetDS <- torch::dataset(
 
   name = "segDataSet",
 
@@ -156,12 +156,12 @@ defineSegDataSet <- torch::dataset(
     mask <- terra::as.array(mask)/self$mskRescale
     mask <- mask+self$mskAdd
 
-    image <- torch::torch_tensor(image, dtype=torch_float32())
+    image <- torch::torch_tensor(image, dtype=torch::torch_float32())
     image <- image$permute(c(3,1,2))
     if(self$mskLong == TRUE){
-      mask <- torch::torch_tensor(mask, dtype=torch_long())
+      mask <- torch::torch_tensor(mask, dtype=torch::torch_long())
     }else{
-      mask <- torch::torch_tensor(mask, dtype=torch_float32())
+      mask <- torch::torch_tensor(mask, dtype=torch::torch_float32())
     }
     mask <- mask$permute(c(3,1,2))
 

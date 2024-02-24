@@ -42,7 +42,6 @@
 makeChipsMultiClass <- function(image,
                                 mask,
                                 n_channels = 3,
-                                hasZero = TRUE,
                                 size = 256,
                                 stride_x = 256,
                                 stride_y = 256,
