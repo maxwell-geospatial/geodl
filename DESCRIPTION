@@ -6,18 +6,23 @@ Date: 2023-08-03
 Author: c(person(family="Maxwell", given="Aaron", 
   email="Aaron.Maxwell@mail.wvu.edu", role=c("aut", "cre"))
 Maintainer: Aaron E. Maxwell <Aaron.Maxwell@mail.wvu.edu>
-Description: This package provides utilities and functions for semantic segmentation
-  of geospatial data using convolutional neural network-based deep learning. Functions
-  allow for creating masks, image chips, data frames listing image chips in a directory, 
-  and datasets for use within data loaders. A basic UNet architecture is provided, and more
-  UNet-like architectures will be made available in later releases. Dice and Dice-like
-  loss metrics are also avaialble along with F1-score, recall, and precision assessment
-  metrics implemented with luz. Trained models can be used to predict to spatial data 
-  without the need to generate chips from larger spatial extents. The package relies on 
-  torch for implementing deep learning, which does not require the installation or a 
-  Pyton environment. Raster geospatial data are handled with terra. Models can be 
-  trained using a CUDA-enabled GPU; however, multi-GPU training is not supported by 
-  terra. Both binary and multiclass models can be trained. 
+Description: This package provides tools for semantic segmentation of geospatial data using convolutional neural 
+  network-based deep learning. Utility functions allow for creating masks, image chips, data frames listing image 
+  chips in a directory, and DataSets for use within DataLoaders. Additional functions are provided to serve as checks 
+  during the data preparation and training process. A UNet architecture can be defined with 4 blocks in the encoder, a 
+  bottleneck block, and 4 blocks in the decoder. The UNet can accept a variable number of input channels, and the user 
+  can define the number of feature maps produced in each encoder and decoder block and the bottleneck. Users can also 
+  choose to (1) replace all ReLU activation functions with leaky ReLU or swish, (2) implement attention gates along the 
+  skip connections, (3) implement squeeze and excitation modules within the encoder blocks, (4) add residual connections 
+  within all blocks, (5) replace the bottleneck with a modified atrous spatial pyramid pooling (ASPP) module, and/or 
+  (6) implement deep supervision using predictions generated at each stage in the decoder.A unified focal loss framework is implemented after:
+  Yeung, M., Sala, E., Schönlieb, C.B. and Rundo, L., 2022. Unified focal loss: Generalising dice and cross entropy-based losses 
+  to handle class imbalanced medical image segmentation. Computerized Medical Imaging and Graphics, 95, p.102026. We have also implemented 
+  assessment metrics using the luz package including F1-score, recall, and precision.Trained models can be used to predict to spatial 
+  data without the need to generate chips from larger spatial extents. Functions are available for performing accuracy assessment. The package 
+  relies on torch for implementing deep learning, which does not require theinstallation of a Python environment. Raster geospatial 
+  data are handled with terra. Models can be trained using a CUDA-enabled GPU; however, multi-GPU training is not supported by torch 
+  in R. Both binary and multiclass models can be trained. This package is still experimental and is a work-in-progress.
 Depends: R (>= 4.1)
 Imports:
   dplyr,
