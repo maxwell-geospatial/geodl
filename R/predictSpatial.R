@@ -88,25 +88,32 @@ predictSpatial <- function(imgIn,
 
   p_arr <- image
 
-  if(predType == "class"){
+  if(mode == "multiclass" & predType %in% c("logit", "prob")){
     p_arr <- terra::subset(image, 1)
-  }
-
-  if(mode == "binary"){
+    p_arr <- rep(p_arr, nCls)
+    names(p_arr) <- paste0("Class_", rep(1:nCls))
+    p_arr[] <- 0
+    outGrd <- p_arr
+    p_arr <- torch::torch_tensor(terra::as.array(p_arr))
+    p_arr <- p_arr$permute(c(3,2,1))
+  }else{
     p_arr <- terra::subset(image, 1)
+    p_arr[] <- 0
+    names(p_arr) <- "Class"
+    outGrd <- p_arr
+    p_arr <- torch::torch_tensor(terra::as.array(p_arr))
+    p_arr <- p_arr$permute(c(3,2,1))
   }
-
-
-  p_arr[] <- 0
-  outGrd <- p_arr
-  p_arr <- torch::torch_tensor(terra::as.array(p_arr))
-  p_arr <- p_arr$permute(c(3,2,1))
 
   if(useCUDA == TRUE){
    p_arr <- p_arr$to(device = "cuda")
   }
 
-  outBands <- p_arr$shape[1]
+  if(predType %in% c("logit", "prob")){
+    outBands <- nCls
+  }else{
+    outBands <- 1
+  }
 
   image <- terra::as.array(image)
   image <- torch::torch_tensor(image)
@@ -199,7 +206,7 @@ predictSpatial <- function(imgIn,
 
       if(mode == "multiclass"){
         if(predType == "prob"){
-          preds <- torch::nnf_sofmax(preds, dim=2)
+          preds <- torch::nnf_softmax(preds, dim=2)
         }else if(predType == "logit"){
           preds <- preds
         }else{
@@ -216,8 +223,9 @@ predictSpatial <- function(imgIn,
         }
       }
 
-      preds <- torch::torch_squeeze(preds, dim=1)
-
+      if(length(dim(preds))==4){
+        preds <- torch::torch_squeeze(preds, dim=1)
+      }
 
       if(r1b == 1 & c1b == 1){ #Write first row, first column
 

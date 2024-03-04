@@ -37,20 +37,20 @@
 #' or it is assumed that deep supervision is not used.
 #' @return Image grids of example chips and masks loaded from a batch produced by the DataLoader.
 #' @export
-viewBatchPreds <- function(dataLoader,
-                          model,
-                          mode="multiclass",
-                          chnDim=TRUE,
-                          mskLong = TRUE,
-                          nRows = 4,
-                          r = 1,
-                          g = 2,
-                          b = 3,
-                          cNames,
-                          cColors,
-                          useCUDA=FALSE,
-                          probs=FALSE,
-                          usedDS=FALSE){
+viewBatchPreds <- function(dataLoader=testDL,
+                           model=model2,
+                           mode="multiclass",
+                           chnDim=FALSE,
+                           mskLong = TRUE,
+                           nRows = 4,
+                           r = 1,
+                           g = 2,
+                           b = 3,
+                           cNames,
+                           cColors,
+                           useCUDA=TRUE,
+                           probs=FALSE,
+                           usedDS=FALSE){
 
   batch1 <- dataLoader$.iter()$.next()
 
@@ -64,23 +64,12 @@ viewBatchPreds <- function(dataLoader,
   }
 
   if(chnDim == FALSE){
-    masks <- mask$unsqueeze(2)
+    masks <- masks$unsqueeze(2)
   }
 
   if(mskLong == TRUE){
     masks <- torch::torch_tensor(masks, dtype=torch_float32())
   }
-
-  theImgGrid <- torchvision::vision_make_grid(images, num_rows=nRows)$permute(c(2,3,1))
-  theMskGrid <- torchvision::vision_make_grid(masks, num_rows=nRows)$permute(c(2,3,1))
-
-  img1 <- terra::rast(as.array(theImgGrid)*255)
-  msk1 <- terra::rast(as.array(theMskGrid))
-
-  terra::plotRGB(img1, r=r, g=g, b=b, scale=1, axes=FALSE, stretch="lin")
-  terra::plot(msk1, type="classes", axes=FALSE, levels=cNames, col=cColors)
-
-  batch1 <- dataLoader$.iter()$.next()
 
   if(useCUDA == TRUE){
     imgs <- batch1$image$to(device="cuda")
@@ -88,7 +77,7 @@ viewBatchPreds <- function(dataLoader,
 
   preds <- predict(model, batch1$image)
 
-  if(useDS==TRUE){
+  if(usedDS==TRUE){
     preds <- preds[1]
   }
 
@@ -104,10 +93,12 @@ viewBatchPreds <- function(dataLoader,
     preds <- torch::nnf_softmax(preds, dim=2)
     thePredsGrid <- torchvision::vision_make_grid(preds, num_rows=nRows)$permute(c(2,3,1))$cpu()$to(device="cpu")
     pred1 <- terra::rast(as.array(thePredsGrid))
-    terra::plot(pred1, type="continuous", axes=FALSE, main="Predictions", col=map.pal("grey"))
+    terra::plot(pred1, type="continuous", axes=FALSE, main="Predictions", col=terra::map.pal("grey"))
   }else if(probs == FALSE & mode=="multiclass"){
-    preds <- torch::arg_max(preds, dim=2)
-    thePredsGrid <- torchvision::vision_make_grid(preds, num_rows=nRows)$permute(c(2,3,1))$cpu()$to(device="cpu")
+    predsC <- torch::torch_argmax(preds, dim=2)
+    predsC2 <- predsC$unsqueeze(2)
+    predsC3 <- torch::torch_tensor(predsC2, dtype=torch_float32())
+    thePredsGrid <- torchvision::vision_make_grid(predsC3, scale=FALSE, num_rows=nRows)$permute(c(2,3,1))$cpu()$to(device="cpu")
     pred1 <- terra::rast(as.array(thePredsGrid))
     terra::plot(pred1, type="classes", axes=FALSE, levels=cNames, col=cColors, main="Predictions")
   }else if(probs == TRUE & mode == "binary"){

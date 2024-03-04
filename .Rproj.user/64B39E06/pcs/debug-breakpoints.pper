@@ -1,5 +1,21 @@
 {
     "debugBreakpointsState": {
-        "breakpoints": []
+        "breakpoints": [
+            {
+                "id": 0,
+                "path": "C:/Users/vidcg/Dropbox/code_dev/geodl/geodl/R/predictSpatial.R",
+                "line_number": 306,
+                "function_steps": "",
+                "function_name": "predictSpatial",
+                "state": 2,
+                "editor_state": 2,
+                "editor_line_number": 306,
+                "is_pending_debug_completion": false,
+                "needs_updated_steps": true,
+                "type": 0,
+                "is_package_breakpoint": true,
+                "package_name": "geodl"
+            }
+        ]
     }
 }

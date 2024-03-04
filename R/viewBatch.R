@@ -50,7 +50,7 @@ viewBatch <- function(dataLoader,
   }
 
   if(chnDim == FALSE){
-    masks <- mask$unsqueeze(2)
+    masks <- masks$unsqueeze(2)
   }
 
   if(mskLong == TRUE){

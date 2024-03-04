@@ -10,8 +10,7 @@ luz_metric_recall(
   mode = "multiclass",
   average = "macro",
   zeroStart = TRUE,
-  chnDim = TRUE,
-  useDS = FALSE
+  chnDim = TRUE
 )
 }
 \arguments{

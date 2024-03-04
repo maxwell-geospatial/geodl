@@ -45,8 +45,8 @@ and bottleneck/ASPP module blocks. Default is FALSE or no residual connections a
 \item{useASPP}{TRUE or FALSE. Whether to use an ASPP module as the bottleneck as opposed to a
 double convolution operation. Default is FALSE or the ASPP module is not used as the bottleneck.}
 
-\item{useDS}{TRUE or FALSE. Whether or not to use deep supervision. If TRUE, four predictions will
-be made, one at each decoder block resolution and the predictions will be returned as a list object
+\item{useDS}{TRUE or FALSE. Whether or not to use deep supervision. If TRUE, four predictions are
+be made, one at each decoder block resolution, and the predictions will be returned as a list object
 containing the 4 predictions. If FALSE, only the final prediction at the original resolution is
 returned. Default is FALSE or deep supervision is not implemented.}
 

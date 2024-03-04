@@ -44,6 +44,9 @@ For gray scale or single-band images, assign the same index to all three bands.}
 
 \item{cColors}{Vector of color values to use to display the masks. Colors are applied based on the
 order of class indices. Length of vector must be the same as the number of classes.}
+
+\item{usedDS}{TRUE or FALSE. Must be set to TRUE when using defineSegDataSetDS(). Default is FALSE,
+or it is assumed that deep supervision is not used.}
 }
 \value{
 Image grids of example chips and masks loaded from a batch produced by the DataLoader.

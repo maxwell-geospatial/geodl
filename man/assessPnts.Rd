@@ -44,7 +44,7 @@ provided in the $PositiveCase object.
 Assess semantic segmentation model using point locations
 }
 \details{
-This function will generate a set of summary metrics when provided
+This function generates a set of summary metrics when provided
 reference and predicted classes. For a multiclass classification problem
 a confusion matrix is produced with the columns representing the reference
 data and the rows representing the predictions. The following metrics are

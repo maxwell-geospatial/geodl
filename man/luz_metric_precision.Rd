@@ -10,8 +10,7 @@ luz_metric_precision(
   mode = "multiclass",
   average = "macro",
   zeroStart = TRUE,
-  chnDim = TRUE,
-  useDS = FALSE
+  chnDim = TRUE
 )
 }
 \arguments{
@@ -50,10 +49,6 @@ binary classification, the class index must be 1 for the positive class and
 
 \item{nCLs}{number of classes being differentiated. Should be 1 for a binary classification
 where only the postive case logit is returned. Default is 1.}
-
-\item{usedDS}{TRUE or FALSE. If deep supervision was implemented and masks are produced at varying scales using
-the defineSegDataSetDS() function, this should be set to TRUE. Only the original resolution is used
-to calculate assessment metrics. Default is FALSE.}
 }
 \value{
 Calculated metric return as a base-R vector as opposed to tensor.

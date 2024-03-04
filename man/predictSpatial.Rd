@@ -92,13 +92,13 @@ the function. This should match the setting used in defineSegDataSet().}
 example, this could be set to 255 to rescale 8-bit data. Default is 1 or no
 rescaling. This should match the setting used in defineSegDataSet().}
 
-\item{usedDS}{TRUE or FALSE. If deep supervision was implemented and masks are produced at varying scales using
-the defineSegDataSetDS() function, this should be set to TRUE. Only the original resolution is used
-to calculate assessment metrics. Default is FALSE.}
+\item{usedDS}{TRUE or FALSE. If model is configured to use deep supervision,
+this must be set to TRUE. Default is FALSE, or it is assumed that deep supervision
+is not used.}
 }
 \value{
 A spatRast object and a raster grid saved to disk of predicted class
-indices (predType = "class"),logits (predType = "logit"), or rescaled logits
+indices (predType = "class"), logits (predType = "logit"), or rescaled logits
 (predType = "prob").
 }
 \description{

@@ -8,7 +8,6 @@ makeChipsMultiClass(
   image,
   mask,
   n_channels = 3,
-  hasZero = TRUE,
   size = 256,
   stride_x = 256,
   stride_y = 256,
@@ -17,11 +16,11 @@ makeChipsMultiClass(
 )
 }
 \arguments{
-\item{image}{Path to input image. Function will generate a SpatRaster object
+\item{image}{SpatRaster object or path to input image. Function will generate a SpatRaster object
 internally. The image and mask must have the same extent, number of rows and
 columns of pixels, cell size, and coordinate reference system.}
 
-\item{mask}{Path to single-band mask. Function will generate a SpatRaster
+\item{mask}{SpatRaster object or path to single-band mask. Function will generate a SpatRaster
 object internally. The image and mask must have the same extent, number of
 rows and columns of pixels, cell size, and coordinate reference system.}
 
@@ -51,7 +50,7 @@ returned.
 Generate image chips from images and associated raster masks for multiclass classification
 }
 \details{
-This function will generate image and mask chips from an input image and
+This function generates image and mask chips from an input image and
 associated raster mask. The chips will be written into the defined directory.
 The number of rows and columns of pixels per chip are equal to the size argument.
 If a stride_x and/or stride_y is used that is different from the size argument,

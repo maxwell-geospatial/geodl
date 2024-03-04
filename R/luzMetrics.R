@@ -6,17 +6,17 @@
 #' loops.
 #'
 #' @param preds Tensor of class predicted probabilities with shape
-#' (Batch, Class Logits, Height, Width) for a multiclass classification. For a
+#' [Batch, Class Logits, Height, Width] for a multiclass classification. For a
 #' binary classification, you can provide logits for the positive class as
-#' (Batch, Positive Class Logit, Height, Width) or (Batch, Height, Width).
+#' [Batch, Positive Class Logit, Height, Width] or [Batch, Height, Width].
 #' @param target Tensor of target class labels with shape
-#' (Batch, Class Indices, Height, Width) for a multiclass classification. For a
+#' [Batch, Class Indices, Height, Width] for a multiclass classification. For a
 #' binary classification, you can provide targets as
-#' (Batch, Positive Class Index, Height, Width) or (Batch, Height, Width). For
+#' [Batch, Positive Class Index, Height, Width] or [Batch, Height, Width]. For
 #' binary classification, the class index must be 1 for the positive class and
 #' 0 for the background case.
 #' @param nCLs number of classes being differentiated. Should be 1 for a binary classification
-#' where only the positive case logit is returned. Default is 1.
+#' where only the postive case logit is returned. Default is 1.
 #' @param smooth a smoothing factor to avoid divide by zero errors. Default is 1.
 #' @param mode Either "binary" or "multiclass". If "binary", only the logit for
 #' positive class prediction should be provided. If both the positive and negative
@@ -31,7 +31,7 @@
 #' @param zeroStart TRUE or FALSE. If class indices start at 0 as opposed to 1, this should be set to
 #' TRUE. This is required  to implement one-hot encoding since R starts indexing at 1. Default is TRUE.
 #' @param chnDim TRUE or FALSE. Whether the channel dimension is included in the target tensor:
-#' (Batch, Channel, Height, Width) as opposed to (Batch, Channel, Height, Width). If the channel dimension
+#' [Batch, Channel, Height, Width] as opposed to [Batch, Channel, Height, Width]. If the channel dimension
 #' is included, this should be set to TRUE. If it is not, this should be set to FALSE. Default is TRUE.
 #' @param usedDS TRUE or FALSE. If deep supervision was implemented and masks are produced at varying scales using
 #' the defineSegDataSetDS() function, this should be set to TRUE. Only the original resolution is used
@@ -47,8 +47,7 @@ luz_metric_recall <- luz::luz_metric(
                         mode = "multiclass",
                         average="macro",
                         zeroStart=TRUE,
-                        chnDim=TRUE,
-                        usedDS=FALSE){
+                        chnDim=TRUE){
 
     self$nCls <- nCls
     self$smooth <- smooth
@@ -56,7 +55,6 @@ luz_metric_recall <- luz::luz_metric(
     self$average <- average
     self$zeroStart <- zeroStart
     self$chnDim <- chnDim
-    self$usedDS <- usedDS
 
     if(self$mode == "multiclass" & self$average == "macro"){
       self$tps <- rep(0.0, nCls)
@@ -70,11 +68,6 @@ luz_metric_recall <- luz::luz_metric(
   },
 
   update = function(preds, target){
-    if(self$usedDS == TRUE){
-      pred <- pred[1]
-      target <- target[1]
-    }
-
     if(self$chnDim == FALSE){
       target <- target$unsqueeze(dim=2)
     }
@@ -142,17 +135,17 @@ luz_metric_recall <- luz::luz_metric(
 #' loops.
 #'
 #' @param preds Tensor of class predicted probabilities with shape
-#' (Batch, Class Logits, Height, Width) for a multiclass classification. For a
+#' [Batch, Class Logits, Height, Width] for a multiclass classification. For a
 #' binary classification, you can provide logits for the positive class as
-#' (Batch, Positive Class Logit, Height, Width) or (Batch, Height, Width).
+#' [Batch, Positive Class Logit, Height, Width] or [Batch, Height, Width].
 #' @param target Tensor of target class labels with shape
-#' (Batch, Class Indices, Height, Width) for a multiclass classification. For a
+#' [Batch, Class Indices, Height, Width] for a multiclass classification. For a
 #' binary classification, you can provide targets as
-#' (Batch, Positive Class Index, Height, Width) or (Batch, Height, Width). For
+#' [Batch, Positive Class Index, Height, Width] or [Batch, Height, Width]. For
 #' binary classification, the class index must be 1 for the positive class and
 #' 0 for the background case.
 #' @param nCLs number of classes being differentiated. Should be 1 for a binary classification
-#' where only the positive case logit is returned. Default is 1.
+#' where only the postive case logit is returned. Default is 1.
 #' @param smooth a smoothing factor to avoid divide by zero errors. Default is 1.
 #' @param mode Either "binary" or "multiclass". If "binary", only the logit for
 #' positive class prediction should be provided. If both the positive and negative
@@ -167,11 +160,8 @@ luz_metric_recall <- luz::luz_metric(
 #' @param zeroStart TRUE or FALSE. If class indices start at 0 as opposed to 1, this should be set to
 #' TRUE. This is required  to implement one-hot encoding since R starts indexing at 1. Default is TRUE.
 #' @param chnDim TRUE or FALSE. Whether the channel dimension is included in the target tensor:
-#' (Batch, Channel, Height, Width) as opposed to (Batch, Channel, Height, Width). If the channel dimension
+#' [Batch, Channel, Height, Width] as opposed to [Batch, Channel, Height, Width]. If the channel dimension
 #' is included, this should be set to TRUE. If it is not, this should be set to FALSE. Default is TRUE.
-#' @param usedDS TRUE or FALSE. If deep supervision was implemented and masks are produced at varying scales using
-#' the defineSegDataSetDS() function, this should be set to TRUE. Only the original resolution is used
-#' to calculate assessment metrics. Default is FALSE.
 #' @return Calculated metric return as a base-R vector as opposed to tensor.
 #' @export
 luz_metric_precision <- luz::luz_metric(
@@ -183,8 +173,7 @@ luz_metric_precision <- luz::luz_metric(
                         mode = "multiclass",
                         average="macro",
                         zeroStart=TRUE,
-                        chnDim=TRUE,
-                        usedDS=FALSE){
+                        chnDim=TRUE){
 
     self$nCls <- nCls
     self$smooth <- smooth
@@ -192,7 +181,6 @@ luz_metric_precision <- luz::luz_metric(
     self$average <- average
     self$zeroStart <- zeroStart
     self$chnDim <- chnDim
-    self$usedDS <- usedDS
 
     #initialize R vectors to store true positive, false negative, and false positive counts
     #For a binary and micro-averaged multiclass metric, will obtain a vector with a length of one.
@@ -209,11 +197,6 @@ luz_metric_precision <- luz::luz_metric(
   },
 
   update = function(preds, target){
-
-    if(self$usedDS == TRUE){
-      pred <- pred[1]
-      target <- target[1]
-    }
     #If the channel dimension is not included, add it.
     if(self$chnDim == FALSE){
       target <- target$unsqueeze(dim=2)
@@ -303,17 +286,18 @@ luz_metric_precision <- luz::luz_metric(
 #' loops.
 #'
 #' @param preds Tensor of class predicted probabilities with shape
-#' (Batch, Class Logits, Height, Width) for a multiclass classification. For a
+#' [Batch, Class Logits, Height, Width] for a multiclass classification. For a
 #' binary classification, you can provide logits for the positive class as
-#' (Batch, Positive Class Logit, Height, Width) or (Batch, Height, Width).
+#' [Batch, Positive Class Logit, Height, Width] or [Batch, Height, Width].
 #' @param target Tensor of target class labels with shape
-#' (Batch, Class Indices, Height, Width) for a multiclass classification. For a
+#' [Batch, Class Indices, Height, Width] for a multiclass classification. For a
 #' binary classification, you can provide targets as
-#' (Batch, Positive Class Index, Height, Width) or (Batch, Height, Width). For
+#' [Batch, Positive Class Index, Height, Width] or [Batch, Height, Width]. For
 #' binary classification, the class index must be 1 for the positive class and
+#'
 #' 0 for the background case.
 #' @param nCLs number of classes being differentiated. Should be 1 for a binary classification
-#' where only the positive case logit is returned. Default is 1.
+#' where only the postive case logit is returned. Default is 1.
 #' @param smooth a smoothing factor to avoid divide by zero errors. Default is 1.
 #' @param mode Either "binary" or "multiclass". If "binary", only the logit for
 #' positive class prediction should be provided. If both the positive and negative
@@ -328,11 +312,8 @@ luz_metric_precision <- luz::luz_metric(
 #' @param zeroStart TRUE or FALSE. If class indices start at 0 as opposed to 1, this should be set to
 #' TRUE. This is required  to implement one-hot encoding since R starts indexing at 1. Default is TRUE.
 #' @param chnDim TRUE or FALSE. Whether the channel dimension is included in the target tensor:
-#' (Batch, Channel, Height, Width) as opposed to (Batch, Channel, Height, Width). If the channel dimension
+#' [Batch, Channel, Height, Width] as opposed to [Batch, Channel, Height, Width]. If the channel dimension
 #' is included, this should be set to TRUE. If it is not, this should be set to FALSE. Default is TRUE.
-#' @param usedDS TRUE or FALSE. If deep supervision was implemented and masks are produced at varying scales using
-#' the defineSegDataSetDS() function, this should be set to TRUE. Only the original resolution is used
-#' to calculate assessment metrics. Default is FALSE.
 #' @return Calculated metric return as a base-R vector as opposed to tensor.
 #' @export
 luz_metric_f1score <- luz::luz_metric(
@@ -344,8 +325,7 @@ luz_metric_f1score <- luz::luz_metric(
                         mode = "multiclass",
                         average="micro",
                         zeroStart=TRUE,
-                        chnDim=TRUE,
-                        usedDS=FALSE){
+                        chnDim=TRUE){
 
     self$nCls <- nCls
     self$smooth <- smooth
@@ -353,7 +333,6 @@ luz_metric_f1score <- luz::luz_metric(
     self$average <- average
     self$zeroStart <- zeroStart
     self$chnDim <- chnDim
-    self$usedDS <- usedDS
 
     if(self$mode == "multiclass" & self$average == "macro"){
       self$tps <- rep(0.0, nCls)
@@ -367,11 +346,6 @@ luz_metric_f1score <- luz::luz_metric(
   },
 
   update = function(preds, target){
-    if(self$usedDS == TRUE){
-      pred <- pred[1]
-      target <- target[1]
-    }
-
     if(self$chnDim == FALSE){
       target <- target$unsqueeze(dim=2)
     }
@@ -429,297 +403,7 @@ luz_metric_f1score <- luz::luz_metric(
     #Not sure if this is the best way to do this or if it should be calculated direclty from precision and recall as (2*precision*recall)/(precision+recall)
     recalls <- (self$tps + self$smooth)/(self$tps + self$fns + self$smooth)
     precisions <- (self$tps + self$smooth)/(self$tps + self$fps + self$smooth)
-    f1s <- (2*precisions*recalls)/(precisions + recalls)
+    f1s <- (2.0*precisions*recalls)/(precisions + recalls)
     return(base::mean(f1s))
   }
 )
-
-#Multiclass example
-#refC <- terra::rast("E:/Dropbox/code_dev/geodl/data/metricCheck/multiclass_reference.tif")
-#predL <- terra::rast("E:/Dropbox/code_dev/geodl/data/metricCheck/multiclass_logits.tif")
-#predC <- terra::rast("E:/Dropbox/code_dev/geodl/data/metricCheck/multiclass_prediction.tif")
-#names(refC) <- "reference"
-#names(predC) <- "prediction"
-#cm <- terra::crosstab(c(predC, refC))
-#yardstick::f_meas(cm, estimator="macro")
-#yardstick::accuracy(cm, estimator="micro")
-#yardstick::recall(cm, estimator="macro")
-#yardstick::precision(cm, estimator="macro")
-
-
-#predL <- terra::as.array(predL)
-#refC <- terra::as.array(refC)
-
-#target <- torch::torch_tensor(refC, dtype=torch::torch_long())
-#pred <- torch::torch_tensor(predL, dtype=torch::torch_float32())
-#target <- target$permute(c(3,1,2))
-#pred <- pred$permute(c(3,1,2))
-
-#target <- target$unsqueeze(1)
-#pred <- pred$unsqueeze(1)
-
-#target <- torch::torch_cat(list(target, target), dim=1)
-#pred <- torch::torch_cat(list(pred, pred), dim=1)
-
-
-#metric<-luz_metric_f1score(nCls=5,
-                           #smooth=1e-8,
-                           #mode = "multiclass",
-                           #average="macro",
-                           #zeroStart=TRUE,
-                           #chnDim=TRUE)
-#metric<-metric$new()
-#metric$update(pred,target)
-#metric$compute()
-
-
-#metric<-luz_metric_recall(nCls=5,
-                           #smooth=1e-8,
-                           #mode = "multiclass",
-                           #average="macro",
-                           #zeroStart=TRUE,
-                           #chnDim=TRUE)
-#metric<-metric$new()
-#metric$update(pred,target)
-#metric$compute()
-
-
-#metric<-luz_metric_precision(nCls=5,
-                           #smooth=1e-8,
-                           #mode = "multiclass",
-                           #average="macro",
-                           #zeroStart=TRUE,
-                           #chnDim=TRUE)
-#metric<-metric$new()
-#metric$update(pred,target)
-#metric$compute()
-
-
-#Binary Example
-#Multiclass example
-#refC <- terra::rast("E:/Dropbox/code_dev/geodl/data/metricCheck/multiclass_reference.tif")
-#predL <- terra::rast("E:/Dropbox/code_dev/geodl/data/metricCheck/multiclass_logits.tif")
-#predC <- terra::rast("E:/Dropbox/code_dev/geodl/data/metricCheck/multiclass_prediction.tif")
-#names(refC) <- "reference"
-#names(predC) <- "prediction"
-#cm <- terra::crosstab(c(predC, refC))
-#yardstick::f_meas(cm, estimator="macro")
-#yardstick::accuracy(cm, estimator="micro")
-#yardstick::recall(cm, estimator="macro")
-#yardstick::precision(cm, estimator="macro")
-
-
-#predL <- terra::as.array(predL)
-#refC <- terra::as.array(refC)
-
-#target <- torch::torch_tensor(refC, dtype=torch::torch_long())
-#pred <- torch::torch_tensor(predL, dtype=torch::torch_float32())
-#target <- target$permute(c(3,1,2))
-#pred <- pred$permute(c(3,1,2))
-
-#target <- target$unsqueeze(1)
-#pred <- pred$unsqueeze(1)
-
-#target <- torch::torch_cat(list(target, target), dim=1)
-#pred <- torch::torch_cat(list(pred, pred), dim=1)
-
-
-#metric<-luz_metric_f1score(nCls=5,
-                           #smooth=1e-8,
-                           #mode = "multiclass",
-                           #average="macro",
-                           #zeroStart=TRUE,
-                           #chnDim=TRUE)
-#metric<-metric$new()
-#metric$update(pred,target)
-#metric$compute()
-
-
-#metric<-luz_metric_recall(nCls=5,
-                          #smooth=1e-8,
-                          #mode = "multiclass",
-                          #average="macro",
-                          #zeroStart=TRUE,
-                          #chnDim=TRUE)
-#metric<-metric$new()
-#metric$update(pred,target)
-#metric$compute()
-
-
-#metric<-luz_metric_precision(nCls=5,
-                             #smooth=1e-8,
-                             #mode = "multiclass",
-                             #average="macro",
-                             #zeroStart=TRUE,
-                             #chnDim=TRUE)
-#metric<-metric$new()
-#metric$update(pred,target)
-#metric$compute()
-
-
-
-
-#Binary Example
-#refC <- terra::rast("E:/Dropbox/code_dev/geodl/data/metricCheck/binary_reference.tif")
-#predL <- terra::rast("E:/Dropbox/code_dev/geodl/data/metricCheck/binary_logits.tif")
-#predC <- terra::rast("E:/Dropbox/code_dev/geodl/data/metricCheck/binary_prediction.tif")
-#names(refC) <- "reference"
-#names(predC) <- "prediction"
-#cm <- terra::crosstab(c(predC, refC))
-#yardstick::f_meas(cm, estimator="binary", event_level="second")
-#yardstick::accuracy(cm, estimator="binary", event_level="second")
-#yardstick::recall(cm, estimator="binary", event_level="second")
-#yardstick::precision(cm, estimator="binary", event_level="second")
-
-
-#predL <- terra::as.array(predL)
-#refC <- terra::as.array(refC)
-
-#target <- torch::torch_tensor(refC, dtype=torch::torch_long())
-#pred <- torch::torch_tensor(predL, dtype=torch::torch_float32())
-#target <- target$permute(c(3,1,2))
-#pred <- pred$permute(c(3,1,2))
-
-#target <- target$unsqueeze(1)
-#pred <- pred$unsqueeze(1)
-
-#target <- torch::torch_cat(list(target, target), dim=1)
-#pred <- torch::torch_cat(list(pred, pred), dim=1)
-
-
-#metric<-luz_metric_f1score(nCls=1,
-                           #smooth=1e-8,
-                           #mode = "binary",
-                           #average="macro",
-                           #zeroStart=TRUE,
-                           #chnDim=TRUE)
-#metric<-metric$new()
-#metric$update(pred,target)
-#metric$compute()
-
-
-#metric<-luz_metric_recall(nCls=1,
-                          #smooth=1e-8,
-                          #mode = "binary",
-                          #average="macro",
-                          #zeroStart=TRUE,
-                          #chnDim=TRUE)
-#metric<-metric$new()
-#metric$update(pred,target)
-#metric$compute()
-
-
-#metric<-luz_metric_precision(nCls=1,
-                             #smooth=1e-8,
-                             #mode = "binary",
-                             #average="macro",
-                             #zeroStart=TRUE,
-                             #chnDim=TRUE)
-#metric<-metric$new()
-#metric$update(pred,target)
-#metric$compute()
-
-
-#' luz_metric_accuracyDS
-#'
-#' luz_metric function to calculate the overall accuracy for a multiclass classification
-#'
-#' Calculates overall accuracy for a multiclass classification. This is an augmentation of the
-#' original luz_metric_accuracy() function from luz that has been modified to support deep supervision.
-#' It should only be used if deep supervision is implemented. If deep supervision is not implemented,
-#' use the original implementation from luz.
-
-#' @return Calculated metric return as a base-R vector as opposed to tensor.
-#' @export
-luz_metric_accuracyDS <- luz::luz_metric(
-  abbrev = "Acc",
-  initialize = function() {
-    self$correct <- 0
-    self$total <- 0
-  },
-  update = function(preds, target) {
-    preds <- preds[1]
-    target <- target[1]
-    pred <- torch::torch_argmax(preds, dim = 2)
-    self$correct <- self$correct + (pred == target)$
-      to(dtype = torch::torch_float())$
-      sum()$
-      item()
-    self$total <- self$total + pred$numel()
-  },
-  compute = function() {
-    self$correct/self$total
-  }
-)
-
-
-#' luz_metric_binary_accuracyDS
-#'
-#' luz_metric function to calculate the overall accuracy for a binary classification from predicted probabilities
-#'
-#' Calculates overall accuracy for a binary classification. This is an augmentation of the
-#' original luz_metric_binary_accuracy() function from luz that has been modified to support deep supervision.
-#' It should only be used if deep supervision is implemented. If deep supervision is not implemented,
-#' use the original implementation from luz.
-#'
-#' @return Calculated metric return as a base-R vector as opposed to tensor.
-#' @export
-luz_metric_binary_accuracyDS <- luz::luz_metric(
-  abbrev = "Acc",
-  initialize = function(threshold = 0.5) {
-    self$correct <- 0
-    self$total <- 0
-    self$threshold <- threshold
-  },
-  update = function(preds, targets) {
-    preds <- preds[1]
-    target <- target[1]
-    preds <- (preds > self$threshold)$
-      to(dtype = torch::torch_float())
-    self$correct <- self$correct + (preds == targets)$
-      to(dtype = torch::torch_float())$
-      sum()$
-      item()
-    self$total <- self$total + preds$numel()
-  },
-  compute = function() {
-    self$correct/self$total
-  }
-)
-
-
-#' luz_metric_binary_accuracy_with_logitsDS
-#'
-#' luz_metric function to calculate the overall accuracy for a binary classification from predicted logits
-#'
-#' Calculates overall accuracy for a binary classification. This is an augmentation of the
-#' original luz_metric_binary_accuracy_with_logits() function from luz that has been modified
-#' to support deep supervision. It should only be used if deep supervision is implemented.
-#' If deep supervision is not implemented, use the original implementation from luz.
-#'
-#' @return Calculated metric return as a base-R vector as opposed to tensor.
-#' @export
-luz_metric_binary_accuracy_with_logitsDS <- luz::luz_metric(
-  abbrev = "Acc",
-  initialize = function(threshold = 0.5) {
-    self$correct <- 0
-    self$total <- 0
-    self$threshold <- threshold
-  },
-  update = function(preds, targets) {
-    preds <- preds[1]
-    target <- target[1]
-    preds <- torch::torch_sigmoid(preds)
-    preds <- (preds > self$threshold)$
-      to(dtype = torch::torch_float())
-    self$correct <- self$correct + (preds == targets)$
-      to(dtype = torch::torch_float())$
-      sum()$
-      item()
-    self$total <- self$total + preds$numel()
-  },
-  compute = function() {
-    self$correct/self$total
-  }
-)
-

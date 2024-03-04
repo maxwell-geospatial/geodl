@@ -5,10 +5,10 @@
 \title{viewBatchPreds}
 \usage{
 viewBatchPreds(
-  dataLoader,
-  model,
+  dataLoader = testDL,
+  model = model2,
   mode = "multiclass",
-  chnDim = TRUE,
+  chnDim = FALSE,
   mskLong = TRUE,
   nRows = 4,
   r = 1,
@@ -16,7 +16,7 @@ viewBatchPreds(
   b = 3,
   cNames,
   cColors,
-  useCUDA = FALSE,
+  useCUDA = TRUE,
   probs = FALSE,
   usedDS = FALSE
 )
@@ -63,6 +63,9 @@ shown as opposed to the hard classification. If FALSE, hard classification will 
 shown. For a binary problem, the positive class logit is transformed using a sigmoid
 function. For multiclass, softmax is used to transform the class logits to probabilities
 that sum to 1.}
+
+\item{usedDS}{TRUE or FALSE. Must be set to TRUE when using defineSegDataSetDS(). Default is FALSE,
+or it is assumed that deep supervision is not used.}
 }
 \value{
 Image grids of example chips and masks loaded from a batch produced by the DataLoader.
