@@ -50,8 +50,7 @@
 #' with subfolders already defined as opposed to using a new directory. This can be used
 #' if you want to add chips to an existing set of chips. However, the "mode" should
 #' be the same as that used to generated the original chips. Default is FALSE.
-#' @return Image and mask files written to disk in TIFF format. Spatial reference
-#' information is not maintained. No R object is returned.
+#' @return Image and mask files written to disk in TIFF format. No R object is returned.
 #' @export
 makeChips <- function(image,
                       mask,

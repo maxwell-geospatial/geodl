@@ -17,7 +17,7 @@ output terrain stack. We recommend saving the data to either TIFF (".tif") or
 Image (".img") format.}
 }
 \value{
-Three-band raster mask written to disk in TIFF format and spatRaster object.
+Three-band raster grid written to disk in TIFF format and spatRaster object.
 }
 \description{
 Make three band terrain stack from input digital terrain model
@@ -33,7 +33,8 @@ then linearly rescaled from 0 and 1. The square root of slope is clamped to a
 range of 0 to 10 then linearly rescaled from 0 to 1. Values are provided in
 floating point.
 
-The stack is described in the following publication:
+The stack is described in the following publication and was originall proposed by
+William Odom.
 
 Maxwell, A.E., W.E. Odom, C.M. Shobe, D.H. Doctor, M.S. Bester, and T. Ore,
 2023. Exploring the influence of input feature space on CNN-based geomorphic

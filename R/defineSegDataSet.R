@@ -1,14 +1,17 @@
 #' defineSegDataSet
 #'
-#' Instantiate a subclass of torch dataset() function for semantic segmentation
+#' Define a subclass of torch::dataset() for semantic segmentation
 #'
-#' This function instantiates a subclass of the torch dataset() function that loads
-#' data generated using the makeChips() or makeChipsMultiClass() functions. Can also
+#' This function instantiates a subclass of torch::dataset() that loads
+#' data generated using the makeChips() or makeChipsMultiClass() function. Can also
 #' define random augmentations to combat overfitting. Note that horizontal and vertical
-#' flips will effect the alignment of the image and associated mask chips. As a result,
+#' flips will affect the alignment of the image and associated mask chips. As a result,
 #' the same augmentation will be applied to both the image and the mask. Changes in
 #' brightness, contrast, gamma, hue, and saturation will not be applied to the masks
-#' since alignment is not impacted by these transformations. If you plan to implement
+#' since alignment is not impacted by these transformations. Predictor variables are
+#' generated with three dimensions (channel/variable, width, height) regardless of
+#' the number of channels/variables. Masks are generated as three dimensional tensors
+#' (class index, width, height). If you plan to implement
 #' deep supervision, you must use the defineSegDataSetDS() method instead.
 #'
 #' @param chpDF Data frame of image chip paths created using makeChipsDF().
@@ -25,23 +28,18 @@
 #' 0 to 1. For example, if masks are scaled from 0 and 255, you can divide by 255 to
 #' obtain a 0 to 1 scale. Default is 1 or no rescaling.
 #' @param mskAdd Value to add to mask class numeric codes. For example, if class indices
-#' start are zero, 1 can be added so that indices start at 1. Default is 0 (return
-#' original class codes).
+#' start are 0, 1 can be added so that indices start at 1. Default is 0 (return
+#' original class codes). Note that several other functions in this package have a zeroStart
+#' argument. If class codes start at 0, this argument should be set to TRUE. If they start at 1,
+#' this argument should be set to FALSE. The importance of this arises from the use of one-hot
+#' encoding internally, which requires that class indices start at 1.
 #' @param bands Vector of bands to include. The default is to only include the
 #' first 3 bands. If you want to use a different subset of bands, you must provide
 #' a vector of band indices here to override the default.
 #' @param bMns Vector of band means. Length should be the same as the number of bands.
 #' Normalization is applied before any rescaling within the function.
 #' @param bSDs Vector of band standard deviations. Length should be the same
-#' as the number of bands. Normalization is applied before any rescaling within
-#' the function.
-#' @param chnDim TRUE or FALSE. Default is TRUE. If TRUE, will produce target tensors that include the
-#' channel dimension: (N, C, H, W). If FALSE, will produce target tensors that do not include the
-#' channel dimension: (C, H, W). We recommend including the target dimension since other functions
-#' in this package expect this by default.
-#' @param mskLong TRUE or FALSE. Default is TRUE. If TRUE, target tensors will be produced with a
-#' tensor_long data type. If FALSE, target tensors will be produced with a tensor_float32 data type.
-#' We recommend using TRUE or producing targets with a torch_long data type.
+#' as the number of bands. Normalization is applied before any rescaling.
 #' @param doAugs TRUE or FALSE. Whether or not to apply data augmentations to combat
 #' overfitting. If FALSE, all augmentations parameters are ignored. Data augmentations
 #' are generally only applied to the training set. Default is FALSE.
@@ -83,7 +81,7 @@
 #' 0 gives the original image.
 #' @param saturationFactor Vector of smallest and largest saturation adjustment factors.
 #' Random value will be selected between these extremes. The default is 0.8 to 1.2.
-#' For example, 0 will give a black and white image, 1`will give the original image while 2 will
+#' For example, 0 will give a black-and-white image, 1`will give the original image while 2 will
 #' enhance the saturation by a factor of 2.
 #' @return A dataset object that can be provided to torch::dataloader().
 #' @export
@@ -100,8 +98,6 @@ defineSegDataSet <- torch::dataset(
                         bands = c(1,2,3),
                         bMns=1,
                         bSDs=1,
-                        mskLong = TRUE,
-                        chnDim = TRUE,
                         doAugs = FALSE,
                         maxAugs = 0,
                         probVFlip = 0,
@@ -125,8 +121,6 @@ defineSegDataSet <- torch::dataset(
      self$bands <- bands
      self$bMns <- bMns
      self$bSDs <- bSDs
-     self$mskLong <- mskLong
-     self$chnDim <- chnDim
      self$doAugs <- doAugs
      self$maxAugs <- maxAugs
      self$probVFlip <- probVFlip
@@ -157,11 +151,9 @@ defineSegDataSet <- torch::dataset(
 
      image <- torch::torch_tensor(image, dtype=torch::torch_float32())
      image <- image$permute(c(3,1,2))
-     if(self$mskLong == TRUE){
-       mask <- torch::torch_tensor(mask, dtype=torch::torch_long())
-     }else{
-       mask <- torch::torch_tensor(mask, dtype=torch::torch_float32())
-     }
+
+     mask <- torch::torch_tensor(mask, dtype=torch::torch_long())
+
      mask <- mask$permute(c(3,1,2))
 
      if(self$normalize == TRUE){
@@ -169,10 +161,6 @@ defineSegDataSet <- torch::dataset(
      }
 
      image <- torch::torch_div(image,self$rescaleFactor)
-
-     if(self$chnDim == FALSE){
-       mask <- mask$squeeze()
-     }
 
      if(self$doAugs == TRUE){
 

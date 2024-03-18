@@ -1,4 +1,4 @@
-#' defineMultiClassLoss
+#' defineUnifiedFocalLoss
 #'
 #' Define a loss for semantic segmentation using a modified unified focal loss framework as a subclass of torch::nn_module()
 #'
@@ -36,30 +36,23 @@
 #'
 #' @param pred Tensor of predicted class logits. Should be of shape (mini-batch,
 #' class, width, height) where the class dimension has a length equal to the number
-#' of classes being differentiated. For a binary classification, output can be provided
-#' as (mini-batch, class, width, height) or (mini-batch, width, height) if only the positive
-#' case logit is returned.
-#' @param target Tensor or predicted class indices from 0 to n-1 or 1 to n where n is the
-#' number of classes. For a binary classification, only the positive case logit can be returned.
-#' Shape can be (mini-batch, class, width, height) or (mini-batch, width, height)
-#' @param nCls number of classes being differentiated. Should be 1 for a binary classification
-#' where only the positive case logit is returned. Default is 3.
+#' of classes being differentiated. The predictions should have a 32-bit float data type.
+#' @param target Tensor of reference class indices from 0 to n-1 or 1 to n where n is the
+#' number of classes. Shape must be (mini-batch, class, width, height), and a long integer data type must be used.
+#' @param nCls number of classes being differentiated.
 #' @param lambda Term used to control the relative weighting of the distribution- and region-based
 #' losses. Default is 0.5, or equal weighting between the losses. If lambda = 1, only the distribution-
 #' based loss is considered. If lambda = 0, only the region-based loss is considered. Values between 0.5
 #' and 1 put more weight on the distribution-based loss while values between 0 and 0.5 put more
 #' weight on the region-based loss.
 #' @param gamma Parameter that controls increased weighting applied to difficult-to-predict pixels (for
-#' distribution-based losses) or difficult-to-predict classes (region-based losses). Default is 0, or no focal
-#' weighting is applied.
+#' distribution-based losses) or difficult-to-predict classes (region-based losses). Smaller values increase the
+#' weight applied to difficult samples or classes. Default is 0, or no focal weighting is applied.
 #' @param delta Parameter that controls the relative weightings of false positive and false negative errors for
 #' each class. Different weightings can be provided for each class. The default is 0.6, which results in prioritizing
 #' false positive errors relative to false negative errors.
 #' @param smooth Smoothing factor to avoid divide-by-zero errors and provide numeric stability. Default is 1e-8.
 #' Recommend using the default.
-#' @param chnDim TRUE or FALSE. Whether the channel dimension is included in the target tensor:
-#' (Batch, Channel, Height, Width) as opposed to (Batch, Channel, Height, Width). If the channel dimension
-#' is included, this should be set to TRUE. If it is not, this should be set to FALSE. Default is TRUE.
 #' @param zeroStart TRUE or FALSE. If class indices start at 0 as opposed to 1, this should be set to
 #' TRUE. This is required  to implement one-hot encoding since R starts indexing at 1. Default is TRUE.
 #' @param clsWghtsDist Vector of class weights for use in calculating a weighted version of the CE loss.
@@ -70,13 +63,12 @@
 #' loss. Default is FALSE.
 #' @return Loss metric for use in training process.
 #' @export
-defineMultiClassLoss <- torch::nn_module(#This is simply a class-based version of function defined above/implements function internally
+defineUnifiedFocalLoss <- torch::nn_module(#This is simply a class-based version of function defined above/implements function internally
   initialize = function(nCls=3,
                         lambda=.5,
                         gamma=.5,
                         delta=0.6,
                         smooth = 1e-8,
-                        chnDim=TRUE,
                         zeroStart=TRUE,
                         clsWghtsDist=1,
                         clsWghtsReg=1,
@@ -88,7 +80,6 @@ defineMultiClassLoss <- torch::nn_module(#This is simply a class-based version o
     self$gamma = gamma
     self$delta= delta
     self$smooth = smooth
-    self$chnDim= chnDim
     self$zeroStart = zeroStart
     self$clsWghtsDist = clsWghtsDist
     self$clsWghtsReg = clsWghtsReg
@@ -154,11 +145,6 @@ defineMultiClassLoss <- torch::nn_module(#This is simply a class-based version o
     target1 <- torch::torch_tensor(target,
                                    dtype=torch::torch_long(),
                                    device=self$device)
-
-    #If the channel or class dimension is not included in the target, add it
-    if(self$chnDim == FALSE){
-      target1 <- target1$unsqueeze(dim=2)
-    }
 
     #Add 1 if class codes start at 0 for one-hot encoding
     if(self$zeroStart == TRUE){
@@ -291,14 +277,10 @@ defineMultiClassLoss <- torch::nn_module(#This is simply a class-based version o
 #'
 #' @param pred Tensor of predicted class logits. Should be of shape (mini-batch,
 #' class, width, height) where the class dimension has a length equal to the number
-#' of classes being differentiated. For a binary classification, output can be provided
-#' as (mini-batch, class, width, height) or (mini-batch, width, height) if only the positive
-#' case logit is returned.
-#' @param target Tensor or predicted class indices from 0 to n-1 or 1 to n where n is the
-#' number of classes. For a binary classification, only the positive case logit can be returned.
-#' Shape can be (mini-batch, class, width, height) or (mini-batch, width, height)
-#' @param nCls number of classes being differentiated. Should be 1 for a binary classification
-#' where only the positive case logit is returned. Default is 3.
+#' of classes being differentiated. The predictions should have a 32-bit float data type.
+#' @param target Tensor of reference class indices from 0 to n-1 or 1 to n where n is the
+#' number of classes. Shape must be (mini-batch, class, width, height), and a long integer data type must be used.
+#' @param nCls number of classes being differentiated.
 #' @param dsWghts Vector of 4 weights. Weights to apply to the losses calculated at each spatial
 #' resolution when using deep supervision. The default is c(.6, .2, .1, .1) where larger weights are
 #' placed on the results at a higher spatial resolution.
@@ -308,16 +290,13 @@ defineMultiClassLoss <- torch::nn_module(#This is simply a class-based version o
 #' and 1 put more weight on the distribution-based loss while values between 0 and 0.5 put more
 #' weight on the region-based loss.
 #' @param gamma Parameter that controls increased weighting applied to difficult-to-predict pixels (for
-#' distribution-based losses) or difficult-to-predict classes (region-based losses). Default is 0, or no focal
-#' weighting is applied.
+#' distribution-based losses) or difficult-to-predict classes (region-based losses). Smaller values increase the
+#' weight applied to difficult samples or classes. Default is 0, or no focal weighting is applied.
 #' @param delta Parameter that controls the relative weightings of false positive and false negative errors for
 #' each class. Different weightings can be provided for each class. The default is 0.6, which results in prioritizing
 #' false positive errors relative to false negative errors.
 #' @param smooth Smoothing factor to avoid divide-by-zero errors and provide numeric stability. Default is 1e-8.
 #' Recommend using the default.
-#' @param chnDim TRUE or FALSE. Whether the channel dimension is included in the target tensor:
-#' (Batch, Channel, Height, Width) as opposed to (Batch, Channel, Height, Width). If the channel dimension
-#' is included, this should be set to TRUE. If it is not, this should be set to FALSE. Default is TRUE.
 #' @param zeroStart TRUE or FALSE. If class indices start at 0 as opposed to 1, this should be set to
 #' TRUE. This is required  to implement one-hot encoding since R starts indexing at 1. Default is TRUE.
 #' @param clsWghtsDist Vector of class weights for use in calculating a weighted version of the CE loss.
@@ -328,14 +307,13 @@ defineMultiClassLoss <- torch::nn_module(#This is simply a class-based version o
 #' loss. Default is FALSE.
 #' @return Loss metric for use in training process.
 #' @export
-defineMultiClassLossDS <- torch::nn_module(#This is simply a class-based version of function defined above/implements function internally
+defineUnifiedFocalLossDS <- torch::nn_module(#This is simply a class-based version of function defined above/implements function internally
   initialize = function(nCls=3,
-                        dsWghts = c(1,.3,.3,.3),
+                        dsWghts = c(.6,.2,.1,.1),
                         lambda=.5,
                         gamma=.5,
                         delta=0.6,
                         smooth = 1e-8,
-                        chnDim=TRUE,
                         zeroStart=TRUE,
                         clsWghtsDist=1,
                         clsWghtsReg=1,
@@ -348,59 +326,55 @@ defineMultiClassLossDS <- torch::nn_module(#This is simply a class-based version
     self$gamma = gamma
     self$delta= delta
     self$smooth = smooth
-    self$chnDim= chnDim
     self$zeroStart = zeroStart
     self$clsWghtsDist = clsWghtsDist
     self$clsWghtsReg = clsWghtsReg
     self$useLogCosH =useLogCosH
     self$device=device
 
-    loss1 <- defineMultiClassLoss(self$nCls,
-                                  self$dsWghts,
+    self$wght1 <- torch::torch_tensor(dsWghts[1], dtype=torch::torch_float32(), device=device)
+    self$wght2 <- torch::torch_tensor(dsWghts[2], dtype=torch::torch_float32(), device=device)
+    self$wght4 <- torch::torch_tensor(dsWghts[3], dtype=torch::torch_float32(), device=device)
+    self$wght8 <- torch::torch_tensor(dsWghts[4], dtype=torch::torch_float32(), device=device)
+
+    self$loss1 <- defineUnifiedFocalLoss(self$nCls,
                                   self$lambda,
                                   self$gamma,
                                   self$delta,
                                   self$smooth,
-                                  self$chnDim,
                                   self$zeroStart,
                                   self$clsWghtsDist,
                                   self$clsWghtsReg,
                                   self$useLogCosH,
                                   self$device)
 
-    loss2 <- defineMultiClassLoss(self$nCls,
-                                  self$dsWghts,
+    self$loss2 <- defineUnifiedFocalLoss(self$nCls,
                                   self$lambda,
                                   self$gamma,
                                   self$delta,
                                   self$smooth,
-                                  self$chnDim,
                                   self$zeroStart,
                                   self$clsWghtsDist,
                                   self$clsWghtsReg,
                                   self$useLogCosH,
                                   self$device)
 
-    loss4 <- defineMultiClassLoss(self$nCls,
-                                  self$dsWghts,
+    self$loss4 <- defineUnifiedFocalLoss(self$nCls,
                                   self$lambda,
                                   self$gamma,
                                   self$delta,
                                   self$smooth,
-                                  self$chnDim,
                                   self$zeroStart,
                                   self$clsWghtsDist,
                                   self$clsWghtsReg,
                                   self$useLogCosH,
                                   self$device)
 
-    loss8 <- defineMultiClassLoss(self$nCls,
-                                  self$dsWghts,
+    self$loss8 <- defineUnifiedFocalLoss(self$nCls,
                                   self$lambda,
                                   self$gamma,
                                   self$delta,
                                   self$smooth,
-                                  self$chnDim,
                                   self$zeroStart,
                                   self$clsWghtsDist,
                                   self$clsWghtsReg,
@@ -409,316 +383,12 @@ defineMultiClassLossDS <- torch::nn_module(#This is simply a class-based version
   },
 
   forward = function(pred, target){
-    l1 <- loss1(pred[1], target[1])
-    l2 <- loss1(pred[2], target[2])
-    l4 <- loss1(pred[3], target[3])
-    l8 <- loss1(pred[4], target[4])
+    l1 <- self$loss1(pred[[1]], target[[1]])
+    l2 <- self$loss2(pred[[2]], target[[2]])
+    l4 <- self$loss4(pred[[3]], target[[3]])
+    l8 <- self$loss8(pred[[4]], target[[4]])
 
-    lossOut <- ((self$dsWghts[1]*l1)+(self$dsWghts[2]*l2)+(self$dsWghts[3]*l4)(self$dsWghts[4]*l8))/sum(self$dsWghts)
-
-    return(lossOut)
-  }
-)
-
-#' defineBinaryLoss
-#'
-#' Define a loss for binary semantic segmentation using a modified unified focal loss framework as a subclass of torch::nn_module()
-#'
-#' Use this loss as opposed to the multiclass version if only a logit for the positive case is returned.
-#' Implementation of modified version of the unified focal dice loss after:
-#'
-#' Yeung, M., Sala, E., Schönlieb, C.B. and Rundo, L., 2022. Unified focal loss:
-#' Generalising dice and cross entropy-based losses to handle class imbalanced
-#' medical image segmentation. Computerized Medical Imaging and Graphics, 95, p.102026.
-#'
-#' This loss has three key hyperparameters that control its implementation. Lambda controls
-#' the relative weight of the distribution- and region-based losses. Default is 0.5,
-#' or equal weighting between the losses is applied. If lambda = 1, only the distribution-
-#' based loss is considered. If lambda = 0, only the region-based loss is considered. Values between 0.5
-#' and 1 put more weight on the distribution-based loss while values between 0 and 0.5 put more
-#' weight on the region-based loss.
-#'
-#' Gamma controls the application of focal loss and the application of
-#' increased weight to difficult-to-predict pixels (for distribution-based losses). Focal correction is only applied to
-#' distribution-based loss. Lower gamma values put increased weight on difficult samples or classes.
-#' Using a value of 1 equates to not using a focal adjustment.
-#'
-#' The delta term controls the relative weight of
-#' false positive and false negative errors for each class. The default is 0.6 for each class, which results in
-#' placing a higher weight on false positive as opposed to false negative errors relative to that class.
-#'
-#' @param pred Tensor of predicted class logits. Should be of shape (mini-batch,
-#' class, width, height) where the class dimension has a length equal to the number
-#' of classes being differentiated. For a binary classification, output can be provided
-#' as (mini-batch, class, width, height) or (mini-batch, width, height) if only the positive
-#' case logit is returned.
-#' @param target Tensor or predicted class indices from 0 to n-1 or 1 to n where n is the
-#' number of classes. For a binary classification, only the positive case logit can be returned.
-#' Shape can be (mini-batch, class, width, height) or (mini-batch, width, height)
-#' @param lambda Term used to control the relative weighting of the distribution- and region-based
-#' losses. Default is 0.5, or equal weighting between the losses. If lambda = 1, only the distribution-
-#' based loss is considered. If lambda = 0, only the region-based loss is considered. Values between 0.5
-#' and 1 put more weight on the distribution-based loss while values between 0 and 0.5 put more
-#' weight on the region-based loss.
-#' @param gamma Parameter that controls increased weighting applied to difficult-to-predict pixels (for
-#' distribution-based losses) or difficult-to-predict classes (region-based losses). Default is 0, or no focal
-#' weighting is applied.
-#' @param delta Parameter that controls the relative weightings of false positive and false negative errors for
-#' each class. Different weightings can be provided for each class. The default is 0.6, which results in prioritizing
-#' false positive errors relative to false negative errors.
-#' @param smooth Smoothing factor to avoid divide-by-zero errors and provide numeric stability. Default is 1e-8.
-#' Recommend using the default.
-#' @param chnDim TRUE or FALSE. Whether the channel dimension is included in the target tensor:
-#' (Batch, Channel, Height, Width) as opposed to (Batch, Channel, Height, Width). If the channel dimension
-#' is included, this should be set to TRUE. If it is not, this should be set to FALSE. Default is TRUE.
-#' @param zeroStart TRUE or FALSE. If class indices start at 0 as opposed to 1, this should be set to
-#' TRUE. This is required  to implement one-hot encoding since R starts indexing at 1. Default is TRUE.
-#' @param useLogCosH TRUE or FALSE. Whether or not to apply a logCosH transformation to the region-based
-#' loss. Default is FALSE.
-#' @return Loss metric for use in training process.
-#' @export
-defineBinaryLoss <- torch::nn_module(
-  initialize = function(lambda=.5,
-                        gamma=.5,
-                        delta=0.6,
-                        smooth = 1e-8,
-                        chnDim=TRUE,
-                        zeroStart=TRUE,
-                        useLogCosH =FALSE){
-
-    self$lambda = lambda
-    self$gamma = gamma
-    self$delta = delta
-    self$smooth = smooth
-    self$chnDim = chnDim
-    self$zeroStart = zeroStart
-    useLogCosH = useLogCosH
-
-  },
-
-  forward = function(pred, target){
-    pred <- pred %>% nn_log_sigmoid() %>% torch_exp()
-    pred <- pred %>% nn_flatten(1,4)
-    target <- target %>% nn_flatten(1,4)
-
-    #Convert smooth, lambda, delta, gamma, and class weight vectors/parameters to torch tensors and move to device
-    smoothT <- torch::torch_tensor(self$smooth,
-                                   dtype=torch::torch_float32(),
-                                   device=self$device)
-    lambdaT <- torch::torch_tensor(self$lambda,
-                                   dtype=torch::torch_float32(),
-                                   device=self$device)
-    deltaT <- torch::torch_tensor(delta2,
-                                  dtype=torch::torch_float32(),
-                                  device=self$device)
-    gammaT <- torch::torch_tensor(self$gamma,
-                                  dtype=torch::torch_float32(),
-                                  device=self$device)
-
-    #Convert target to long type
-    target1 <- torch::torch_tensor(target,
-                                   dtype=torch::torch_long(),
-                                   device=self$device)
-
-    #If the channel or class dimension is not included in the target, add it
-    if(self$chnDim == FALSE){
-      target1 <- target1$unsqueeze(dim=2)
-    }
-
-    #If does not start at 0, subtract 1
-    if(self$zeroStart == FALSE){
-      target1 <- torch::torch_tensor(target1-1,
-                                     dtype=torch::torch_long(),
-                                     device=self$device)
-    }
-
-    # Distribution-based loss -------------------------------------------------
-
-    #Calculate focal CE loss with gamma and class weights
-    #https://github.com/pytorch/vision/issues/3250
-
-    if(self$lambda > 0){
-      #Remove class dimension (required for CE loss as implemented with torch)
-      targetCE <- target1$squeeze()
-
-      #Calculate CE loss with no reduction (use predicted logits with no softmax applied)
-      ceL <- torch::nn_binary_cross_entropy_loss(pred, target)
-
-      #Calculate modified focal CE loss
-      pt = torch::torch_exp(-ceL)
-      mFL <- deltaT*((1.0-pt)**(1.0-gammaT))*ceL
-
-      #Get mean distribution-based loss for all pixels
-      distMetric <- torch::torch_mean(mFL)
-    }
-
-    # Region-based loss -------------------------------------------------------
-
-    if(self$lambda < 1){
-      #Get tps, fps, and fns
-      tps <- sum(pred * target)
-      fps <- sum((1.0 - target) * pred)
-      fns <- sum(target * (1.0 - pred))
-
-      #Calculated modified Tversky Index using tps, fps, fns, and delta parameter
-      mTI <- (tps + smoothT)/(tps + ((1.0-deltaT) * fps) + (deltaT * fns) + smoothT)
-
-      #Apply log-cosh correction if desired
-      if(self$useLogCosH == TRUE){
-        regMetric <- torch::torch_log(torch::torch_cosh(regMetric))
-      }
-    }
-
-    if(self$lambda == 1){
-      comboMetric <- distMetric
-    }else if(self$lambda == 0){
-      comboMetric <- regMetric
-    }else{
-      #Calculate combined metrics using relative weightings specified by lambda
-      comboMetric <- (lambdaT*distMetric)+((1.0-lambdaT)*regMetric)
-    }
-
-    return(comboMetric)
-
-  }
-)
-
-
-#' defineBinaryLossDS
-#'
-#' Define a loss for binary semantic segmentation using a modified unified focal loss framework as a subclass of torch::nn_module() when using deep supervision.
-#'
-#' Use this loss as opposed to the multiclass version if only a logit for the positive case is returned.
-#' Implementation of modified version of the unified focal dice loss after:
-#'
-#' Yeung, M., Sala, E., Schönlieb, C.B. and Rundo, L., 2022. Unified focal loss:
-#' Generalising dice and cross entropy-based losses to handle class imbalanced
-#' medical image segmentation. Computerized Medical Imaging and Graphics, 95, p.102026.
-#'
-#' This loss has three key hyperparameters that control its implementation. Lambda controls
-#' the relative weight of the distribution- and region-based losses. Default is 0.5,
-#' or equal weighting between the losses is applied. If lambda = 1, only the distribution-
-#' based loss is considered. If lambda = 0, only the region-based loss is considered. Values between 0.5
-#' and 1 put more weight on the distribution-based loss while values between 0 and 0.5 put more
-#' weight on the region-based loss.
-#'
-#' Gamma controls the application of focal loss and the application of
-#' increased weight to difficult-to-predict pixels (for distribution-based losses). Focal correction is only applied to
-#' distribution-based loss. Lower gamma values put increased weight on difficult samples or classes.
-#' Using a value of 1 equates to not using a focal adjustment.
-#'
-#' The delta term controls the relative weight of
-#' false positive and false negative errors for each class. The default is 0.6 for each class, which results in
-#' placing a higher weight on false positive as opposed to false negative errors relative to that class.
-#' @param pred Tensor of predicted class logits. Should be of shape (mini-batch,
-#' class, width, height) where the class dimension has a length equal to the number
-#' of classes being differentiated. For a binary classification, output can be provided
-#' as (mini-batch, class, width, height) or (mini-batch, width, height) if only the positive
-#' case logit is returned.
-#' @param target Tensor or predicted class indices from 0 to n-1 or 1 to n where n is the
-#' number of classes. For a binary classification, only the positive case logit can be returned.
-#' Shape can be (mini-batch, class, width, height) or (mini-batch, width, height)
-#' @param lambda Term used to control the relative weighting of the distribution- and region-based
-#' losses. Default is 0.5, or equal weighting between the losses. If lambda = 1, only the distribution-
-#' based loss is considered. If lambda = 0, only the region-based loss is considered. Values between 0.5
-#' and 1 put more weight on the distribution-based loss while values between 0 and 0.5 put more
-#' weight on the region-based loss.
-#' @param gamma Parameter that controls increased weighting applied to difficult-to-predict pixels (for
-#' distribution-based losses) or difficult-to-predict classes (region-based losses). Default is 0, or no focal
-#' weighting is applied.
-#' @param delta Parameter that controls the relative weightings of false positive and false negative errors for
-#' each class. Different weightings can be provided for each class. The default is 0.6, which results in prioritizing
-#' false positive errors relative to false negative errors.
-#' @param smooth Smoothing factor to avoid divide-by-zero errors and provide numeric stability. Default is 1e-8.
-#' Recommend using the default.
-#' @param chnDim TRUE or FALSE. Whether the channel dimension is included in the target tensor:
-#' (Batch, Channel, Height, Width) as opposed to (Batch, Channel, Height, Width). If the channel dimension
-#' is included, this should be set to TRUE. If it is not, this should be set to FALSE. Default is TRUE.
-#' @param zeroStart TRUE or FALSE. If class indices start at 0 as opposed to 1, this should be set to
-#' TRUE. This is required  to implement one-hot encoding since R starts indexing at 1. Default is TRUE.
-#' @param useLogCosH TRUE or FALSE. Whether or not to apply a logCosH transformation to the region-based
-#' loss. Default is FALSE.
-#' @return Loss metric for use in training process.
-#' @export
-defineBinaryLossDS <- torch::nn_module(
-  initialize = function(lambda=.5,
-                        gamma=.5,
-                        delta=0.6,
-                        smooth = 1e-8,
-                        chnDim=TRUE,
-                        zeroStart=TRUE,
-                        useLogCosH =FALSE){
-
-    self$lambda = lambda
-    self$gamma = gamma
-    self$delta = delta
-    self$smooth = smooth
-    self$chnDim = chnDim
-    self$zeroStart = zeroStart
-    useLogCosH = useLogCosH
-
-    loss1 <- defineBinaryLoss(self$nCls,
-                              self$dsWghts,
-                              self$lambda,
-                              self$gamma,
-                              self$delta,
-                              self$smooth,
-                              self$chnDim,
-                              self$zeroStart,
-                              self$clsWghtsDist,
-                              self$clsWghtsReg,
-                              self$useLogCosH,
-                              self$device)
-
-    loss2 <- defineBinaryLoss(self$nCls,
-                              self$dsWghts,
-                              self$lambda,
-                              self$gamma,
-                              self$delta,
-                              self$smooth,
-                              self$chnDim,
-                              self$zeroStart,
-                              self$clsWghtsDist,
-                              self$clsWghtsReg,
-                              self$useLogCosH,
-                              self$device)
-
-    loss4 <- defineBinaryLoss(self$nCls,
-                              self$dsWghts,
-                              self$lambda,
-                              self$gamma,
-                              self$delta,
-                              self$smooth,
-                              self$chnDim,
-                              self$zeroStart,
-                              self$clsWghtsDist,
-                              self$clsWghtsReg,
-                              self$useLogCosH,
-                              self$device)
-
-    loss8 <- defineBinaryLoss(self$nCls,
-                              self$dsWghts,
-                              self$lambda,
-                              self$gamma,
-                              self$delta,
-                              self$smooth,
-                              self$chnDim,
-                              self$zeroStart,
-                              self$clsWghtsDist,
-                              self$clsWghtsReg,
-                              self$useLogCosH,
-                              self$device)
-
-
-  },
-
-  forward = function(pred, target){
-    l1 <- loss1(pred[1], target[1])
-    l2 <- loss1(pred[2], target[2])
-    l4 <- loss1(pred[3], target[3])
-    l8 <- loss1(pred[4], target[4])
-
-    lossOut <- ((self$dsWghts[1]*l1)+(self$dsWghts[2]*l2)+(self$dsWghts[3]*l4)(self$dsWghts[4]*l8))/sum(self$dsWghts)
+    lossOut <- ((self$wght1*l1)+(self$wght2*l2)+(self$wght4*l4)+(self$wght8*l8))/(self$wght1+self$wght2+self$wght4+self$wght8)
 
     return(lossOut)
   }

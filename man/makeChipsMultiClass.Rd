@@ -40,7 +40,7 @@ slash in the file path (e.g., "C:/data/chips/").}
 
 \item{useExistingDir}{TRUE or FALSE. Write chips into an existing directory
 with subfolders already defined as opposed to using a new directory. This can be used
-if you want to add chips to an existing set of chips.}
+if you want to add chips to an existing set of chips. Default is FALSE.}
 }
 \value{
 Image and mask files written to disk in TIFF format. No R object is
@@ -59,9 +59,9 @@ not have overlap or gaps, the stride_x and stride_y arguments should be the
 same as the size argument. Both the image chips and associated masks are
 written to TIFF format (".tif"). Input data are not limited to three
 band images. This function is specifically for a multiclass classification.
-For a binary classification, use the makeChips() function. If an irregular shaped
-raster grid is provided, only chips and masks that contain no NA or NoDATA
-cells will be produced.
+For a binary classification or when only two classes are differentiated, use
+the makeChips() function. If an irregular shaped raster grid is provided, only
+chips and masks that contain no NA or NoDATA cells will be produced.
 
 Within the provided directory, image chips will be written to an "images" folder
 and masks will be written to a "masks" folder.

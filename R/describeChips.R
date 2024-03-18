@@ -27,7 +27,7 @@
 #' @param numChipsBack If subSample is set to TRUE and the mode is "Divided", this
 #' parameter indicates the number of chips to sample from the background-only
 #' samples. The default is 200. This parameter will be ignored if subSample is
-#' set to FALSE and mode is not "Divided".
+#' set to FALSE and/or mode is not "Divided".
 #' @param subSamplePix TRUE or FALSE. Whether or not to calculate statistics using
 #' a subsample of pixels from each image chip as opposed to all pixels. If a large
 #' number of chips are available and/or each chip is large, we suggest setting this

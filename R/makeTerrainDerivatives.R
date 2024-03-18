@@ -12,7 +12,8 @@
 #' range of 0 to 10 then linearly rescaled from 0 to 1. Values are provided in
 #' floating point.
 #'
-#' The stack is described in the following publication:
+#' The stack is described in the following publication and was originall proposed by
+#' William Odom.
 #'
 #' Maxwell, A.E., W.E. Odom, C.M. Shobe, D.H. Doctor, M.S. Bester, and T. Ore,
 #' 2023. Exploring the influence of input feature space on CNN-based geomorphic
@@ -25,7 +26,7 @@
 #' @param filename Name and full path or path relative to working directory for
 #' output terrain stack. We recommend saving the data to either TIFF (".tif") or
 #' Image (".img") format.
-#' @return Three-band raster mask written to disk in TIFF format and spatRaster object.
+#' @return Three-band raster grid written to disk in TIFF format and spatRaster object.
 #' @export
 makeTerrainDerivatives <- function(dtm,
                                    res,

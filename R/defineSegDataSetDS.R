@@ -1,16 +1,17 @@
 #' defineSegDataSetDS
 #'
-#' Instantiate a subclass of torch dataset() function for semantic segmentation with rescaled masks for deep supervision
+#' Define a subclass of torch::dataset() for semantic segmentation with rescaled masks for deep supervision
 #'
-#' This function instantiates a subclass of the torch dataset() function that loads
+#' This function instantiates a subclass of torch::dataset() that loads
 #' data generated using the makeChips() or makeChipsMultiClass() functions. Can also
 #' define random augmentations to combat overfitting. Note that horizontal and vertical
-#' flips will effect the alignment of the image and associated mask chips. As a result,
+#' flips will affect the alignment of the image and associated mask chips. As a result,
 #' the same augmentation will be applied to both the image and the mask. Changes in
 #' brightness, contrast, gamma, hue, and saturation will not be applied to the masks
 #' since alignment is not impacted by these transformations. This version of the function
 #' generates masks at the original, original/2, original/4, and original/8 spatial scales
-#' to support deep supervision.
+#' to support deep supervision. When masks are downsampled, the mode or most commonly
+#' occurring class index is returned for each new cell.
 #'
 #' @param chpDF Data frame of image chip paths created using makeChipsDF().
 #' @param folder Full path or path relative to the working directory to the
@@ -26,8 +27,11 @@
 #' 0 to 1. For example, if masks are scaled from 0 and 255, you can divide by 255 to
 #' obtain a 0 to 1 scale. Default is 1 or no rescaling.
 #' @param mskAdd Value to add to mask class numeric codes. For example, if class indices
-#' start are zero, 1 can be added so that indices start at 1. Default is 0 (return
-#' original class codes).
+#' start are 0, 1 can be added so that indices start at 1. Default is 0 (return
+#' original class codes). Note that several other functions in this package have a zeroStart
+#' argument. If class codes start at 0, this argument should be set to TRUE. If they start at 1,
+#' this argument should be set to FALSE. The importance of this arises from the use of one-hot
+#' encoding internally, which requires that class indices start at 1.
 #' @param bands Vector of bands to include. The default is to only include the
 #' first 3 bands. If you want to use a different subset of bands, you must provide
 #' a vector of band indices here to override the default.
@@ -36,13 +40,6 @@
 #' @param bSDs Vector of band standard deviations. Length should be the same
 #' as the number of bands. Normalization is applied before any rescaling within
 #' the function.
-#' @param chnDim TRUE or FALSE. Default is TRUE. If TRUE, will produce target tensors that include the
-#' channel dimension: (N, C, H, W). If FALSE, will produce target tensors that do not include the
-#' channel dimension: (C, H, W). We recommend including the target dimension since other functions
-#' in this package expect this by default.
-#' @param mskLong TRUE or FALSE. Default is TRUE. If TRUE, target tensors will be produced with a
-#' tensor_long data type. If FALSE, target tensors will be produced with a tensor_float32 data type.
-#' We recommend using TRUE or producing targets with a torch_long data type.
 #' @param doAugs TRUE or FALSE. Whether or not to apply data augmentations to combat
 #' overfitting. If FALSE, all augmentations parameters are ignored. Data augmentations
 #' are generally only applied to the training set. Default is FALSE.
@@ -101,8 +98,6 @@ defineSegDataSetDS <- torch::dataset(
                         bands = c(1,2,3),
                         bMns=1,
                         bSDs=1,
-                        mskLong = TRUE,
-                        chnDim = TRUE,
                         doAugs = FALSE,
                         maxAugs = 0,
                         probVFlip = 0,
@@ -126,8 +121,6 @@ defineSegDataSetDS <- torch::dataset(
     self$bands <- bands
     self$bMns <- bMns
     self$bSDs <- bSDs
-    self$mskLong <- mskLong
-    self$chnDim <- chnDim
     self$doAugs <- doAugs
     self$maxAugs <- maxAugs
     self$probVFlip <- probVFlip
@@ -158,11 +151,8 @@ defineSegDataSetDS <- torch::dataset(
 
     image <- torch::torch_tensor(image, dtype=torch::torch_float32())
     image <- image$permute(c(3,1,2))
-    if(self$mskLong == TRUE){
-      mask <- torch::torch_tensor(mask, dtype=torch::torch_long())
-    }else{
-      mask <- torch::torch_tensor(mask, dtype=torch::torch_float32())
-    }
+
+    mask <- torch::torch_tensor(mask, dtype=torch::torch_long())
     mask <- mask$permute(c(3,1,2))
 
     if(self$normalize == TRUE){
@@ -170,11 +160,6 @@ defineSegDataSetDS <- torch::dataset(
     }
 
     image <- torch::torch_div(image,self$rescaleFactor)
-
-    if(self$chnDim == FALSE){
-      mask <- mask$squeeze()
-    }
-
 
     if(self$doAugs == TRUE){
 
@@ -225,10 +210,24 @@ defineSegDataSetDS <- torch::dataset(
         image <- torchvision::transform_adjust_saturation(image, saturation_factor=saturationFactor)
       }
     }
-    mask2 <- terra::aggregate(mask, fact=2, fun="modal")
-    mask4 <- terra::aggregate(mask, fact=4, fun="modal")
-    mask8 <- terra::aggregate(mask, fact=8, fun="modal")
-    return(list(image = image, list(mask1 = mask, mask2=mask2, mask4=mask4, mask8=mask8)))
+    maskP <- mask$permute(c(2,3,1))
+
+    mask2 <- terra::rast(as.array(maskP)) |> terra::aggregate(fact=2, fun="modal") |>
+      terra::as.array() |>
+      torch::torch_tensor(dtype=torch::torch_long())
+    mask2 <- mask2$permute(c(3,1,2))
+
+    mask4 <- terra::rast(as.array(maskP)) |> terra::aggregate(fact=4, fun="modal") |>
+      terra::as.array() |>
+      torch::torch_tensor(dtype=torch::torch_long())
+    mask4 <- mask4$permute(c(3,1,2))
+
+    mask8 <- terra::rast(as.array(maskP)) |> terra::aggregate(fact=8, fun="modal") |>
+      terra::as.array() |>
+      torch::torch_tensor(dtype=torch::torch_long())
+    mask8 <- mask8$permute(c(3,1,2))
+
+    return(list(image = image, mask = list(mask1 = mask, mask2=mask2, mask4=mask4, mask8=mask8)))
   },
 
   .length = function(){

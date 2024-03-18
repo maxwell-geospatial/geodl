@@ -31,10 +31,10 @@
 #'
 #' @param reference Single-band, categorical spatRaster object representing
 #' the reference labels. Note that the reference and predicted data must have
-#' the same extent, number of rows and columns, and coordinate reference system.
+#' the same extent, number of rows and columns of cells, and coordinate reference system.
 #' @param predicted Single-band, categorical spatRaster object representing the
 #' predicted labels. Note that the reference and predicted data must have the '
-#' same extent, number of rows and columns, and coordinate reference system.
+#' same extent, number of rows and columns of cells, and coordinate reference system.
 #' @param mappings Vector of factor level names. These must be in the same order
 #' as the factor levels so that they are correctly matched to the correct category.
 #' If no mappings are provided, then the factor levels are used by default. This

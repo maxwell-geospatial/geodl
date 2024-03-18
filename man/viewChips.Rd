@@ -34,7 +34,7 @@ final forward slash in the path (e.g., "C:/data/chips/").}
 
 \item{mode}{Either "image", "mask" or "both". If "image", a grid is produced
 for the image chips only. If "mask", a grid is produced for just the masks.
-If "both", masks are produced for both the image chips and masks. Default is
+If "both", grids are produced for both the image chips and masks. Default is
 "both".}
 
 \item{cCnt}{Number of columns in the grid. Row X Column count must sum to the number
@@ -43,16 +43,16 @@ of samples being displayed (nSamps). Default is 4.}
 \item{rCnt}{Number of rows in the grid. Row X Column count must sum to the number
 of samples being displayed (nSamps). Default is 4.}
 
-\item{r}{Band number to map to the red channel. Default is 1.}
+\item{r}{Band number to map to the red channel. Default is 1 or the first channel.}
 
-\item{g}{Band number to map to the green channel. Default is 2.}
+\item{g}{Band number to map to the green channel. Default is 2 or the second channel.}
 
-\item{b}{Band number to map to the red channel. Default is 3.}
+\item{b}{Band number to map to the red channel. Default is 3 or the third channel.}
 
 \item{cNames}{Vector of class names. Class names must be provided.}
 
 \item{cColors}{Vector of colors (named colors, hex codes, or rgb()).
-Colors to use to visualize each class matched based on position
+Color used to visualize each class is matched based on position
 in the vector. Colors must be provided.}
 
 \item{useSeed}{TRUE or FALSE. Whether or not to set a random seed to make result

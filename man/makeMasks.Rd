@@ -35,7 +35,7 @@ vector extent data. If the extent uses a different coordinate reference system
 then the input image, the features will be reprojected to match the image.
 Vector data are converted to a SpatVector object internally.}
 
-\item{field}{The name of the field in the feature vector data that differentiate
+\item{field}{The name of the field in the feature vector data that differentiates
 classes using a unique numeric code with an integer data type. Field name should
 be provided as a string.}
 
@@ -73,7 +73,7 @@ indicated by the field parameter. A unique numeric code should be provided for
 each class. In the case of a binary classification, 0 should indicate background
 and 1 should indicate positive. For a multiclass problem, values should be sequential
 from 0 to n-1, where n is the number of classes, or 1 to n. We recommend using
-0 to n-1. If no cropping is applied, the generated raster mask should have the
+1 to n. If no cropping is applied, the generated raster mask should have the
 same spatial extent, number of rows of pixels, number of columns of pixels,
 cell size, and coordinate reference system as the input image.
 }

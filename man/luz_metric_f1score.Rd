@@ -8,9 +8,9 @@ luz_metric_f1score(
   nCls = 1,
   smooth = 1,
   mode = "multiclass",
-  average = "micro",
+  biThresh = 0.5,
   zeroStart = TRUE,
-  chnDim = TRUE
+  usedDS = FALSE
 )
 }
 \arguments{
@@ -21,38 +21,21 @@ positive class prediction should be provided. If both the positive and negative
 or background class probability is provided for a binary classification, use
 the "multiclass" mode.}
 
-\item{average}{Either "micro" or "macro". Whether to use micro- or macro-averaging
-for multiclass metric calculation. Ignored when mode is "binary". Default is
-"macro". Macro averaging consists of calculating the metric separately for each class
-and averaging the results such that all classes are equally weighted. Micro-averaging calculates the
-metric for all classes collectively, and classes with a larger number of samples will have a larger
-weight in the final metric.}
-
 \item{zeroStart}{TRUE or FALSE. If class indices start at 0 as opposed to 1, this should be set to
 TRUE. This is required  to implement one-hot encoding since R starts indexing at 1. Default is TRUE.}
 
-\item{chnDim}{TRUE or FALSE. Whether the channel dimension is included in the target tensor:
-\link{Batch, Channel, Height, Width} as opposed to \link{Batch, Channel, Height, Width}. If the channel dimension
-is included, this should be set to TRUE. If it is not, this should be set to FALSE. Default is TRUE.}
-
 \item{preds}{Tensor of class predicted probabilities with shape
-\link{Batch, Class Logits, Height, Width} for a multiclass classification. For a
-binary classification, you can provide logits for the positive class as
-\link{Batch, Positive Class Logit, Height, Width} or \link{Batch, Height, Width}.}
+(Mini-Batch, Class Logits, Width, Height) and a 32-bit float data type.}
 
 \item{target}{Tensor of target class labels with shape
-\link{Batch, Class Indices, Height, Width} for a multiclass classification. For a
-binary classification, you can provide targets as
-\link{Batch, Positive Class Index, Height, Width} or \link{Batch, Height, Width}. For
+(Mini-Batch, Class Indices, Width, Height) and a long integer data type. For
 binary classification, the class index must be 1 for the positive class and
-
 0 for the background case.}
 
-\item{nCLs}{number of classes being differentiated. Should be 1 for a binary classification
-where only the postive case logit is returned. Default is 1.}
+\item{nCLs}{number of classes being differentiated.}
 }
 \value{
-Calculated metric return as a base-R vector as opposed to tensor.
+Calculated metric returned as a base-R vector as opposed to tensor.
 }
 \description{
 luz_metric function to calculate the F1-score

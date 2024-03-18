@@ -22,7 +22,7 @@ predictSpatial(
   bMns,
   bSDs,
   rescaleFactor = 1,
-  useDS = FALSE
+  usedDS = FALSE
 )
 }
 \arguments{
@@ -38,7 +38,7 @@ the working directory. Must also include the file extension (e.g., ".tif).}
 
 \item{mode}{Either "multiclass" or "binary". Default is "multiclass". If model
 returns a single logit for the positive case, should be "binary". If two or more
-class logits are returned, this should be "multiclass".}
+class logits are returned, this should be "multiclass". This package treats all cases as multiclass.}
 
 \item{predType}{"class", "logit", or "prob". Default is "class". Whether to generate a "hard"
 classification ("class"), logit(s) ("logit"), or rescaled logit(s) ("prob") with a
@@ -50,9 +50,9 @@ is returned with a channel for each class.}
 
 \item{biThresh}{When mode = "binary" and predType = "class", threshold to use to indicate
 the presence class. This threshold is applied to the rescaled logits after a sigmoid
-activation is applied. Default is 0.5. If rescaled logit is greater than or equal
+activation is applied. Default is 0.5. If the rescaled logit is greater than or equal
 to this threshold, pixel will be mapped to the positive case. Otherwise, it will be
-mapped to the negative or background class.}
+mapped to the negative or background class. This parameter is ignored for multiclass classification.}
 
 \item{useCUDA}{TRUE or FALSE. Whether or not to perform the inference on a GPU.
 If TRUE, the GPU is used. If FALSE, the CPU is used. Must have access to a CUDA-
@@ -60,8 +60,8 @@ enabled graphics card. Default is FALSE. Note that using a GPU significantly
 speeds up inference.}
 
 \item{nCls}{Number of classes being differentiated. Should be 1 for a binary
-classification problem and the number of classes for a multiclass classification
-problem.}
+classification problem where only the positive case logit is predicted or
+the number of classes being differentiated for a multiclass classification problem.}
 
 \item{chpSize}{Size of image chips that will be fed through the prediction process.
 We recommend using the size of the image chips used to train the model. However,
@@ -78,19 +78,19 @@ to reduce edge effects. We recommend at least 20.}
 
 \item{normalize}{TRUE or FALSE. Whether to apply normalization. If FALSE,
 bMns and bSDs is ignored. Default is FALSE. If TRUE, you must provide bMns
-and bSDs. This should match the setting used in defineSegDataSet().}
+and bSDs. This should match the setting used in defineSegDataSet() or defineSegDataSetDS().}
 
 \item{bMns}{Vector of band means. Length should be the same as the number of bands.
 Normalization is applied before any rescaling within the function. This should
-match the setting used in defineSegDataSet() when model was trained.}
+match the setting used in defineSegDataSet() or defineSegDataSetDS() when model was trained.}
 
 \item{bSDs}{Vector of band standard deviations. Length should be the same
 as the number of bands. Normalization is applied before any rescaling within
-the function. This should match the setting used in defineSegDataSet().}
+the function. This should match the setting used in defineSegDataSet() or defineSegDataSetDS().}
 
 \item{rescaleFactor}{A rescaling factor to rescale the bands to 0 to 1. For
 example, this could be set to 255 to rescale 8-bit data. Default is 1 or no
-rescaling. This should match the setting used in defineSegDataSet().}
+rescaling. This should match the setting used in defineSegDataSet() or defineSegDataSetDS().}
 
 \item{usedDS}{TRUE or FALSE. If model is configured to use deep supervision,
 this must be set to TRUE. Default is FALSE, or it is assumed that deep supervision
@@ -107,6 +107,8 @@ Apply a trained semantic segmentation model to predict back to geospatial raster
 \details{
 This function generates a pixel-by-pixel prediction using input data and a
 trained semantic segmentation model. Can return either hard classifications, logits, or
-rescaled logits with a sigmoid or softmax activation applied. Result is written
+rescaled logits with a sigmoid or softmax activation applied. Note that this package treats
+all problems as multiclass problems and does not differentiate between binary and multiclass
+classification. As a result, in our workflow the multiclass mode should be used. Result is written
 to disk and provided as a spatRaster object.
 }

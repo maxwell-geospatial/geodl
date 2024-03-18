@@ -48,8 +48,7 @@ if you want to add chips to an existing set of chips. However, the "mode" should
 be the same as that used to generated the original chips. Default is FALSE.}
 }
 \value{
-Image and mask files written to disk in TIFF format. Spatial reference
-information is not maintained. No R object is returned.
+Image and mask files written to disk in TIFF format. No R object is returned.
 }
 \description{
 Generate image chips from images and associated raster masks

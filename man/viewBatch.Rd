@@ -6,9 +6,7 @@
 \usage{
 viewBatch(
   dataLoader,
-  chnDim = TRUE,
-  mskLong = TRUE,
-  nRows = 3,
+  nCols = 3,
   r = 1,
   g = 2,
   b = 3,
@@ -20,24 +18,15 @@ viewBatch(
 \arguments{
 \item{dataLoader}{Instantiated instance of a DataLoader created using torch::dataloader().}
 
-\item{chnDim}{TRUE or FALSE. Default is TRUE. If TRUE, assumes the target tensor includes the
-channel dimension: (Batch, Channel, Height, Width). If FALSE, assumes the target tensor does not include the
-channel dimension: (Channel, Height, Width). The script is written such that it expects the channel dimension.
-So, if FALSE, the script will add the channel dimension as needed.}
+\item{nCols}{Number of columns in the image grid. Default is 3.}
 
-\item{mskLong}{TRUE or FALSE. Default is TRUE. Data type of target or mask. If the provided target
-has a data type other than torch_long, this parameter should be set to FALSE. This will cause the
-script to convert the target to the tensor_long data type as required for the calculations.}
-
-\item{nRows}{Number of rows in the image grid. Default is 3.}
-
-\item{r}{Index of channel to assign to red channel. Default is 1.
+\item{r}{Index of channel to assign to red channel. Default is 1 or first channel.
 For gray scale or single-band images, assign the same index to all three bands.}
 
-\item{g}{Index of channel to assign to green channel. Default is 2.
+\item{g}{Index of channel to assign to green channel. Default is 2 or the second channel.
 For gray scale or single-band images, assign the same index to all three bands.}
 
-\item{b}{Index of channel to assign to blue channel. Default is 3.
+\item{b}{Index of channel to assign to blue channel. Default is 3 or the third channel.
 For gray scale or single-band images, assign the same index to all three bands.}
 
 \item{cNames}{Vector of class names. Must be the same length as number of classes.}

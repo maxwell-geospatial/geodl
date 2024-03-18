@@ -13,7 +13,7 @@
 #' @param nSamps Number of samples to include in the grid. The default is 16.
 #' @param mode Either "image", "mask" or "both". If "image", a grid is produced
 #' for the image chips only. If "mask", a grid is produced for just the masks.
-#' If "both", masks are produced for both the image chips and masks. Default is
+#' If "both", grids are produced for both the image chips and masks. Default is
 #' "both".
 #' @param justPostitive TRUE or FALSE. If makeChips() was executed using the mode "Divided", you can
 #' choose to only show chips that contained some pixels mapped to the positive class.
@@ -23,12 +23,12 @@
 #' of samples being displayed (nSamps). Default is 4.
 #' @param rCnt Number of rows in the grid. Row X Column count must sum to the number
 #' of samples being displayed (nSamps). Default is 4.
-#' @param r Band number to map to the red channel. Default is 1.
-#' @param g Band number to map to the green channel. Default is 2.
-#' @param b Band number to map to the red channel. Default is 3.
+#' @param r Band number to map to the red channel. Default is 1 or the first channel.
+#' @param g Band number to map to the green channel. Default is 2 or the second channel.
+#' @param b Band number to map to the red channel. Default is 3 or the third channel.
 #' @param cNames Vector of class names. Class names must be provided.
 #' @param cColors Vector of colors (named colors, hex codes, or rgb()).
-#' Colors to use to visualize each class matched based on position
+#' Color used to visualize each class is matched based on position
 #' in the vector. Colors must be provided.
 #' @param useSeed TRUE or FALSE. Whether or not to set a random seed to make result
 #' reproducible. If FALSE, seed is ignored. Default is FALSE.
@@ -91,8 +91,8 @@ viewChips <- function(chpDF,
       blankR[currentR:(currentR+w-1), currentC:(currentC+h-1), 1:l] <- img1[]
       blankM[currentR:(currentR+w-1), currentC:(currentC+h-1), 1] <- msk1[]
     }
-    imgPlot = terra::plotRGB(blankR, r=1, g=2, b=3, scale=255, axes=FALSE, stretch="lin")
-    mskPlot = terra::plot(blankM, type="classes", axes=FALSE, levels=cNames, col=cColors)
+    imgPlot = terra::plotRGB(blankR, r=1, g=2, b=3, scale=255, axes=FALSE, stretch="lin", maxcell=1000000)
+    mskPlot = terra::plot(blankM, type="classes", axes=FALSE, levels=cNames, col=cColors, maxcell=1000000)
   }else if(mode == "image"){
     for(i in 1:nrow(subset1)){
       img1 <- terra::rast(paste0(folder,subset1[i,"chpPth"]))
@@ -103,7 +103,7 @@ viewChips <- function(chpDF,
       currentC <-subset1[i, "cI"]
       blankR[currentR:(currentR+w-1), currentC:(currentC+h-1), 1:l] <- img1[]
     }
-    terra::plotRGB(blankR, r=r, g=g, b=b, scale=255, axes=FALSE, stretch="lin")
+    terra::plotRGB(blankR, r=r, g=g, b=b, scale=255, axes=FALSE, stretch="lin", maxcell=1000000)
   }else{
     blankM <- terra::subset(blankR, 1)
     blankM[] <- 0
@@ -113,6 +113,6 @@ viewChips <- function(chpDF,
       currentC <-subset1[i, "cI"]
       blankM[currentR:(currentR+w-1), currentC:(currentC+h-1), 1] <- msk1[]
     }
-    terra::plot(blankM, type="classes", axes=FALSE, levels=cNames, col=cColors)
+    terra::plot(blankM, type="classes", axes=FALSE, levels=cNames, col=cColors, maxcell=1000000)
   }
 }
