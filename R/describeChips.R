@@ -2,7 +2,7 @@
 #'
 #' Generate data frame of band summary statistics and class pixel counts
 #'
-#' This function will generate a set of summary metrics from image chips and
+#' This function generates a set of summary metrics from image chips and
 #' associated masks stored in a directory. For each band, the minimum, median, mean,
 #' maximum, and standard deviation are returned (along with some other metrics). For
 #' mask data, the count of pixels in each class are returned. These summarizations
@@ -12,7 +12,7 @@
 #' @param folder Full folder path or folder path relative to the current working
 #' directory that holds the image chips and associated masks. You must include
 #' the final forward slash in the folder path (e.g., "C:/data/chips/").
-#' @param extension raster file extension (e.g., ".tif", ".png", ".jpeg", or ".img").
+#' @param extension Raster file extension (e.g., ".tif", ".png", ".jpeg", or ".img").
 #' The utilities in this package generate files in ".tif" format, so this is the default.
 #' This option is provided if chips are generated using another method.
 #' @param mode Either "All", "Positive", or "Divided". This should match the settings

@@ -4,13 +4,7 @@
 \alias{assessRaster}
 \title{assessRaster}
 \usage{
-assessRaster(
-  reference,
-  predicted,
-  multiclass = TRUE,
-  mappings,
-  positive_case = mappings[2]
-)
+assessRaster(reference, predicted, multiclass = TRUE, mappings, decimals = 4)
 }
 \arguments{
 \item{reference}{Single-band, categorical spatRaster object representing

@@ -2,16 +2,16 @@
 #'
 #' Define a loss for semantic segmentation using a modified unified focal loss framework as a subclass of torch::nn_module()
 #'
-#' Implementation of modified version of the unified focal dice loss after:
+#' Implementation of modified version of the unified focal loss after:
 #'
 #' Yeung, M., Sala, E., Schönlieb, C.B. and Rundo, L., 2022. Unified focal loss:
-#' Generalising dice and cross entropy-based losses to handle class imbalanced
+#' Generalising Dice and cross entropy-based losses to handle class imbalanced
 #' medical image segmentation. Computerized Medical Imaging and Graphics, 95, p.102026.
 #'
 #' Modifications include (1) allowing users to define class weights for both the distribution-
-#' based and region-based metrics, (2) using class weights as opposed to the symmetric and
+#' based and region-based losses, (2) using class weights as opposed to the symmetric and
 #' asymmetric methods implemented by the authors, and (3) including an option to apply
-#' a logcosh transform for the region-based loss.
+#' a logcosh transform to the region-based loss.
 #'
 #' This loss has three key hyperparameters that control its implementation. Lambda controls
 #' the relative weight of the distribution- and region-based losses. Default is 0.5,
@@ -27,30 +27,30 @@
 #'
 #' The delta term controls the relative weight of
 #' false positive and false negative errors for each class. The default is 0.6 for each class, which results in
-#' placing a higher weight on false positive as opposed to false negative errors relative to that class.
+#' placing a higher weight on false negative as opposed to false positive errors relative to that class.
 #'
 #' By adjusting the lambda, gamma, delta, and class weight terms, the user can implement a variety of different loss metrics
 #' including cross entropy loss, weighted cross entropy loss, focal cross entropy loss, focal weighted cross entropy loss,
-#' Dice loss, focal Dice loss, Tversky loss, and focal Tversky loss. Please see the associated vignettes that discuss how
-#' to parameterize the function to obtain different loss metrics.
+#' Dice loss, focal Dice loss, Tversky loss, and focal Tversky loss.
 #'
 #' @param pred Tensor of predicted class logits. Should be of shape (mini-batch,
-#' class, width, height) where the class dimension has a length equal to the number
+#' class logits, width, height) where the class dimension has a length equal to the number
 #' of classes being differentiated. The predictions should have a 32-bit float data type.
 #' @param target Tensor of reference class indices from 0 to n-1 or 1 to n where n is the
-#' number of classes. Shape must be (mini-batch, class, width, height), and a long integer data type must be used.
-#' @param nCls number of classes being differentiated.
+#' number of classes. Shape must be (mini-batch, class indices, width, height), and a long integer data type must be used.
+#' @param nCls Number of classes being differentiated.
 #' @param lambda Term used to control the relative weighting of the distribution- and region-based
 #' losses. Default is 0.5, or equal weighting between the losses. If lambda = 1, only the distribution-
 #' based loss is considered. If lambda = 0, only the region-based loss is considered. Values between 0.5
 #' and 1 put more weight on the distribution-based loss while values between 0 and 0.5 put more
 #' weight on the region-based loss.
-#' @param gamma Parameter that controls increased weighting applied to difficult-to-predict pixels (for
-#' distribution-based losses) or difficult-to-predict classes (region-based losses). Smaller values increase the
-#' weight applied to difficult samples or classes. Default is 0, or no focal weighting is applied.
+#' @param gamma Parameter that controls weighting applied to difficult-to-predict pixels (for
+#' distribution-based losses) or difficult-to-predict classes (for region-based losses). Smaller values increase the
+#' weight applied to difficult samples or classes. Default is 1, or no focal weighting is applied. Value must be
+#' less than or equal to 1 and larger than 0.
 #' @param delta Parameter that controls the relative weightings of false positive and false negative errors for
 #' each class. Different weightings can be provided for each class. The default is 0.6, which results in prioritizing
-#' false positive errors relative to false negative errors.
+#' false negative errors relative to false positive errors.
 #' @param smooth Smoothing factor to avoid divide-by-zero errors and provide numeric stability. Default is 1e-8.
 #' Recommend using the default.
 #' @param zeroStart TRUE or FALSE. If class indices start at 0 as opposed to 1, this should be set to
@@ -153,11 +153,11 @@ defineUnifiedFocalLoss <- torch::nn_module(#This is simply a class-based version
                                      device=self$device)
     }
 
-    #Apply softmax to logits along class dimension
+    #Apply softmax to logits along class dimension (all predictions at pixel will sum to 1)
     pred_soft <- pred |>
       torch::nnf_softmax(dim = 2)
 
-    #One hot encode masks
+    #One hot encode masks and reshape as needed
     target_one_hot <- torch::nnf_one_hot(target1,
                                          num_classes = self$nCls)
     target_one_hot <- target_one_hot$squeeze()
@@ -224,7 +224,6 @@ defineUnifiedFocalLoss <- torch::nn_module(#This is simply a class-based version
       }
     }
 
-
     if(self$lambda == 1){
       comboMetric <- distMetric
     }else if(self$lambda == 0){
@@ -239,20 +238,20 @@ defineUnifiedFocalLoss <- torch::nn_module(#This is simply a class-based version
 )
 
 
-#' defineMultiClassLossDS
+#' defineUnifiedFocalLossDS
 #'
-#' Define a loss for semantic segmentation using a modified unified focal loss framework as a subclass of torch::nn_module() when using deep supervision.
+#' Define a loss for geospatial semantic segmentation using a modified unified focal loss framework as a subclass of torch::nn_module() when using deep supervision.
 #'
-#' Implementation of modified version of the unified focal dice loss after:
+#' Implementation of modified version of the unified focal loss after:
 #'
 #' Yeung, M., Sala, E., Schönlieb, C.B. and Rundo, L., 2022. Unified focal loss:
-#' Generalising dice and cross entropy-based losses to handle class imbalanced
+#' Generalising Dice and cross entropy-based losses to handle class imbalanced
 #' medical image segmentation. Computerized Medical Imaging and Graphics, 95, p.102026.
 #'
 #' Modifications include (1) allowing users to define class weights for both the distribution-
-#' based and region-based metrics, (2) using class weights as opposed to the symmetric and
+#' based and region-based losses, (2) using class weights as opposed to the symmetric and
 #' asymmetric methods implemented by the authors, and (3) including an option to apply
-#' a logcosh transform for the region-based loss.
+#' a logcosh transform to the region-based loss.
 #'
 #' This loss has three key hyperparameters that control its implementation. Lambda controls
 #' the relative weight of the distribution- and region-based losses. Default is 0.5,
@@ -263,24 +262,23 @@ defineUnifiedFocalLoss <- torch::nn_module(#This is simply a class-based version
 #'
 #' Gamma controls the application of focal loss and the application of
 #' increased weight to difficult-to-predict pixels (for distribution-based losses) or difficult-to-predict
-#' classes (region-based losses). Smaller gamma values put increased weight on difficult samples or classes.
+#' classes (region-based losses). Lower gamma values put increased weight on difficult samples or classes.
 #' Using a value of 1 equates to not using a focal adjustment.
 #'
 #' The delta term controls the relative weight of
 #' false positive and false negative errors for each class. The default is 0.6 for each class, which results in
-#' placing a higher weight on false positive as opposed to false negative errors relative to that class.
+#' placing a higher weight on false negative as opposed to false positive errors relative to that class.
 #'
 #' By adjusting the lambda, gamma, delta, and class weight terms, the user can implement a variety of different loss metrics
 #' including cross entropy loss, weighted cross entropy loss, focal cross entropy loss, focal weighted cross entropy loss,
-#' Dice loss, focal Dice loss, Tversky loss, and focal Tversky loss. Please see the associated vignettes that discuss how
-#' to parameterize the function to obtain different loss metrics.
+#' Dice loss, focal Dice loss, Tversky loss, and focal Tversky loss.
 #'
 #' @param pred Tensor of predicted class logits. Should be of shape (mini-batch,
-#' class, width, height) where the class dimension has a length equal to the number
+#' class logits, width, height) where the class dimension has a length equal to the number
 #' of classes being differentiated. The predictions should have a 32-bit float data type.
 #' @param target Tensor of reference class indices from 0 to n-1 or 1 to n where n is the
-#' number of classes. Shape must be (mini-batch, class, width, height), and a long integer data type must be used.
-#' @param nCls number of classes being differentiated.
+#' number of classes. Shape must be (mini-batch, class indices, width, height), and a long integer data type must be used.
+#' @param nCls Number of classes being differentiated.
 #' @param dsWghts Vector of 4 weights. Weights to apply to the losses calculated at each spatial
 #' resolution when using deep supervision. The default is c(.6, .2, .1, .1) where larger weights are
 #' placed on the results at a higher spatial resolution.
@@ -289,12 +287,13 @@ defineUnifiedFocalLoss <- torch::nn_module(#This is simply a class-based version
 #' based loss is considered. If lambda = 0, only the region-based loss is considered. Values between 0.5
 #' and 1 put more weight on the distribution-based loss while values between 0 and 0.5 put more
 #' weight on the region-based loss.
-#' @param gamma Parameter that controls increased weighting applied to difficult-to-predict pixels (for
-#' distribution-based losses) or difficult-to-predict classes (region-based losses). Smaller values increase the
-#' weight applied to difficult samples or classes. Default is 0, or no focal weighting is applied.
+#' @param gamma Parameter that controls weighting applied to difficult-to-predict pixels (for
+#' distribution-based losses) or difficult-to-predict classes (for region-based losses). Smaller values increase the
+#' weight applied to difficult samples or classes. Default is 1, or no focal weighting is applied. Value must be
+#' less than or equal to 1 and larger than 0.
 #' @param delta Parameter that controls the relative weightings of false positive and false negative errors for
 #' each class. Different weightings can be provided for each class. The default is 0.6, which results in prioritizing
-#' false positive errors relative to false negative errors.
+#' false negative errors relative to false positive errors.
 #' @param smooth Smoothing factor to avoid divide-by-zero errors and provide numeric stability. Default is 1e-8.
 #' Recommend using the default.
 #' @param zeroStart TRUE or FALSE. If class indices start at 0 as opposed to 1, this should be set to
@@ -383,10 +382,10 @@ defineUnifiedFocalLossDS <- torch::nn_module(#This is simply a class-based versi
   },
 
   forward = function(pred, target){
-    l1 <- self$loss1(pred[[1]], target[[1]])
-    l2 <- self$loss2(pred[[2]], target[[2]])
-    l4 <- self$loss4(pred[[3]], target[[3]])
-    l8 <- self$loss8(pred[[4]], target[[4]])
+    l1 <- self$loss1(pred[[1]], target)
+    l2 <- self$loss2(pred[[2]], target)
+    l4 <- self$loss4(pred[[3]], target)
+    l8 <- self$loss8(pred[[4]], target)
 
     lossOut <- ((self$wght1*l1)+(self$wght2*l2)+(self$wght4*l4)+(self$wght8*l8))/(self$wght1+self$wght2+self$wght4+self$wght8)
 

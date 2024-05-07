@@ -1,6 +1,6 @@
 #' luz_metric_recall
 #'
-#' luz_metric function to calculate recall
+#' luz_metric function to calculate macro-averaged, class aggregated recall
 #'
 #' Calculates recall based on luz_metric() for use within training and validation
 #' loops.
@@ -11,12 +11,13 @@
 #' (Mini-Batch, Class Indices, Width, Height) and a long integer data type. For
 #' binary classification, the class index must be 1 for the positive class and
 #' 0 for the background case.
-#' @param nCLs number of classes being differentiated.
-#' @param smooth a smoothing factor to avoid divide by zero errors. Default is 1.
+#' @param nCLs Number of classes being differentiated.
+#' @param smooth A smoothing factor to avoid divide by zero errors. Default is 1.
 #' @param mode Either "binary" or "multiclass". If "binary", only the logit for
-#' positive class prediction should be provided. If both the positive and negative
+#' the positive class prediction should be provided. If both the positive and negative
 #' or background class probability is provided for a binary classification, use
-#' the "multiclass" mode.
+#' the "multiclass" mode. Note that this package is designed to treat all predictions as multiclass.
+#' The "binary" mode is only provided for use outside of the standard geodl workflow.
 #' @param zeroStart TRUE or FALSE. If class indices start at 0 as opposed to 1, this should be set to
 #' TRUE. This is required  to implement one-hot encoding since R starts indexing at 1. Default is TRUE.
 #' @param usedDS TRUE or FALSE. If deep supervision was implemented and masks are produced at varying scales using
@@ -56,7 +57,7 @@ luz_metric_recall <- luz::luz_metric(
   update = function(preds, target){
     if(self$usedDS == TRUE){
       preds <- preds[[1]]
-      target <- target[[1]]
+      target <- target
     }
 
     if(self$mode == "multiclass"){
@@ -114,7 +115,7 @@ luz_metric_recall <- luz::luz_metric(
 
 #' luz_metric_precision
 #'
-#' luz_metric function to calculate precision
+#' luz_metric function to calculate macro-averaged, class aggregated precision
 #'
 #' Calculates precision based on luz_metric() for use within training and validation
 #' loops.
@@ -125,12 +126,13 @@ luz_metric_recall <- luz::luz_metric(
 #' (Mini-Batch, Class Indices, Width, Height) and a long integer data type. For
 #' binary classification, the class index must be 1 for the positive class and
 #' 0 for the background case.
-#' @param nCLs number of classes being differentiated.
-#' @param smooth a smoothing factor to avoid divide by zero errors. Default is 1.
+#' @param nCLs Number of classes being differentiated.
+#' @param smooth A smoothing factor to avoid divide by zero errors. Default is 1.
 #' @param mode Either "binary" or "multiclass". If "binary", only the logit for
-#' positive class prediction should be provided. If both the positive and negative
+#' the positive class prediction should be provided. If both the positive and negative
 #' or background class probability is provided for a binary classification, use
-#' the "multiclass" mode.
+#' the "multiclass" mode. Note that this package is designed to treat all predictions as multiclass.
+#' The "binary" mode is only provided for use outside of the standard geodl workflow.
 #' @param zeroStart TRUE or FALSE. If class indices start at 0 as opposed to 1, this should be set to
 #' TRUE. This is required  to implement one-hot encoding since R starts indexing at 1. Default is TRUE.
 #' @return Calculated metric returned as a base-R vector as opposed to tensor.
@@ -170,7 +172,7 @@ luz_metric_precision <- luz::luz_metric(
   update = function(preds, target){
     if(self$usedDS == TRUE){
       preds <- preds[[1]]
-      target <- target[[1]]
+      target <- target
     }
 
     #For multiclass problems
@@ -248,7 +250,7 @@ luz_metric_precision <- luz::luz_metric(
 
 #' luz_metric_f1score
 #'
-#' luz_metric function to calculate the F1-score
+#' luz_metric function to calculate the macro-averaged, class aggregated F1-score
 #'
 #' Calculates F1-score based on luz_metric() for use within training and validation
 #' loops.
@@ -259,12 +261,13 @@ luz_metric_precision <- luz::luz_metric(
 #' (Mini-Batch, Class Indices, Width, Height) and a long integer data type. For
 #' binary classification, the class index must be 1 for the positive class and
 #' 0 for the background case.
-#' @param nCLs number of classes being differentiated.
-#' @param smooth a smoothing factor to avoid divide by zero errors. Default is 1.
+#' @param nCLs Number of classes being differentiated.
+#' @param smooth A smoothing factor to avoid divide by zero errors. Default is 1.
 #' @param mode Either "binary" or "multiclass". If "binary", only the logit for
-#' positive class prediction should be provided. If both the positive and negative
+#' the positive class prediction should be provided. If both the positive and negative
 #' or background class probability is provided for a binary classification, use
-#' the "multiclass" mode.
+#' the "multiclass" mode. Note that this package is designed to treat all predictions as multiclass.
+#' The "binary" mode is only provided for use outside of the standard geodl workflow.
 #' @param zeroStart TRUE or FALSE. If class indices start at 0 as opposed to 1, this should be set to
 #' TRUE. This is required  to implement one-hot encoding since R starts indexing at 1. Default is TRUE.
 #' @return Calculated metric returned as a base-R vector as opposed to tensor.
@@ -301,7 +304,7 @@ luz_metric_f1score <- luz::luz_metric(
   update = function(preds, target){
     if(self$usedDS == TRUE){
       preds <- preds[[1]]
-      target <- target[[1]]
+      target <- target
     }
 
     if(self$mode == "multiclass"){
@@ -351,8 +354,6 @@ luz_metric_f1score <- luz::luz_metric(
   },
 
   compute = function(){
-    #Calculate f1-score: (2*tps + smooth)/(2*tps + fns + fps + smooth)
-    #Not sure if this is the best way to do this or if it should be calculated direclty from precision and recall as (2*precision*recall)/(precision+recall)
     recalls <- (self$tps + self$smooth)/(self$tps + self$fns + self$smooth)
     precisions <- (self$tps + self$smooth)/(self$tps + self$fps + self$smooth)
 
@@ -377,12 +378,13 @@ luz_metric_f1score <- luz::luz_metric(
 #' (Mini-Batch, Class Indices, Width, Height) and a long integer data type. For
 #' binary classification, the class index must be 1 for the positive class and
 #' 0 for the background case.
-#' @param nCLs number of classes being differentiated.
-#' @param smooth a smoothing factor to avoid divide by zero errors. Default is 1.
+#' @param nCLs Number of classes being differentiated.
+#' @param smooth A smoothing factor to avoid divide by zero errors. Default is 1.
 #' @param mode Either "binary" or "multiclass". If "binary", only the logit for
-#' positive class prediction should be provided. If both the positive and negative
+#' the positive class prediction should be provided. If both the positive and negative
 #' or background class probability is provided for a binary classification, use
-#' the "multiclass" mode.
+#' the "multiclass" mode. Note that this package is designed to treat all predictions as multiclass.
+#' The "binary" mode is only provided for use outside of the standard geodl workflow.
 #' @param zeroStart TRUE or FALSE. If class indices start at 0 as opposed to 1, this should be set to
 #' TRUE. This is required  to implement one-hot encoding since R starts indexing at 1. Default is TRUE.
 #' @return Calculated metric returned as a base-R vector as opposed to tensor.
@@ -413,7 +415,7 @@ luz_metric_overall_accuracy <- luz::luz_metric(
 
     if(self$usedDS == TRUE){
       preds <- preds[[1]]
-      target <- target[[1]]
+      target <- target
     }
 
     if(self$mode == "multiclass"){

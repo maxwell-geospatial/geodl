@@ -515,7 +515,7 @@ asppBlkR <- torch::nn_module(
 
 #' defineUNet
 #'
-#' Define a UNet architecture for semantic segmentation.
+#' Define a UNet architecture for geospatial semantic segmentation.
 #'
 #' Define a UNet architecture with 4 blocks in the encoder, a bottleneck
 #' block, and 4 blocks in the decoder. UNet can accept a variable number of input
@@ -543,7 +543,7 @@ asppBlkR <- torch::nn_module(
 #' @param useASPP TRUE or FALSE. Whether to use an ASPP module as the bottleneck as opposed to a
 #' double convolution operation. Default is FALSE or the ASPP module is not used as the bottleneck.
 #' @param useDS TRUE or FALSE. Whether or not to use deep supervision. If TRUE, four predictions are
-#' be made, one at each decoder block resolution, and the predictions will be returned as a list object
+#' made, one at each decoder block resolution, and the predictions are returned as a list object
 #' containing the 4 predictions. If FALSE, only the final prediction at the original resolution is
 #' returned. Default is FALSE or deep supervision is not implemented.
 #' @param enChn Vector of 4 integers defining the number of output
@@ -595,111 +595,111 @@ defineUNet <- torch::nn_module(
     self$seRatio = seRatio
 
     if(useRes == TRUE){
-      self$e1 <- doubleConvBlkR(inChn=inChn,
+      self$e1 <- geodl:::doubleConvBlkR(inChn=inChn,
                                 outChn=enChn[1],
                                 actFunc=actFunc,
                                 negative_slope=negative_slope)
-      self$e2 <- doubleConvBlkR(inChn=enChn[1],
+      self$e2 <- geodl:::doubleConvBlkR(inChn=enChn[1],
                                 outChn=enChn[2],
                                 actFunc=actFunc,
                                 negative_slope=negative_slope)
-      self$e3 <- doubleConvBlkR(inChn=enChn[2],
+      self$e3 <- geodl:::doubleConvBlkR(inChn=enChn[2],
                                 outChn=enChn[3],
                                 actFunc=actFunc,
                                 negative_slope=negative_slope)
-      self$e4 <- doubleConvBlkR(inChn=enChn[3],
+      self$e4 <- geodl:::doubleConvBlkR(inChn=enChn[3],
                                 outChn=enChn[4],
                                 actFunc=actFunc,
                                 negative_slope=negative_slope)
 
-      self$dUp1 <- upConvBlk(inChn=btnChn,
+      self$dUp1 <- geodl:::upConvBlk(inChn=btnChn,
                              outChn=btnChn)
-      self$dUp2 <- upConvBlk(inChn=dcChn[1],
+      self$dUp2 <- geodl:::upConvBlk(inChn=dcChn[1],
                              outChn=dcChn[1])
-      self$dUp3 <- upConvBlk(inChn=dcChn[2],
+      self$dUp3 <- geodl:::upConvBlk(inChn=dcChn[2],
                              outChn=dcChn[2])
-      self$dUp4 <- upConvBlk(inChn=dcChn[3],
+      self$dUp4 <- geodl:::upConvBlk(inChn=dcChn[3],
                              outChn=dcChn[3])
-      self$d1 <- doubleConvBlkR(inChn=btnChn+enChn[4],
+      self$d1 <- geodl:::doubleConvBlkR(inChn=btnChn+enChn[4],
                                 outChn=dcChn[1],
                                 actFunc=actFunc,
                                 negative_slope=negative_slope)
-      self$d2 <- doubleConvBlkR(inChn=dcChn[1]+enChn[3],
+      self$d2 <- geodl:::doubleConvBlkR(inChn=dcChn[1]+enChn[3],
                                 outChn=dcChn[2],
                                 actFunc=actFunc,
                                 negative_slope=negative_slope)
-      self$d3 <- doubleConvBlkR(inChn=dcChn[2]+enChn[2],
+      self$d3 <- geodl:::doubleConvBlkR(inChn=dcChn[2]+enChn[2],
                                 outChn=dcChn[3],
                                 actFunc=actFunc,
                                 negative_slope=negative_slope)
-      self$d4 <- doubleConvBlkR(inChn=dcChn[3]+enChn[1],
+      self$d4 <- geodl:::doubleConvBlkR(inChn=dcChn[3]+enChn[1],
                                 outChn=dcChn[4],
                                 actFunc=actFunc,
                                 negative_slope=negative_slope)
 
     }else{
-      self$e1 <- doubleConvBlk(inChn=inChn,
+      self$e1 <- geodl:::doubleConvBlk(inChn=inChn,
                                outChn=enChn[1],
                                actFunc=actFunc,
                                negative_slope=negative_slope)
-      self$e2 <- doubleConvBlk(inChn=enChn[1],
+      self$e2 <- geodl:::doubleConvBlk(inChn=enChn[1],
                                outChn=enChn[2],
                                actFunc=actFunc,
                                negative_slope=negative_slope)
-      self$e3 <- doubleConvBlk(inChn=enChn[2],
+      self$e3 <- geodl:::doubleConvBlk(inChn=enChn[2],
                                outChn=enChn[3],
                                actFunc=actFunc,
                                negative_slope=negative_slope)
-      self$e4 <- doubleConvBlk(inChn=enChn[3],
+      self$e4 <- geodl:::doubleConvBlk(inChn=enChn[3],
                                outChn=enChn[4],
                                actFunc=actFunc,
                                negative_slope=negative_slope)
 
-      self$dUp1 <- upConvBlk(inChn=btnChn,
+      self$dUp1 <- geodl:::upConvBlk(inChn=btnChn,
                              outChn=btnChn)
-      self$dUp2 <- upConvBlk(inChn=dcChn[1],
+      self$dUp2 <- geodl:::upConvBlk(inChn=dcChn[1],
                              outChn=dcChn[1])
-      self$dUp3 <- upConvBlk(inChn=dcChn[2],
+      self$dUp3 <- geodl:::upConvBlk(inChn=dcChn[2],
                              outChn=dcChn[2])
-      self$dUp4 <- upConvBlk(inChn=dcChn[3],
+      self$dUp4 <- geodl:::upConvBlk(inChn=dcChn[3],
                              outChn=dcChn[3])
-      self$d1 <- doubleConvBlk(inChn=btnChn+enChn[4],
+      self$d1 <- geodl:::doubleConvBlk(inChn=btnChn+enChn[4],
                                outChn=dcChn[1],
                                actFunc=actFunc,
                                negative_slope=negative_slope)
-      self$d2 <- doubleConvBlk(inChn=dcChn[1]+enChn[3],
+      self$d2 <- geodl:::doubleConvBlk(inChn=dcChn[1]+enChn[3],
                                outChn=dcChn[2],
                                actFunc=actFunc,
                                negative_slope=negative_slope)
-      self$d3 <- doubleConvBlk(inChn=dcChn[2]+enChn[2],
+      self$d3 <- geodl:::doubleConvBlk(inChn=dcChn[2]+enChn[2],
                                outChn=dcChn[3],
                                actFunc=actFunc,
                                negative_slope=negative_slope)
-      self$d4 <- doubleConvBlk(inChn=dcChn[3]+enChn[1],
+      self$d4 <- geodl:::doubleConvBlk(inChn=dcChn[3]+enChn[1],
                                outChn=dcChn[4],
                                actFunc=actFunc,
                                negative_slope=negative_slope)
     }
 
     if(useASPP == FALSE & useRes == FALSE){
-      self$btn <- bottleneck(inChn=enChn[4],
+      self$btn <-geodl::: bottleneck(inChn=enChn[4],
                              outChn=btnChn,
                              actFunc=actFunc,
                              negative_slope=negative_slope)
     }else if(useASPP == FALSE & useRes == TRUE){
-      self$btn <- bottleneckR(inChn=enChn[4],
+      self$btn <- geodl:::bottleneckR(inChn=enChn[4],
                               outChn=btnChn,
                               actFunc=actFunc,
                               negative_slope=negative_slope)
     }else if(useASPP == TRUE & useRes == FALSE){
-      self$btn <- asppBlk(inChn=enChn[4],
+      self$btn <- geodl:::asppBlk(inChn=enChn[4],
                           outChn=btnChn,
                           dilChn=dilChn,
                           dilRates=dilRates,
                           actFunc=actFunc,
                           negative_slope=negative_slope)
     }else{
-      self$btn <- asppBlkR(inChn=enChn[4],
+      self$btn <- geodl:::asppBlkR(inChn=enChn[4],
                            outChn=btnChn,
                            dilChn=dilChn,
                            dilRates=dilRates,
@@ -708,32 +708,41 @@ defineUNet <- torch::nn_module(
     }
 
     if(useSE == TRUE){
-      self$se1 <- seModule(inChn=enChn[1],
+      self$se1 <- geodl:::seModule(inChn=enChn[1],
                            ratio=seRatio)
-      self$se2 <- seModule(inChn=enChn[2],
+      self$se2 <- geodl:::seModule(inChn=enChn[2],
                            ratio=seRatio)
-      self$se3 <- seModule(inChn=enChn[3],
+      self$se3 <- geodl:::seModule(inChn=enChn[3],
                            ratio=seRatio)
-      self$se4 <- seModule(inChn=enChn[4],
+      self$se4 <- geodl:::seModule(inChn=enChn[4],
                            ratio=seRatio)
     }
 
     if(useAttn == TRUE){
-      self$ag1 <- attnBlk(enChn[1], dcChn[3])
-      self$ag2 <- attnBlk(enChn[2], dcChn[2])
-      self$ag3 <- attnBlk(enChn[3], dcChn[1])
-      self$ag4 <- attnBlk(enChn[4], btnChn)
+      self$ag1 <- geodl:::attnBlk(enChn[1], dcChn[3])
+      self$ag2 <- geodl:::attnBlk(enChn[2], dcChn[2])
+      self$ag3 <- geodl:::attnBlk(enChn[3], dcChn[1])
+      self$ag4 <- geodl:::attnBlk(enChn[4], btnChn)
     }
 
-    self$c4 <- classifierBlk(inChn=dcChn[4],
+    self$c4 <- geodl:::classifierBlk(inChn=dcChn[4],
                              nCls=nCls)
 
     if(useDS == TRUE){
-      self$c3 <- classifierBlk(inChn=dcChn[3],
+      self$upSamp2 <- torch::nn_upsample(scale_factor=2,
+                                        mode="bilinear",
+                                        align_corners=TRUE)
+      self$upSamp4 <- torch::nn_upsample(scale_factor=4,
+                                        mode="bilinear",
+                                        align_corners=TRUE)
+      self$upSamp8 <- torch::nn_upsample(scale_factor=8,
+                                        mode="bilinear",
+                                        align_corners=TRUE)
+      self$c3 <- geodl:::classifierBlk(inChn=dcChn[3],
                                nCls=nCls)
-      self$c2 <- classifierBlk(inChn=dcChn[2],
+      self$c2 <- geodl:::classifierBlk(inChn=dcChn[2],
                                nCls=nCls)
-      self$c1 <- classifierBlk(inChn=dcChn[1],
+      self$c1 <- geodl:::classifierBlk(inChn=dcChn[1],
                                nCls=nCls)
     }
 
@@ -814,9 +823,12 @@ defineUNet <- torch::nn_module(
     c4x <- self$c4(d4x)
 
     if(self$useDS == TRUE){
-      c3x <- self$c3(d3x)
-      c2x <- self$c2(d2x)
-      c1x <- self$c1(d1x)
+      d3xUp <- self$upSamp2(d3x)
+      d2xUp <- self$upSamp4(d2x)
+      d1xUp <- self$upSamp8(d1x)
+      c3x <- self$c3(d3xUp)
+      c2x <- self$c2(d2xUp)
+      c1x <- self$c1(d1xUp)
       return(list(c4x, c3x, c2x, c1x))
     }else{
       return(c4x)
@@ -828,7 +840,7 @@ defineUNet <- torch::nn_module(
 
 #' defineMobileUNet
 #'
-#' Define a UNet architecture for semantic segmentation with a MobileNet-v2 backbone.
+#' Define a UNet architecture for geospatial semantic segmentation with a MobileNet-v2 backbone.
 #'
 #' Define a UNet architecture with a MobileNet-v2 backbone or encoder. This UNet implementation was
 #' inspired by a blog post by Sigrid Keydana available
@@ -844,12 +856,12 @@ defineUNet <- torch::nn_module(
 #' MobileNet-v2 encoder. Default is TRUE.
 #' @param freezeEncoder TRUE or FALSE. Whether or not to freeze the encoder during training. The default is TRUE.
 #' If TRUE, only the decoder component is trained.
-#' @param actFunc Defines activation function to use throughout the network. "relu" =
-#' rectified linear unit (ReLU); "lrelu" = leaky ReLU; "swish" = swish. Default is "relu".
+#' @param actFunc Defines activation function to use throughout the network (note that MobileNet-v2 layers are
+#' not impacted). "relu" = rectified linear unit (ReLU); "lrelu" = leaky ReLU; "swish" = swish. Default is "relu".
 #' @param useAttn TRUE or FALSE. Whether to add attention gates along the skip connections.
 #' Default is FALSE or no attention gates are added.
 #' @param useDS TRUE or FALSE. Whether or not to use deep supervision. If TRUE, four predictions are
-#' be made, one at each decoder block resolution, and the predictions will be returned as a list object
+#' made, one at each of the four largest decoder block resolutions, and the predictions are returned as a list object
 #' containing the 4 predictions. If FALSE, only the final prediction at the original resolution is
 #' returned. Default is FALSE or deep supervision is not implemented.
 #' @param dcChn Vector of 4 integers defining the number of output feature
@@ -879,8 +891,8 @@ defineMobileUNet <- torch::nn_module(
 
     self$base_model <- torchvision::model_mobilenet_v2(pretrained = pretrainedEncoder)
 
-    self$stages <- nn_module_list(list(
-      nn_identity(),
+    self$stages <- torch::nn_module_list(list(
+      torch::nn_identity(),
       self$base_model$features[1:2],
       self$base_model$features[3:4],
       self$base_model$features[5:7],
@@ -906,54 +918,64 @@ defineMobileUNet <- torch::nn_module(
       }
     }
 
-    self$dUp1 <- upConvBlk(inChn=320,
+    self$dUp1 <- geodl:::upConvBlk(inChn=320,
                            outChn=320)
-    self$dUp2 <- upConvBlk(inChn=dcChn[1],
+    self$dUp2 <- geodl:::upConvBlk(inChn=dcChn[1],
                            outChn=dcChn[1])
-    self$dUp3 <- upConvBlk(inChn=dcChn[2],
+    self$dUp3 <- geodl:::upConvBlk(inChn=dcChn[2],
                            outChn=dcChn[2])
-    self$dUp4 <- upConvBlk(inChn=dcChn[3],
+    self$dUp4 <- geodl:::upConvBlk(inChn=dcChn[3],
                            outChn=dcChn[3])
-    self$dUp5 <- upConvBlk(inChn=dcChn[4],
+    self$dUp5 <- geodl:::upConvBlk(inChn=dcChn[4],
                            outChn=dcChn[4])
 
-    self$d1 <- doubleConvBlk(inChn=320+96,
+    self$d1 <- geodl:::doubleConvBlk(inChn=320+96,
                              outChn=dcChn[1],
                              actFunc=actFunc,
                              negative_slope=negative_slope)
-    self$d2 <- doubleConvBlk(inChn=dcChn[1]+32,
+    self$d2 <- geodl:::doubleConvBlk(inChn=dcChn[1]+32,
                              outChn=dcChn[2],
                              actFunc=actFunc,
                              negative_slope=negative_slope)
-    self$d3 <- doubleConvBlk(inChn=dcChn[2]+24,
+    self$d3 <- geodl:::doubleConvBlk(inChn=dcChn[2]+24,
                              outChn=dcChn[3],
                              actFunc=actFunc,
                              negative_slope=negative_slope)
-    self$d4 <- doubleConvBlk(inChn=dcChn[3]+16,
+    self$d4 <- geodl:::doubleConvBlk(inChn=dcChn[3]+16,
                              outChn=dcChn[4],
                              actFunc=actFunc,
                              negative_slope=negative_slope)
-     self$d5 <- doubleConvBlk(inChn=dcChn[4]+3,
+     self$d5 <- geodl:::doubleConvBlk(inChn=dcChn[4]+3,
                              outChn=dcChn[5],
                              actFunc=actFunc,
                              negative_slope=negative_slope)
 
   if(useAttn == TRUE){
-    self$ag1 <- attnBlk(16, dcChn[4])
-    self$ag2 <- attnBlk(24, dcChn[3])
-    self$ag3 <- attnBlk(32, dcChn[2])
-    self$ag4 <- attnBlk(96, 320)
+    self$ag1 <- geodl:::attnBlk(3, dcChn[4])
+    self$ag2 <- geodl:::attnBlk(16, dcChn[3])
+    self$ag3 <- geodl:::attnBlk(24, dcChn[2])
+    self$ag4 <- geodl:::attnBlk(32, dcChn[1])
+    self$ag5 <- geodl:::attnBlk(96, 320)
   }
 
-  self$c4 <- classifierBlk(inChn=dcChn[5],
+  self$c4 <- geodl:::classifierBlk(inChn=dcChn[5],
                            nCls=nCls)
 
   if(useDS == TRUE){
-    self$c3 <- classifierBlk(inChn=dcChn[4],
+    self$upSamp2 <- torch::nn_upsample(scale_factor=2,
+                                      mode="bilinear",
+                                      align_corners=TRUE)
+    self$upSamp4 <- torch::nn_upsample(scale_factor=4,
+                                      mode="bilinear",
+                                      align_corners=TRUE)
+    self$upSamp8 <- torch::nn_upsample(scale_factor=8,
+                                      mode="bilinear",
+                                      align_corners=TRUE)
+    self$c3 <- geodl:::classifierBlk(inChn=dcChn[4],
                              nCls=nCls)
-    self$c2 <- classifierBlk(inChn=dcChn[3],
+    self$c2 <- geodl:::classifierBlk(inChn=dcChn[3],
                              nCls=nCls)
-    self$c1 <- classifierBlk(inChn=dcChn[2],
+    self$c1 <- geodl:::classifierBlk(inChn=dcChn[2],
                              nCls=nCls)
   }
 
@@ -969,32 +991,36 @@ defineMobileUNet <- torch::nn_module(
     btnx <- self$btn(e5x)
 
     if(self$useAttn == TRUE){
-      e5x <- self$ag4(e5x, btnx)
+      e5x <- self$ag5(e5x, btnx)
     }
     d1Upx <- self$dUp1(btnx)
     d1Cat <- torch::torch_cat(list(d1Upx, e5x), dim=2)
     d1x <- self$d1(d1Cat)
 
     if(self$useAttn == TRUE){
-      e4x <- self$ag3(e4x, d1x)
+      e4x <- self$ag4(e4x, d1x)
     }
     d2Upx <- self$dUp2(d1x)
     d2Cat <- torch::torch_cat(list(d2Upx, e4x), dim=2)
     d2x <- self$d2(d2Cat)
 
     if(self$useAttn == TRUE){
-      e3x <- self$ag2(e3x, d2x)
+      e3x <- self$ag3(e3x, d2x)
     }
     d3Upx <- self$dUp3(d2x)
     d3Cat <- torch::torch_cat(list(d3Upx, e3x), dim=2)
     d3x <- self$d3(d3Cat)
 
     if(self$useAttn == TRUE){
-      e2x <- self$ag1(e2x, d3x)
+      e2x <- self$ag2(e2x, d3x)
     }
     d4Upx <- self$dUp4(d3x)
     d4Cat <- torch::torch_cat(list(d4Upx, e2x), dim=2)
     d4x <- self$d4(d4Cat)
+
+    if(self$useAttn == TRUE){
+      e1x <- self$ag1(e1x, d4x)
+    }
 
     d5Upx <- self$dUp5(d4x)
     d5Cat <- torch::torch_cat(list(d5Upx, e1x), dim=2)
@@ -1003,9 +1029,12 @@ defineMobileUNet <- torch::nn_module(
     c4x <- self$c4(d5x)
 
     if(self$useDS == TRUE){
-      c3x <- self$c3(d4x)
-      c2x <- self$c2(d3x)
-      c1x <- self$c1(d2x)
+      d4xUp <- self$upSamp2(d4x)
+      d3xUp <- self$upSamp4(d3x)
+      d2xUp <- self$upSamp8(d2x)
+      c3x <- self$c3(d4xUp)
+      c2x <- self$c2(d3xUp)
+      c1x <- self$c1(d2xUp)
       return(list(pred1 = c4x,
                   pred2 = c3x,
                   pred4 = c2x,

@@ -1,8 +1,8 @@
 #' viewBatch
 #'
-#' Generate image grid of batch of image chips and associated masks created by a DataLoader.
+#' Generate image grid of mini-batch of image chips and associated masks created by a DataLoader.
 #'
-#' The goal of this function is to provide a visual check of a batch of image chips and associated masks
+#' The goal of this function is to provide a visual check of a mini-batch of image chips and associated masks
 #' generated from a DataLoader.
 #'
 #' @param dataLoader Instantiated instance of a DataLoader created using torch::dataloader().
@@ -16,9 +16,7 @@
 #' @param cNames Vector of class names. Must be the same length as number of classes.
 #' @param cColors Vector of color values to use to display the masks. Colors are applied based on the
 #' order of class indices. Length of vector must be the same as the number of classes.
-#' @param usedDS TRUE or FALSE. Must be set to TRUE when using defineSegDataSetDS(). Default is FALSE,
-#' or it is assumed that deep supervision is not used.
-#' @return Image grids of example chips and masks loaded from a batch produced by the DataLoader.
+#' @return Image grids of example chips and masks loaded from a mini-batch produced by the DataLoader.
 #' @export
 viewBatch <- function(dataLoader,
                       nCols = 3,
@@ -26,19 +24,13 @@ viewBatch <- function(dataLoader,
                       g = 2,
                       b = 3,
                       cNames,
-                      cColors,
-                      usedDS = FALSE){
+                      cColors){
 
   batch1 <- dataLoader$.iter()$.next()
 
-  nSamps <- dataLoader$batch_size
-  if(usedDS == TRUE){
-    masks <- batch1$mask$mask1
-    images <- batch1$image
-  }else{
-    masks <- batch1$mask
-    images <- batch1$image
-  }
+
+  masks <- batch1$mask
+  images <- batch1$image
 
   masks <- torch::torch_tensor(masks, dtype=torch::torch_float32())
 

@@ -1,11 +1,11 @@
 #' viewBatchPreds
 #'
-#' Generate image grid of batch of image chips, masks, and predictions for all samples in a DataLoader batch.
+#' Generate image grid of mini-batch of image chips, masks, and predictions for all samples in a DataLoader mini-batch.
 #'
-#' The goal of this function is to provide a visual check of predictions for a batch of data.
+#' The goal of this function is to provide a visual check of predictions for a mini-batch of data.
 #'
 #' @param dataLoader Instantiated instance of a DataLoader created using torch::dataloader().
-#' @param model Fitted model used to predict batch.
+#' @param model Fitted model used to predict mini-batch.
 #' @param mode "multiclass" or "binary". If the prediction returns the positive case logit
 #' for a binary classification problem, use "binary". If 2 or more class logits are returned,
 #' use "multiclass". This package treats all cases as multiclass.
@@ -20,15 +20,15 @@
 #' @param cColors Vector of color values to use to display the masks. Colors are applied based on the
 #' order of class indices. Length of vector must be the same as the number of classes.
 #' @param useCUDA TRUE or FALSE. Default is FALSE. If TRUE, GPU will be used to predict
-#' the data batch. If FALSE, predictions will be made on the CPU.
+#' the data mini-batch. If FALSE, predictions will be made on the CPU. We recommend using a GPU.
 #' @param probs TRUE or FALSE. Default is FALSE. If TRUE, rescaled logits will be
 #' shown as opposed to the hard classification. If FALSE, hard classification will be
 #' shown. For a binary problem where only the positive case logit is returned, the logit
 #' is transformed using a sigmoid function. When 2 or more classes are predicted, softmax
 #' is used to rescale the logits.
-#' @param usedDS TRUE or FALSE. Must be set to TRUE when using defineSegDataSetDS(). Default is FALSE,
+#' @param usedDS TRUE or FALSE. Must be set to TRUE when using deep supervision. Default is FALSE,
 #' or it is assumed that deep supervision is not used.
-#' @return Image grids of example chips, reference masks, and predictions loaded from a batch provided by the DataLoader.
+#' @return Image grids of example chips, reference masks, and predictions loaded from a mini-batch provided by the DataLoader.
 #' @export
 viewBatchPreds <- function(dataLoader,
                            model,
@@ -48,7 +48,7 @@ viewBatchPreds <- function(dataLoader,
 
   nSamps <- dataLoader$batch_size
   if(usedDS == TRUE){
-    masks <- batch1$mask[[1]]
+    masks <- batch1$mask
     images <- batch1$image
     model2 <- model$model
   }else{

@@ -7,10 +7,11 @@
 #' rescaled logits with a sigmoid or softmax activation applied. Note that this package treats
 #' all problems as multiclass problems and does not differentiate between binary and multiclass
 #' classification. As a result, in our workflow the multiclass mode should be used. Result is written
-#' to disk and provided as a spatRaster object.
+#' to disk and provided as a spatRaster object. If you are experiencing memory issues, you may need to
+#' break larger raster extents into smaller tiles for processing.
 #'
 #' @param imgIn Input image to classify. Can be a file path (full or relative to
-#' current working directory) or a spatRaster object. Should have the same number
+#' current working directory) or a SpatRaster object. Should have the same number
 #' of bands as the data used to train the model. Bands must also be in the same
 #' order.
 #' @param model Trained model to use to infer to new data.
@@ -48,23 +49,22 @@
 #' @param nChn Number of input channels. Default is 3.
 #' @param normalize TRUE or FALSE. Whether to apply normalization. If FALSE,
 #' bMns and bSDs is ignored. Default is FALSE. If TRUE, you must provide bMns
-#' and bSDs. This should match the setting used in defineSegDataSet() or defineSegDataSetDS().
+#' and bSDs. This should match the setting used in defineSegDataSet().
 #' @param bMns Vector of band means. Length should be the same as the number of bands.
 #' Normalization is applied before any rescaling within the function. This should
-#' match the setting used in defineSegDataSet() or defineSegDataSetDS() when model was trained.
+#' match the setting used in defineSegDataSet() when model was trained.
 #' @param bSDs Vector of band standard deviations. Length should be the same
 #' as the number of bands. Normalization is applied before any rescaling within
-#' the function. This should match the setting used in defineSegDataSet() or defineSegDataSetDS().
+#' the function. This should match the setting used in defineSegDataSet().
 #' @param rescaleFactor A rescaling factor to rescale the bands to 0 to 1. For
 #' example, this could be set to 255 to rescale 8-bit data. Default is 1 or no
-#' rescaling. This should match the setting used in defineSegDataSet() or defineSegDataSetDS().
+#' rescaling. This should match the setting used in defineSegDataSet().
 #' @param usedDS TRUE or FALSE. If model is configured to use deep supervision,
 #' this must be set to TRUE. Default is FALSE, or it is assumed that deep supervision
 #' is not used.
 #' @return A spatRast object and a raster grid saved to disk of predicted class
 #' indices (predType = "class"), logits (predType = "logit"), or rescaled logits
 #' (predType = "prob").
-
 #' @export
 predictSpatial <- function(imgIn,
                            model,

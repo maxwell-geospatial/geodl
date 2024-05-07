@@ -9,7 +9,7 @@ assessPnts(
   predicted,
   multiclass = TRUE,
   mappings = levels(as.factor(reference)),
-  positive_case = mappings[2]
+  decimals = 4
 )
 }
 \arguments{

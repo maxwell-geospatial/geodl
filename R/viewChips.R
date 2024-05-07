@@ -15,7 +15,7 @@
 #' for the image chips only. If "mask", a grid is produced for just the masks.
 #' If "both", grids are produced for both the image chips and masks. Default is
 #' "both".
-#' @param justPostitive TRUE or FALSE. If makeChips() was executed using the mode "Divided", you can
+#' @param justPostitive TRUE or FALSE. If makeChips() was executed using the "Divided" mode, you can
 #' choose to only show chips that contained some pixels mapped to the positive class.
 #' The default is FALSE. This should be left to the default or set to FALSE if chips
 #' were generated using a method other than "Divided".
@@ -24,14 +24,20 @@
 #' @param rCnt Number of rows in the grid. Row X Column count must sum to the number
 #' of samples being displayed (nSamps). Default is 4.
 #' @param r Band number to map to the red channel. Default is 1 or the first channel.
+#' For gray scale or single-band images, assign the same index to all three bands.
 #' @param g Band number to map to the green channel. Default is 2 or the second channel.
+#' For gray scale or single-band images, assign the same index to all three bands.
 #' @param b Band number to map to the red channel. Default is 3 or the third channel.
+#' For gray scale or single-band images, assign the same index to all three bands.
+#' @param rescale TRUE or FALSE. Whether or not to rescale image data. Default is FALSE or no rescaling.
+#' @param rescaleVal If rescale is TRUE, value used to rescale data. For example, 255 could
+#' be used to rescale the chips from 0 to 1 to 0 to 255.
 #' @param cNames Vector of class names. Class names must be provided.
 #' @param cColors Vector of colors (named colors, hex codes, or rgb()).
 #' Color used to visualize each class is matched based on position
 #' in the vector. Colors must be provided.
 #' @param useSeed TRUE or FALSE. Whether or not to set a random seed to make result
-#' reproducible. If FALSE, seed is ignored. Default is FALSE.
+#' reproducible (i.e., obtain the same samples). If FALSE, seed is ignored. Default is FALSE.
 #' @param seed Random seed value. Default is 42. This is ignored if useSeed is FALSE.
 #' @return Plot of image chip grid (if mode = "image"); plot of mask chip grid
 #' (if mode ="mask"); plot of image and mask chip grids (if model = "both").

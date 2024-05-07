@@ -11,10 +11,6 @@ describeBatch(dataLoader, zeroStart = FALSE, usedDS = FALSE)
 
 \item{zeroStart}{TRUE or FALSE. If class indices start at 0, set this to TRUE. If they start at 1,
 set this to FALSE. Default is FALSE.}
-
-\item{usedDS}{TRUE or FALSE. If deep supervision is implemented, this must be set to TRUE.
-Default is FALSE. Whether or not deep supervision was used, only metrics for the masks
-at the original spatial resolution are returned.}
 }
 \value{
 List object summarizing a batch of image chips and masks.
