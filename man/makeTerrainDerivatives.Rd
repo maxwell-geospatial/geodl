@@ -33,11 +33,19 @@ then linearly rescaled from 0 and 1. The square root of slope is clamped to a
 range of 0 to 10 then linearly rescaled from 0 to 1. Values are provided in
 floating point.
 
-The stack is described in the following publication and was originall proposed by
-William Odom.
+The stack is described in the following publication and was originally proposed by
+William Odom of the United States Geological Survey (USGS):
 
 Maxwell, A.E., W.E. Odom, C.M. Shobe, D.H. Doctor, M.S. Bester, and T. Ore,
 2023. Exploring the influence of input feature space on CNN-based geomorphic
 feature extraction from digital terrain data, Earth and Space Science,
 10: e2023EA002845. https://doi.org/10.1029/2023EA002845.
+}
+\examples{
+/dontrun{
+inDTM <- terra::rast("INPUT DTM NAME AND PATH")
+terrOut <- makeTerrainDerivatives(dtm=inDTM,
+                                 res=2,
+                                 filename="OUT TERRAIN STACK NAME AND PATH")
+}
 }

@@ -26,12 +26,23 @@ For gray scale or single-band images, assign the same index to all three bands.}
 order of class indices. Length of vector must be the same as the number of classes.}
 }
 \value{
-Image grids of example chips and masks loaded from a batch produced by the DataLoader.
+Image grids of example chips and masks loaded from a mini-batch produced by the DataLoader.
 }
 \description{
-Generate image grid of batch of image chips and associated masks created by a DataLoader.
+Generate image grid of mini-batch of image chips and associated masks created by a DataLoader.
 }
 \details{
-The goal of this function is to provide a visual check of a batch of image chips and associated masks
+The goal of this function is to provide a visual check of a mini-batch of image chips and associated masks
 generated from a DataLoader.
+}
+\examples{
+/dontrun{
+viewBatch(dataLoader=trainDL,
+          nCols = 5,
+          r = 1,
+          g = 2,
+          b = 3,
+          cNames=c("Background", "Mine"),
+          cColors=c("gray", "darksalmon"))
+}
 }

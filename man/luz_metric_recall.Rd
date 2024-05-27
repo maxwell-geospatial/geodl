@@ -10,16 +10,18 @@ luz_metric_recall(
   mode = "multiclass",
   biThresh = 0.5,
   zeroStart = TRUE,
+  clsWghts = rep(1, nCls),
   usedDS = TRUE
 )
 }
 \arguments{
-\item{smooth}{a smoothing factor to avoid divide by zero errors. Default is 1.}
+\item{smooth}{A smoothing factor to avoid divide by zero errors. Default is 1.}
 
 \item{mode}{Either "binary" or "multiclass". If "binary", only the logit for
-positive class prediction should be provided. If both the positive and negative
+the positive class prediction should be provided. If both the positive and negative
 or background class probability is provided for a binary classification, use
-the "multiclass" mode.}
+the "multiclass" mode. Note that this package is designed to treat all predictions as multiclass.
+The "binary" mode is only provided for use outside of the standard geodl workflow.}
 
 \item{zeroStart}{TRUE or FALSE. If class indices start at 0 as opposed to 1, this should be set to
 TRUE. This is required  to implement one-hot encoding since R starts indexing at 1. Default is TRUE.}
@@ -36,15 +38,51 @@ to calculate assessment metrics. Default is FALSE.}
 binary classification, the class index must be 1 for the positive class and
 0 for the background case.}
 
-\item{nCLs}{number of classes being differentiated.}
+\item{nCLs}{Number of classes being differentiated.}
 }
 \value{
 Calculated metric returned as a base-R vector as opposed to tensor.
 }
 \description{
-luz_metric function to calculate recall
+luz_metric function to calculate macro-averaged, class aggregated recall
 }
 \details{
 Calculates recall based on luz_metric() for use within training and validation
 loops.
+}
+\examples{
+#Generate example data as SpatRasters
+ref <- terra::rast(matrix(sample(c(1, 2, 3), 625, replace=TRUE), nrow=25, ncol=25))
+pred1 <- terra::rast(matrix(sample(c(1:150), 625, replace=TRUE), nrow=25, ncol=25))
+pred2 <- terra::rast(matrix(sample(c(1:150), 625, replace=TRUE), nrow=25, ncol=25))
+pred3 <- terra::rast(matrix(sample(c(1:150), 625, replace=TRUE), nrow=25, ncol=25))
+pred <- c(pred2, pred2, pred3)
+
+#Convert SpatRaster to array
+ref <- terra::as.array(ref)
+pred <- terra::as.array(pred)
+
+#Convert arrays to tensors and reshape
+ref <- torch::torch_tensor(ref, dtype=torch::torch_long())
+pred <- torch::torch_tensor(pred, dtype=torch::torch_float32())
+ref <- ref$permute(c(3,1,2))
+pred <- pred$permute(c(3,1,2))
+
+#Add mini-batch dimension
+ref <- ref$unsqueeze(1)
+pred <- pred$unsqueeze(1)
+
+#Duplicate tensors to have a batch of two
+ref <- torch::torch_cat(list(ref, ref), dim=1)
+pred <- torch::torch_cat(list(pred, pred), dim=1)
+
+#Calculate Macro-Averaged, Class Aggregated Recall
+metric<-luz_metric_recall(nCls=3,
+                          smooth=1e-8,
+                          mode = "multiclass",
+                          zeroStart=FALSE,
+                          usedDS=FALSE)
+metric<-metric$new()
+metric$update(pred,ref)
+metric$compute()
 }

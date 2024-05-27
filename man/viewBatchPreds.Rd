@@ -23,7 +23,7 @@ viewBatchPreds(
 \arguments{
 \item{dataLoader}{Instantiated instance of a DataLoader created using torch::dataloader().}
 
-\item{model}{Fitted model used to predict batch.}
+\item{model}{Fitted model used to predict mini-batch.}
 
 \item{mode}{"multiclass" or "binary". If the prediction returns the positive case logit
 for a binary classification problem, use "binary". If 2 or more class logits are returned,
@@ -46,7 +46,7 @@ For gray scale or single-band images, assign the same index to all three bands.}
 order of class indices. Length of vector must be the same as the number of classes.}
 
 \item{useCUDA}{TRUE or FALSE. Default is FALSE. If TRUE, GPU will be used to predict
-the data batch. If FALSE, predictions will be made on the CPU.}
+the data mini-batch. If FALSE, predictions will be made on the CPU. We recommend using a GPU.}
 
 \item{probs}{TRUE or FALSE. Default is FALSE. If TRUE, rescaled logits will be
 shown as opposed to the hard classification. If FALSE, hard classification will be
@@ -54,15 +54,32 @@ shown. For a binary problem where only the positive case logit is returned, the 
 is transformed using a sigmoid function. When 2 or more classes are predicted, softmax
 is used to rescale the logits.}
 
-\item{usedDS}{TRUE or FALSE. Must be set to TRUE when using defineSegDataSetDS(). Default is FALSE,
+\item{usedDS}{TRUE or FALSE. Must be set to TRUE when using deep supervision. Default is FALSE,
 or it is assumed that deep supervision is not used.}
 }
 \value{
-Image grids of example chips, reference masks, and predictions loaded from a batch provided by the DataLoader.
+Image grids of example chips, reference masks, and predictions loaded from a mini-batch provided by the DataLoader.
 }
 \description{
-Generate image grid of batch of image chips, masks, and predictions for all samples in a DataLoader batch.
+Generate image grid of mini-batch of image chips, masks, and predictions for all samples in a DataLoader mini-batch.
 }
 \details{
-The goal of this function is to provide a visual check of predictions for a batch of data.
+The goal of this function is to provide a visual check of predictions for a mini-batch of data.
+}
+\examples{
+/dontrun{
+viewBatchPreds(dataLoader=testDL,
+               model=model,
+               mode="multiclass",
+               nCols =5,
+               r = 1,
+               g = 2,
+               b = 3,
+               cCodes=c(1,2),
+               cNames=c("Not Mine", "Mine"),
+               cColors=c("gray", "darksalmon"),
+               useCUDA=TRUE,
+               probs=FALSE,
+               usedDS=FALSE)
+}
 }

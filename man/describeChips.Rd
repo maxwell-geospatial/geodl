@@ -20,7 +20,7 @@ describeChips(
 directory that holds the image chips and associated masks. You must include
 the final forward slash in the folder path (e.g., "C:/data/chips/").}
 
-\item{extension}{raster file extension (e.g., ".tif", ".png", ".jpeg", or ".img").
+\item{extension}{Raster file extension (e.g., ".tif", ".png", ".jpeg", or ".img").
 The utilities in this package generate files in ".tif" format, so this is the default.
 This option is provided if chips are generated using another method.}
 
@@ -58,10 +58,22 @@ $ImageStats object and the count of pixels by class in the $maskStats object.
 Generate data frame of band summary statistics and class pixel counts
 }
 \details{
-This function will generate a set of summary metrics from image chips and
+This function generates a set of summary metrics from image chips and
 associated masks stored in a directory. For each band, the minimum, median, mean,
 maximum, and standard deviation are returned (along with some other metrics). For
 mask data, the count of pixels in each class are returned. These summarizations
 can be useful for data normalization and determining class weightings in loss
 calculations.
+}
+\examples{
+/dontrun{
+chpDescript <- describeChips(folder= "PATH TO CHIPS FOLDER",
+                             extension = ".tif",
+                             mode = "Positive",
+                             subSample = TRUE,
+                             numChips = 100,
+                             numChipsBack = 100,
+                             subSamplePix = TRUE,
+                             sampsPerChip = 400)
+}
 }

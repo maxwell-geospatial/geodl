@@ -43,11 +43,19 @@ of samples being displayed (nSamps). Default is 4.}
 \item{rCnt}{Number of rows in the grid. Row X Column count must sum to the number
 of samples being displayed (nSamps). Default is 4.}
 
-\item{r}{Band number to map to the red channel. Default is 1 or the first channel.}
+\item{r}{Band number to map to the red channel. Default is 1 or the first channel.
+For gray scale or single-band images, assign the same index to all three bands.}
 
-\item{g}{Band number to map to the green channel. Default is 2 or the second channel.}
+\item{g}{Band number to map to the green channel. Default is 2 or the second channel.
+For gray scale or single-band images, assign the same index to all three bands.}
 
-\item{b}{Band number to map to the red channel. Default is 3 or the third channel.}
+\item{b}{Band number to map to the red channel. Default is 3 or the third channel.
+For gray scale or single-band images, assign the same index to all three bands.}
+
+\item{rescale}{TRUE or FALSE. Whether or not to rescale image data. Default is FALSE or no rescaling.}
+
+\item{rescaleVal}{If rescale is TRUE, value used to rescale data. For example, 255 could
+be used to rescale the chips from 0 to 1 to 0 to 255.}
 
 \item{cNames}{Vector of class names. Class names must be provided.}
 
@@ -56,11 +64,11 @@ Color used to visualize each class is matched based on position
 in the vector. Colors must be provided.}
 
 \item{useSeed}{TRUE or FALSE. Whether or not to set a random seed to make result
-reproducible. If FALSE, seed is ignored. Default is FALSE.}
+reproducible (i.e., obtain the same samples). If FALSE, seed is ignored. Default is FALSE.}
 
 \item{seed}{Random seed value. Default is 42. This is ignored if useSeed is FALSE.}
 
-\item{justPostitive}{TRUE or FALSE. If makeChips() was executed using the mode "Divided", you can
+\item{justPostitive}{TRUE or FALSE. If makeChips() was executed using the "Divided" mode, you can
 choose to only show chips that contained some pixels mapped to the positive class.
 The default is FALSE. This should be left to the default or set to FALSE if chips
 were generated using a method other than "Divided".}
@@ -76,4 +84,32 @@ Plot a grid of image and/or mask chips
 This function generates a plot of image chips and/or image masks. It serves
 as a means to visualize chips generated with the makeChips() or makeChipsMultiClass()
 function. It can be used as a check to make sure chips were generated as expected.
+}
+\examples{
+/dontrun{
+viewChips(chpDF=chpDF,
+          folder= "FOLDER CONTAINING CHIPS",
+          nSamps = 16,
+          mode = "both",
+          justPositive = FALSE,
+          cCnt = 4,
+          rCnt = 4,
+          r = 1,
+          g = 2,
+          b = 3,
+          rescale = FALSE,
+          rescaleVal = 1,
+          cNames=c("Background",
+                   "Building",
+                   "Woodland",
+                   "Water",
+                   "Road"),
+          cColor=c("gray",
+                   "darksalmon",
+                    "forestgreen",
+                    "lightblue",
+                    "black"),
+          useSeed = FALSE,
+          seed = 42)
+}
 }

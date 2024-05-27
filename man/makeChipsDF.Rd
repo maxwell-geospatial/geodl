@@ -55,3 +55,13 @@ associated mask. All paths are relative to the input folder as opposed to
 the full file path so that the results can still be used if the data are copied
 to a new location on disk or to a new computer.
 }
+\examples{
+/dontrun{
+chpDF <- makeChipsDF(folder = "PATHT TO CHIPS FOLDER",
+                      outCSV = "OUTPUT CSV FILE AND PATH",
+                      extension = ".tif",
+                      mode="Positive",
+                      shuffle=TRUE,
+                      saveCSV=TRUE)
+}
+}

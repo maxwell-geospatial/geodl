@@ -46,7 +46,7 @@ and bottleneck/ASPP module blocks. Default is FALSE or no residual connections a
 double convolution operation. Default is FALSE or the ASPP module is not used as the bottleneck.}
 
 \item{useDS}{TRUE or FALSE. Whether or not to use deep supervision. If TRUE, four predictions are
-be made, one at each decoder block resolution, and the predictions will be returned as a list object
+made, one at each decoder block resolution, and the predictions are returned as a list object
 containing the 4 predictions. If FALSE, only the final prediction at the original resolution is
 returned. Default is FALSE or deep supervision is not implemented.}
 
@@ -70,8 +70,11 @@ to use. Default is 0.01.}
 
 \item{seRatio}{Ratio to use in squeeze and excitation module. The default is 8.}
 }
+\value{
+Unet model instance as torch nnn_module
+}
 \description{
-Define a UNet architecture for semantic segmentation.
+Define a UNet architecture for geospatial semantic segmentation.
 }
 \details{
 Define a UNet architecture with 4 blocks in the encoder, a bottleneck
@@ -83,4 +86,29 @@ gates along the skip connections, (3) implement squeeze and excitation modules w
 the encoder blocks, (4) add residual connections within all blocks, (5) replace the
 bottleneck with a modified atrous spatial pyramid pooling (ASPP) module, and/or (6)
 implement deep supervision using predictions generated at each stage in the decoder.
+}
+\examples{
+# example code
+#Generate example data as torch tensor
+tensorIn <- torch::torch_rand(c(12,4,128,128))
+
+ #Instantiate model
+ model <- defineUNet(inChn = 4,
+                    nCls = 3,
+                    actFunc = "lrelu",
+                    useAttn = TRUE,
+                    useSE = TRUE,
+                    useRes = TRUE,
+                    useASPP = TRUE,
+                    useDS = TRUE,
+                    enChn = c(16,32,64,128),
+                    dcChn = c(128,64,32,16),
+                    btnChn = 256,
+                    dilRates=c(1,2,4,8,16),
+                    dilChn=c(16,16,16,16,16),
+                    negative_slope = 0.01,
+                    seRatio=8)
+
+ #Predict data with model
+ pred <- model(tensorIn)
 }

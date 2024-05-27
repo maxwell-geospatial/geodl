@@ -31,7 +31,7 @@ defineSegDataSet(
 )
 }
 \arguments{
-\item{chpDF}{Data frame of image chip paths created using makeChipsDF().}
+\item{chpDF}{Data frame of image chip and mask paths created using makeChipsDF().}
 
 \item{folder}{Full path or path relative to the working directory to the
 folder containing the image chips and associated masks. You must include the
@@ -52,7 +52,7 @@ obtain a 0 to 1 scale. Default is 1 or no rescaling.}
 \item{mskAdd}{Value to add to mask class numeric codes. For example, if class indices
 start are 0, 1 can be added so that indices start at 1. Default is 0 (return
 original class codes). Note that several other functions in this package have a zeroStart
-argument. If class codes start at 0, this argument should be set to TRUE. If they start at 1,
+parameter. If class codes start at 0, this argument should be set to TRUE. If they start at 1,
 this argument should be set to FALSE. The importance of this arises from the use of one-hot
 encoding internally, which requires that class indices start at 1.}
 
@@ -107,13 +107,13 @@ image, and 2 increases the contrast by a factor of 2.}
 \item{gammaFactor}{Vector of smallest and largest gamma values and gain value
 for a total of 3 values. Random value will be selected between these extremes.
 The default gamma value range is 0.8 to 1.2 and the default gain is 1. The gain
-is not randomly altered, only the gamma. Non negative real number. gamma larger
-than 1 make the shadows darker, while gamma smaller than 1 make dark regions
+is not randomly altered, only the gamma. Non negative real number. A gamma larger
+than 1 makes the shadows darker while a gamma smaller than 1 makes dark regions
 lighter.}
 
 \item{hueFactor}{Vector of smallest and largest hue adjustment factors.
 Random value will be selected between these extremes. The default is -0.2 to 0.2.
-Should be in (-0.5, 0.5). 0.5 and -0.5 give complete reversal of hue channel
+Should be in range -0.5 to 0.5. 0.5 and -0.5 give complete reversal of hue channel
 in HSV space in positive and negative direction, respectively. 0 means no shift.
 Therefore, both -0.5 and 0.5 will give an image with complementary colors while
 0 gives the original image.}
@@ -127,7 +127,7 @@ enhance the saturation by a factor of 2.}
 A dataset object that can be provided to torch::dataloader().
 }
 \description{
-Define a subclass of torch::dataset() for semantic segmentation
+Instantiate a subclass of torch::dataset() for geospatial semantic segmentation
 }
 \details{
 This function instantiates a subclass of torch::dataset() that loads
@@ -139,6 +139,32 @@ brightness, contrast, gamma, hue, and saturation will not be applied to the mask
 since alignment is not impacted by these transformations. Predictor variables are
 generated with three dimensions (channel/variable, width, height) regardless of
 the number of channels/variables. Masks are generated as three dimensional tensors
-(class index, width, height). If you plan to implement
-deep supervision, you must use the defineSegDataSetDS() method instead.
+(class index, width, height).
+}
+\examples{
+/dontrun{
+#Define training dataset and augmentations
+trainDS <- defineSegDataSet(
+  chpDF=trainDF,
+  folder="PATH TO CHIPS FOLDER",
+  normalize = FALSE,
+  rescaleFactor = 255,
+  mskRescale= 255,
+  bands = c(1,2,3),
+  mskAdd=1,
+  doAugs = TRUE,
+  maxAugs = 1,
+  probVFlip = .5,
+  probHFlip = .5,
+  probBrightness = 0,
+  probContrast = 0,
+  probGamma = 0,
+  probHue = 0,
+  probSaturation = 0,
+  brightFactor = c(.9,1.1),
+  contrastFactor = c(.9,1.1),
+  gammaFactor = c(.9, 1.1, 1),
+  hueFactor = c(-.1, .1),
+  saturationFactor = c(.9, 1.1))
+}
 }

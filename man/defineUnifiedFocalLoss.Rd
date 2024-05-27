@@ -18,7 +18,7 @@ defineUnifiedFocalLoss(
 )
 }
 \arguments{
-\item{nCls}{number of classes being differentiated.}
+\item{nCls}{Number of classes being differentiated.}
 
 \item{lambda}{Term used to control the relative weighting of the distribution- and region-based
 losses. Default is 0.5, or equal weighting between the losses. If lambda = 1, only the distribution-
@@ -26,13 +26,14 @@ based loss is considered. If lambda = 0, only the region-based loss is considere
 and 1 put more weight on the distribution-based loss while values between 0 and 0.5 put more
 weight on the region-based loss.}
 
-\item{gamma}{Parameter that controls increased weighting applied to difficult-to-predict pixels (for
-distribution-based losses) or difficult-to-predict classes (region-based losses). Smaller values increase the
-weight applied to difficult samples or classes. Default is 0, or no focal weighting is applied.}
+\item{gamma}{Parameter that controls weighting applied to difficult-to-predict pixels (for
+distribution-based losses) or difficult-to-predict classes (for region-based losses). Smaller values increase the
+weight applied to difficult samples or classes. Default is 1, or no focal weighting is applied. Value must be
+less than or equal to 1 and larger than 0.}
 
 \item{delta}{Parameter that controls the relative weightings of false positive and false negative errors for
 each class. Different weightings can be provided for each class. The default is 0.6, which results in prioritizing
-false positive errors relative to false negative errors.}
+false negative errors relative to false positive errors.}
 
 \item{smooth}{Smoothing factor to avoid divide-by-zero errors and provide numeric stability. Default is 1e-8.
 Recommend using the default.}
@@ -50,11 +51,11 @@ region-based loss. Default is for all classes to be equally weighted.}
 loss. Default is FALSE.}
 
 \item{pred}{Tensor of predicted class logits. Should be of shape (mini-batch,
-class, width, height) where the class dimension has a length equal to the number
+class logits, width, height) where the class dimension has a length equal to the number
 of classes being differentiated. The predictions should have a 32-bit float data type.}
 
 \item{target}{Tensor of reference class indices from 0 to n-1 or 1 to n where n is the
-number of classes. Shape must be (mini-batch, class, width, height), and a long integer data type must be used.}
+number of classes. Shape must be (mini-batch, class indices, width, height), and a long integer data type must be used.}
 }
 \value{
 Loss metric for use in training process.
@@ -63,16 +64,16 @@ Loss metric for use in training process.
 Define a loss for semantic segmentation using a modified unified focal loss framework as a subclass of torch::nn_module()
 }
 \details{
-Implementation of modified version of the unified focal dice loss after:
+Implementation of modified version of the unified focal loss after:
 
 Yeung, M., Sala, E., Schönlieb, C.B. and Rundo, L., 2022. Unified focal loss:
-Generalising dice and cross entropy-based losses to handle class imbalanced
+Generalising Dice and cross entropy-based losses to handle class imbalanced
 medical image segmentation. Computerized Medical Imaging and Graphics, 95, p.102026.
 
 Modifications include (1) allowing users to define class weights for both the distribution-
-based and region-based metrics, (2) using class weights as opposed to the symmetric and
+based and region-based losses, (2) using class weights as opposed to the symmetric and
 asymmetric methods implemented by the authors, and (3) including an option to apply
-a logcosh transform for the region-based loss.
+a logcosh transform to the region-based loss.
 
 This loss has three key hyperparameters that control its implementation. Lambda controls
 the relative weight of the distribution- and region-based losses. Default is 0.5,
@@ -88,10 +89,49 @@ Using a value of 1 equates to not using a focal adjustment.
 
 The delta term controls the relative weight of
 false positive and false negative errors for each class. The default is 0.6 for each class, which results in
-placing a higher weight on false positive as opposed to false negative errors relative to that class.
+placing a higher weight on false negative as opposed to false positive errors relative to that class.
 
 By adjusting the lambda, gamma, delta, and class weight terms, the user can implement a variety of different loss metrics
 including cross entropy loss, weighted cross entropy loss, focal cross entropy loss, focal weighted cross entropy loss,
-Dice loss, focal Dice loss, Tversky loss, and focal Tversky loss. Please see the associated vignettes that discuss how
-to parameterize the function to obtain different loss metrics.
+Dice loss, focal Dice loss, Tversky loss, and focal Tversky loss.
+}
+\examples{
+#Generate example data as SpatRasters
+ref <- terra::rast(matrix(sample(c(1, 2, 3), 625, replace=TRUE), nrow=25, ncol=25))
+pred1 <- terra::rast(matrix(sample(c(1:150), 625, replace=TRUE), nrow=25, ncol=25))
+pred2 <- terra::rast(matrix(sample(c(1:150), 625, replace=TRUE), nrow=25, ncol=25))
+pred3 <- terra::rast(matrix(sample(c(1:150), 625, replace=TRUE), nrow=25, ncol=25))
+pred <- c(pred2, pred2, pred3)
+
+#Convert SpatRaster to array
+ref <- terra::as.array(ref)
+pred <- terra::as.array(pred)
+
+#Convert arrays to tensors and reshape
+ref <- torch::torch_tensor(ref, dtype=torch::torch_long())
+pred <- torch::torch_tensor(pred, dtype=torch::torch_float32())
+ref <- ref$permute(c(3,1,2))
+pred <- pred$permute(c(3,1,2))
+
+#Add mini-batch dimension
+ref <- ref$unsqueeze(1)
+pred <- pred$unsqueeze(1)
+
+#Duplicate tensors to have a batch of two
+ref <- torch::torch_cat(list(ref, ref), dim=1)
+pred <- torch::torch_cat(list(pred, pred), dim=1)
+
+#Instantiate loss metric
+myDiceLoss <- defineUnifiedFocalLoss(nCls=3,
+                                    lambda=0, #Only use region-based loss
+                                    gamma= 1,
+                                    delta= 0.5, #Equal weights for FP and FN
+                                    smooth = 1e-8,
+                                    zeroStart=FALSE,
+                                    clsWghtsDist=1,
+                                    clsWghtsReg=1,
+                                    useLogCosH =FALSE,
+                                    device='cpu')
+#Calculate loss
+myDiceLoss(pred, ref)
 }

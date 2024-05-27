@@ -18,11 +18,11 @@ makeMasks(
 }
 \arguments{
 \item{image}{File name and full path or path relative to working directory for image.
-Image is converted to a spatRaster internally.}
+Image is converted to a SpatRaster internally.}
 
 \item{features}{File name and full path or path relative to working directory
 for vector mask or label data. A field should be provided that differentiates
-classes using unique numeric codes as explained above. If the input features
+classes using unique numeric codes. If the input features
 use a different coordinate reference system then the input image, the features
 will be reprojected to match the image. Vector data are converted to a
 SpatVector object internally.}
@@ -73,7 +73,20 @@ indicated by the field parameter. A unique numeric code should be provided for
 each class. In the case of a binary classification, 0 should indicate background
 and 1 should indicate positive. For a multiclass problem, values should be sequential
 from 0 to n-1, where n is the number of classes, or 1 to n. We recommend using
-1 to n. If no cropping is applied, the generated raster mask should have the
+1 to n. If no cropping is applied, the generated raster mask will have the
 same spatial extent, number of rows of pixels, number of columns of pixels,
 cell size, and coordinate reference system as the input image.
+}
+\examples{
+\dontrun{
+makeMasks(image = "INPUT IMAGE FILE AND PATH",
+features = "INPUT VECTOR FEATURES FILE AND PATH",
+crop = TRUE,
+extent = "INPUT VECTOR BOUNDARY and PATH",
+field = "ATTRIBUTE COLUMN NAME",
+background = 0,
+outImage = "OUTPUT IMAGE NAME AND PATH",
+outMask = "OUTPUT MASK NAME AND PATH",
+mode = "Both")
+}
 }

@@ -21,52 +21,64 @@ assessPnts(
 use TRUE. If only two classes are differentiated and there are positive and
 background/negative classes, use FALSE. Default is TRUE.}
 
-\item{mappings}{Vector of factor level names. These must be in the same order
+\item{mappings}{Vector of class names. These must be in the same order
 as the factor levels so that they are correctly matched to the correct category.
-If no mappings are provided, then the factor levels are used by default.}
+If no mappings are provided, then the factor levels are used by default. For a
+binary classification, it is assumed that the first class is "Background" and
+the second class is "Positive".}
 
-\item{positive_case}{Factor level associated with the positive case for a
-binary classification. Default is the second factor level. This argument is
-not used for multiclass classification.}
+\item{decimals}{Number of decimal places to return for assessment metrics. Default is 4.}
 }
 \value{
-List object containing the resulting metrics. For multiclass assessment,
-the confusion matrix is provided in the $ConfusionMatrix object, the aggregated
-metrics are provided in the $Metrics object, class user's accuracies are provided
-in the $UsersAccs object, class producer's accuracies are provided in the
-$ProducersAccs object, and the list of classes are provided in the $Classes object.
-For a binary classification, the confusion matrix is provided in the
-$ConfusionMatrix object, the metrics are provided in the $Metrics object,
-the classes are provided in the $Classes object, and the positive class label is
-provided in the $PositiveCase object.
+List object containing the resulting metrics and ancillary information.
 }
 \description{
 Assess semantic segmentation model using point locations
 }
 \details{
-This function generates a set of summary metrics when provided
-reference and predicted classes. For a multiclass classification problem
-a confusion matrix is produced with the columns representing the reference
-data and the rows representing the predictions. The following metrics are
-calculated: overall accuracy (OA), 95\% confidence interval for OA
-(OAU and OAL), the Kappa statistic, map image classification
-efficacy (MICE), average class user's accuracy (aUA), average class
-producer's accuracy (aPA), average class F1-score, overall error (Error),
-allocation disagreement (Allocation), quantity disagreement (Quantity),
-exchange disagreement (Exchange), and shift disagreement (shift). For average
-class user's accuracy, producer's accuracy, and F1-score, macro-averaging
-is used where all classes are equally weighted. For a multiclass classification
-all class user's and producer's accuracies are also returned.
+This function generates a set of summary assessment metrics when provided
+reference and predicted classes. Results are returned as a list object. For
+multiclass assessment, the class names ($Classes), count of samples per class
+in the reference data ($referenceCounts), count of samples per class in the
+predictions ($predictionCounts), confusion matrix ($confusionMatrix),
+aggregated assessment metrics ($aggMetrics) (OA = overall accuracy, macroF1 = macro-averaged
+class aggregated F1-score, macroPA = macro-averaged class aggregated producer's
+accuracy or recall, amd macroUA = macro-averaged class aggregated user's accuracy or
+precision), class-level user's accuracies or precisions ($userAccuracies),
+class-level producer's accuracies or recalls ($producerAccuracies), and class-level
+F1-scores ($F1Scores). For a binary case, the $Classes, $referenceCounts,
+$predictionCounts, and $confusionMatrix objects are also returned; however, the $aggMets
+object is replaced with $Mets, which stores the following metrics: overall accuracy, recall,
+precision, specificity, negative predictive value (NPV), and F1-score.
+For binary cases, the second class is assumed to be the positive case.
+}
+\examples{
+#Multiclass example
+#Generate example data as data frame of class predictions
+inDF <- data.frame(ref = sample(c("Class A", "Class B", "Class C"), 1000, replace=TRUE),
+pred = sample(c("Class A", "Class B", "Class C"), 1000, replace=TRUE))
 
-For a binary classification problem, a confusion matrix is returned
-along with the following metrics: overall accuracy (OA), overall accuracy
-95\% confidence interval (OAU and OAL), the Kappa statistic (Kappa), map
-image classification efficacy (MICE), precision (Precision), recall (Recall),
-F1-score (F1), negative predictive value (NPV), specificity (Specificity),
-overall error (Error), allocation disagreement (Allocation), quantity
-disagreement (Quantity), exchange disagreement (Exchange), and shift
-disagreement (shift).
+#Calculate metrics
+metsOut <- assessPnts(reference=inDF$ref,
+                     predicted=inDF$pred,
+                     multiclass=TRUE,
+                     mappings = c("Class A", "Class B", "Class C"),
+                     decimals=4)
 
-Results are returned as a list object. This function makes use of the caret,
-diffeR, and rfUtilities packages.
+print(metsOut)
+
+#Binary example
+
+#Generate example data as data frame of class predictions
+inDF <- data.frame(ref = sample(c("Background", "Positive"), 1000, replace=TRUE),
+                  pred = sample(c("Background", "Positive"), 1000, replace=TRUE))
+
+#Calculate metrics
+metsOut <- assessPnts(reference=inDF$ref,
+                     predicted=inDF$pred,
+                     multiclass=FALSE,
+                     mappings = c("Background", "Positive"),
+                     decimals=4)
+
+print(metsOut)
 }

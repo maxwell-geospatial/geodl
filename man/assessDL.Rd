@@ -7,68 +7,83 @@
 assessDL(
   dl,
   model,
+  multiclass = TRUE,
   batchSize,
   size,
   nCls,
-  mode,
   cCodes,
   cNames,
-  usedDS,
-  useCUDA,
-  positive_case
+  usedDS = FALSE,
+  useCUDA = FALSE,
+  decimals = 4
 )
 }
 \arguments{
 \item{dl}{torch DataLoader object.}
 
-\item{nCls}{number of classes being differentiated.}
-
-\item{cCodes}{class indices as a vector of integer values equal in length to the number of
-classes.}
-
-\item{cNames}{class names as a vector of character strings with a length equal to the number of
-classes and in the correct order. Class codes and names are matched by position in the
-cCodes and cNames vectors.}
-
-\item{positive_case}{Factor level associated with the positive case for a
-binary classification. Default is the second factor level. This argument is
-not used for multiclass classification.}
+\item{model}{trained model object.}
 
 \item{multiclass}{TRUE or FALSE. If more than two classes are differentiated,
 use TRUE. If only two classes are differentiated and there are positive and
-background/negative classes, use FALSE. Default is TRUE.}
+background/negative classes, use FALSE. Default is TRUE. For binary cases, the second
+class is assumed to be the positive case.}
+
+\item{batchSize}{Batch size used in torch DataLoader.}
+
+\item{size}{Size of image chips in spatial dimensions (e.g., 128, 256, 512).}
+
+\item{nCls}{Number of classes being differentiated.}
+
+\item{cCodes}{Class indices as a vector of integer values equal in length to the number of
+classes.}
+
+\item{cNames}{Class names as a vector of character strings with a length equal to the number of
+classes and in the correct order. Class codes and names are matched by position in the
+cCodes and cNames vectors. For binary case, this argument is ignored, and the first class is
+called "Negative" while the second class is called "Positive".}
+
+\item{usedDS}{TRUE or FALSE. Whether or not deep supervision was used. Default is FALSE, or
+it is assumed that deep supervision was not used.}
+
+\item{useCUDA}{TRUE or FALSE. Whether or not to use GPU. Default is FALSE, or GPU is not used.
+We recommend using a CUDA-enabled GPU if one is available since this will speed up computation.}
+
+\item{decimals}{Number of decimal places to return for assessment metrics. Default is 4.}
 }
 \value{
-List object containing the resulting metrics. For multiclass assessment,
-the confusion matrix is provided in the $ConfusionMatrix object, the aggregated
-metrics are provided in the $Metrics object, class user's accuracies are provided
-in the $UsersAccs object, class producer's accuracies are provided in the
-$ProducersAccs object, and the list of classes are provided in the $Classes object.
-For a binary classification, the confusion matrix is provided in the
-$ConfusionMatrix object, the metrics are provided in the $Metrics object,
-the classes are provided in the $Classes object, and the positive class label is
-provided in the $PositiveCase object.
+List object containing the resulting metrics and ancillary information.
+examples
+/dontrun{
+metricsOut <- assessDL(dl=testDL,
+model=model,
+batchSize=15,
+size=256,
+nCls=2,
+mode="binary",
+cCodes=c(1,2),
+cNames=c("Not Mine", "Mine"),
+usedDS=FALSE,
+useCUDA=TRUE,
+decimals=4)
+}
 }
 \description{
-Assess semantic segmentation model using all samples in a DataLoader.
+Assess semantic segmentation model using all samples in a torch DataLoader.
 }
 \details{
-This function generates a set of summary metrics when provided
-reference and predicted classes. For a multiclass classification problem
-a confusion matrix is produced with the columns representing the reference
-data and the rows representing the predictions. The following metrics are
-calculated: overall accuracy (OA), the Kappa statistic, map image classification
-efficacy (MICE), average class user's accuracy (aUA), average class
-producer's accuracy (aPA), and average class F1-score (aF1). For average
-class user's accuracy, producer's accuracy, and F1-score, macro-averaging
-is used where all classes are equally weighted. For a multiclass classification
-all class user's and producer's accuracies are also returned.
-
-For a binary classification problem, a confusion matrix is returned
-along with the following metrics: overall accuracy (OA), overall accuracy,
-the Kappa statistic (Kappa), map
-image classification efficacy (MICE), precision (Precision), recall (Recall),
-F1-score (F1), negative predictive value (NPV), and specificity (Specificity).
-
-Results are returned as a list object. This function makes use of the rfUtilities package.
+This function generates a set of summary assessment metrics based on all samples
+within a torch data loader. Results are returned as a list object. For
+multiclass assessment, the class names ($Classes), count of samples per class
+in the reference data ($referenceCounts), count of samples per class in the
+predictions ($predictionCounts), confusion matrix ($confusionMatrix),
+aggregated assessment metrics ($aggMetrics) (OA = overall accuracy, macroF1 = macro-averaged
+class aggregated F1-score, macroPA = macro-averaged class aggregated producer's
+accuracy or recall, and macroUA = macro-averaged class aggregated user's accuracy or
+precision), class-level user's accuracies or precisions ($userAccuracies),
+class-level producer's accuracies or recalls ($producerAccuracies), and class-level
+F1-scores ($F1Scores). For a binary case, the $Classes, $referenceCounts,
+$predictionCounts, and $confusionMatrix objects are also returned; however, the $aggMets
+object is replaced with $Mets, which stores the following metrics: overall accuracy, recall,
+precision, specificity, negative predictive value (NPV), and F1-score.
+For binary cases, the second class is assumed to be the positive case.
 }
