@@ -30,6 +30,35 @@
 #' the second class is "Positive".
 #' @param decimals Number of decimal places to return for assessment metrics. Default is 4.
 #' @return List object containing the resulting metrics and ancillary information.
+#' @examples
+#' #Multiclass example
+#' #Generate example data as data frame of class predictions
+#' inDF <- data.frame(ref = sample(c("Class A", "Class B", "Class C"), 1000, replace=TRUE),
+#' pred = sample(c("Class A", "Class B", "Class C"), 1000, replace=TRUE))
+#'
+#' #Calculate metrics
+#' metsOut <- assessPnts(reference=inDF$ref,
+#'                      predicted=inDF$pred,
+#'                      multiclass=TRUE,
+#'                      mappings = c("Class A", "Class B", "Class C"),
+#'                      decimals=4)
+#'
+#' print(metsOut)
+#'
+#' #Binary example
+#'
+#' #Generate example data as data frame of class predictions
+#' inDF <- data.frame(ref = sample(c("Background", "Positive"), 1000, replace=TRUE),
+#'                   pred = sample(c("Background", "Positive"), 1000, replace=TRUE))
+#'
+#' #Calculate metrics
+#' metsOut <- assessPnts(reference=inDF$ref,
+#'                      predicted=inDF$pred,
+#'                      multiclass=FALSE,
+#'                      mappings = c("Background", "Positive"),
+#'                      decimals=4)
+#'
+#' print(metsOut)
 #' @export
 assessPnts <- function(reference,
                       predicted,

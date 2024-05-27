@@ -37,6 +37,17 @@
 #' subSamplePix is set to FALSE, this parameter is ignored.
 #' @return List object containing the summary metrics for each band in the
 #' $ImageStats object and the count of pixels by class in the $maskStats object.
+#' @examples
+#' /dontrun{
+#' chpDescript <- describeChips(folder= "PATH TO CHIPS FOLDER",
+#'                              extension = ".tif",
+#'                              mode = "Positive",
+#'                              subSample = TRUE,
+#'                              numChips = 100,
+#'                              numChipsBack = 100,
+#'                              subSamplePix = TRUE,
+#'                              sampsPerChip = 400)
+#' }
 #' @export
 describeChips <- function(folder,
                           extension = ".tif",

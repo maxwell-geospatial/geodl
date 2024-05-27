@@ -31,6 +31,36 @@
 #' the second class is "Positive".
 #' @param decimals Number of decimal places to return for assessment metrics. Default is 4.
 #' @return List object containing the resulting metrics and ancillary information.
+#' @examples
+#' #Multiclass example
+#'
+#' #Generate example data as SpatRasters
+#'  ref <- terra::rast(matrix(sample(c(1, 2, 3), 625, replace=TRUE), nrow=25, ncol=25))
+#'  pred <- terra::rast(matrix(sample(c(1, 2, 3), 625, replace=TRUE), nrow=25, ncol=25))
+#'
+#'  #Calculate metrics
+#'  metsOut <- assessRaster(reference=ref,
+#'                         predicted=pred,
+#'                         multiclass=TRUE,
+#'                         mappings=c("Class A", "Class B", "Class C"),
+#'                         decimals=4)
+#'
+#' print(metsOut)
+#'
+#'  #Binary example
+#'
+#'  Generate example data as SpatRasters
+#'  ref <- terra::rast(matrix(sample(c(0, 1), 625, replace=TRUE), nrow=25, ncol=25))
+#'  pred <- terra::rast(matrix(sample(c(0, 1), 625, replace=TRUE), nrow=25, ncol=25))
+#'
+#'  #Calculate metrics
+#'  metsOut <- assessRaster(reference=ref,
+#'                         predicted=pred,
+#'                         multiclass=FALSE,
+#'                         mappings=c("Background", "Positive"),
+#'                         decimals=4)
+#'
+#' print(metsOut)
 #' @export
 assessRaster <- function(reference,
                          predicted,

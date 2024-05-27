@@ -83,6 +83,32 @@
 #' For example, 0 will give a black-and-white image, 1`will give the original image while 2 will
 #' enhance the saturation by a factor of 2.
 #' @return A dataset object that can be provided to torch::dataloader().
+#' @examples
+#' /dontrun{
+#' #Define training dataset and augmentations
+#' trainDS <- defineSegDataSet(
+#'   chpDF=trainDF,
+#'   folder="PATH TO CHIPS FOLDER",
+#'   normalize = FALSE,
+#'   rescaleFactor = 255,
+#'   mskRescale= 255,
+#'   bands = c(1,2,3),
+#'   mskAdd=1,
+#'   doAugs = TRUE,
+#'   maxAugs = 1,
+#'   probVFlip = .5,
+#'   probHFlip = .5,
+#'   probBrightness = 0,
+#'   probContrast = 0,
+#'   probGamma = 0,
+#'   probHue = 0,
+#'   probSaturation = 0,
+#'   brightFactor = c(.9,1.1),
+#'   contrastFactor = c(.9,1.1),
+#'   gammaFactor = c(.9, 1.1, 1),
+#'   hueFactor = c(-.1, .1),
+#'   saturationFactor = c(.9, 1.1))
+#' }
 #' @export
 defineSegDataSet <- torch::dataset(
 

@@ -559,6 +559,31 @@ asppBlkR <- torch::nn_module(
 #' @param negative_slope If actFunc = "lrelu", specifies the negative slope term
 #' to use. Default is 0.01.
 #' @param seRatio Ratio to use in squeeze and excitation module. The default is 8.
+#' @return Unet model instance as torch nnn_module
+#' @examples
+#' # example code
+#' #Generate example data as torch tensor
+#' tensorIn <- torch::torch_rand(c(12,4,128,128))
+#'
+#'  #Instantiate model
+#'  model <- defineUNet(inChn = 4,
+#'                     nCls = 3,
+#'                     actFunc = "lrelu",
+#'                     useAttn = TRUE,
+#'                     useSE = TRUE,
+#'                     useRes = TRUE,
+#'                     useASPP = TRUE,
+#'                     useDS = TRUE,
+#'                     enChn = c(16,32,64,128),
+#'                     dcChn = c(128,64,32,16),
+#'                     btnChn = 256,
+#'                     dilRates=c(1,2,4,8,16),
+#'                     dilChn=c(16,16,16,16,16),
+#'                     negative_slope = 0.01,
+#'                     seRatio=8)
+#'
+#'  #Predict data with model
+#'  pred <- model(tensorIn)
 #' @export
 defineUNet <- torch::nn_module(
   "UNet",
@@ -868,6 +893,22 @@ defineUNet <- torch::nn_module(
 #' maps for each of the 4 decoder blocks. Default is 128, 64, 32, and 16.
 #' @param negative_slope If actFunc = "lrelu", specifies the negative slope term
 #' to use. Default is 0.01.
+#' @return ModileUNet model instance as torch nn_module
+#' @examples
+#' #Generate example data as torch tensor
+#' tensorIn <- torch::torch_rand(c(12,3,128,128))
+#'
+#' #Instantiate model
+#' model <- defineMobileUNet(nCls = 3,
+#'                           pretrainedEncoder = FALSE,
+#'                           freezeEncoder = FALSE,
+#'                           actFunc = "relu",
+#'                           useAttn = TRUE,
+#'                           useDS = TRUE,
+#'                           dcChn = c(256,128,64,32,16),
+#'                           negative_slope = 0.01)
+#'
+#' pred <- model(tensorIn)
 #' @export
 defineMobileUNet <- torch::nn_module(
   "MobileUNet",

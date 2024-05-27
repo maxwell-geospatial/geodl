@@ -13,6 +13,13 @@
 #' @param zeroStart TRUE or FALSE. If class indices start at 0, set this to TRUE. If they start at 1,
 #' set this to FALSE. Default is FALSE.
 #' @return List object summarizing a mini-batch of image chips and masks.
+#' @examples
+#' /dontrun{
+#' trainStats <- describeBatch(trainDL,
+#' tzeroStart=TRUE,
+#' tusedDS=FALSE)
+#' }
+#'
 #' @export
 describeBatch <- function(dataLoader, zeroStart=FALSE){
 

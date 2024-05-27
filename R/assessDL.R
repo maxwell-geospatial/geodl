@@ -34,12 +34,26 @@
 #' classes and in the correct order. Class codes and names are matched by position in the
 #' cCodes and cNames vectors. For binary case, this argument is ignored, and the first class is
 #' called "Negative" while the second class is called "Positive".
-#' @usedDS TRUE or FALSE. Whether or not deep supervision was used. Default is FALSE, or
+#' @param usedDS TRUE or FALSE. Whether or not deep supervision was used. Default is FALSE, or
 #' it is assumed that deep supervision was not used.
-#' @useCUDA TRUE or FALSE. Whether or not to use GPU. Default is FALSE, or GPU is not used.
+#' @param useCUDA TRUE or FALSE. Whether or not to use GPU. Default is FALSE, or GPU is not used.
 #' We recommend using a CUDA-enabled GPU if one is available since this will speed up computation.
-#' @return List object containing the resulting metrics and ancillary information.
 #' @param decimals Number of decimal places to return for assessment metrics. Default is 4.
+#' @return List object containing the resulting metrics and ancillary information.
+#' examples
+#' /dontrun{
+#' metricsOut <- assessDL(dl=testDL,
+#'                        model=model,
+#'                        batchSize=15,
+#'                        size=256,
+#'                        nCls=2,
+#'                        mode="binary",
+#'                        cCodes=c(1,2),
+#'                        cNames=c("Not Mine", "Mine"),
+#'                        usedDS=FALSE,
+#'                        useCUDA=TRUE,
+#'                        decimals=4)
+#' }
 #' @export
 assessDL <- function(dl,
                      model,

@@ -41,6 +41,33 @@
 #' @param seed Random seed value. Default is 42. This is ignored if useSeed is FALSE.
 #' @return Plot of image chip grid (if mode = "image"); plot of mask chip grid
 #' (if mode ="mask"); plot of image and mask chip grids (if model = "both").
+#' @examples
+#' /dontrun{
+#' viewChips(chpDF=chpDF,
+#'           folder= "FOLDER CONTAINING CHIPS",
+#'           nSamps = 16,
+#'           mode = "both",
+#'           justPositive = FALSE,
+#'           cCnt = 4,
+#'           rCnt = 4,
+#'           r = 1,
+#'           g = 2,
+#'           b = 3,
+#'           rescale = FALSE,
+#'           rescaleVal = 1,
+#'           cNames=c("Background",
+#'                    "Building",
+#'                    "Woodland",
+#'                    "Water",
+#'                    "Road"),
+#'           cColor=c("gray",
+#'                    "darksalmon",
+#'                     "forestgreen",
+#'                     "lightblue",
+#'                     "black"),
+#'           useSeed = FALSE,
+#'           seed = 42)
+#' }
 #' @export
 viewChips <- function(chpDF,
                       folder,

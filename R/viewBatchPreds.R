@@ -29,6 +29,22 @@
 #' @param usedDS TRUE or FALSE. Must be set to TRUE when using deep supervision. Default is FALSE,
 #' or it is assumed that deep supervision is not used.
 #' @return Image grids of example chips, reference masks, and predictions loaded from a mini-batch provided by the DataLoader.
+#' @examples
+#' /dontrun{
+#' viewBatchPreds(dataLoader=testDL,
+#'                model=model,
+#'                mode="multiclass",
+#'                nCols =5,
+#'                r = 1,
+#'                g = 2,
+#'                b = 3,
+#'                cCodes=c(1,2),
+#'                cNames=c("Not Mine", "Mine"),
+#'                cColors=c("gray", "darksalmon"),
+#'                useCUDA=TRUE,
+#'                probs=FALSE,
+#'                usedDS=FALSE)
+#' }
 #' @export
 viewBatchPreds <- function(dataLoader,
                            model,

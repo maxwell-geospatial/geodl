@@ -24,6 +24,41 @@
 #' the defineSegDataSetDS() function, this should be set to TRUE. Only the original resolution is used
 #' to calculate assessment metrics. Default is FALSE.
 #' @return Calculated metric returned as a base-R vector as opposed to tensor.
+#' @examples
+#' #Generate example data as SpatRasters
+#' ref <- terra::rast(matrix(sample(c(1, 2, 3), 625, replace=TRUE), nrow=25, ncol=25))
+#' pred1 <- terra::rast(matrix(sample(c(1:150), 625, replace=TRUE), nrow=25, ncol=25))
+#' pred2 <- terra::rast(matrix(sample(c(1:150), 625, replace=TRUE), nrow=25, ncol=25))
+#' pred3 <- terra::rast(matrix(sample(c(1:150), 625, replace=TRUE), nrow=25, ncol=25))
+#' pred <- c(pred2, pred2, pred3)
+#'
+#' #Convert SpatRaster to array
+#' ref <- terra::as.array(ref)
+#' pred <- terra::as.array(pred)
+#'
+#' #Convert arrays to tensors and reshape
+#' ref <- torch::torch_tensor(ref, dtype=torch::torch_long())
+#' pred <- torch::torch_tensor(pred, dtype=torch::torch_float32())
+#' ref <- ref$permute(c(3,1,2))
+#' pred <- pred$permute(c(3,1,2))
+#'
+#' #Add mini-batch dimension
+#' ref <- ref$unsqueeze(1)
+#' pred <- pred$unsqueeze(1)
+#'
+#' #Duplicate tensors to have a batch of two
+#' ref <- torch::torch_cat(list(ref, ref), dim=1)
+#' pred <- torch::torch_cat(list(pred, pred), dim=1)
+#'
+#' #Calculate Macro-Averaged, Class Aggregated Recall
+#' metric<-luz_metric_recall(nCls=3,
+#'                           smooth=1e-8,
+#'                           mode = "multiclass",
+#'                           zeroStart=FALSE,
+#'                           usedDS=FALSE)
+#' metric<-metric$new()
+#' metric$update(pred,ref)
+#' metric$compute()
 #' @export
 luz_metric_recall <- luz::luz_metric(
 
@@ -34,6 +69,7 @@ luz_metric_recall <- luz::luz_metric(
                         mode = "multiclass",
                         biThresh = 0.5,
                         zeroStart=TRUE,
+                        clsWghts=rep(1.0, nCls),
                         usedDS = TRUE){
 
     self$nCls <- nCls
@@ -41,6 +77,7 @@ luz_metric_recall <- luz::luz_metric(
     self$mode <- mode
     self$biThresh <- biThresh
     self$zeroStart <- zeroStart
+    self$clsWghts <- clsWghts
     self$usedDS <- usedDS
 
     if(self$mode == "multiclass"){
@@ -108,7 +145,7 @@ luz_metric_recall <- luz::luz_metric(
 
   compute = function(){
     #Calculate recall: (tps + smooth)/(tps + fns + smooth)
-    base::mean((self$tps + self$smooth)/(self$tps + self$fns + self$smooth))
+    stats::weighted.mean(((self$tps + self$smooth)/(self$tps + self$fns + self$smooth)), self$clsWghts)
   }
 )
 
@@ -136,6 +173,40 @@ luz_metric_recall <- luz::luz_metric(
 #' @param zeroStart TRUE or FALSE. If class indices start at 0 as opposed to 1, this should be set to
 #' TRUE. This is required  to implement one-hot encoding since R starts indexing at 1. Default is TRUE.
 #' @return Calculated metric returned as a base-R vector as opposed to tensor.
+#' @examples
+#' #Generate example data as SpatRasters
+#' ref <- terra::rast(matrix(sample(c(1, 2, 3), 625, replace=TRUE), nrow=25, ncol=25))
+#' pred1 <- terra::rast(matrix(sample(c(1:150), 625, replace=TRUE), nrow=25, ncol=25))
+#' pred2 <- terra::rast(matrix(sample(c(1:150), 625, replace=TRUE), nrow=25, ncol=25))
+#' pred3 <- terra::rast(matrix(sample(c(1:150), 625, replace=TRUE), nrow=25, ncol=25))
+#' pred <- c(pred2, pred2, pred3)
+#'
+#' #Convert SpatRaster to array
+#' ref <- terra::as.array(ref)
+#' pred <- terra::as.array(pred)
+#'
+#' #Convert arrays to tensors and reshape
+#' ref <- torch::torch_tensor(ref, dtype=torch::torch_long())
+#' pred <- torch::torch_tensor(pred, dtype=torch::torch_float32())
+#' ref <- ref$permute(c(3,1,2))
+#' pred <- pred$permute(c(3,1,2))
+#'
+#' #Add mini-batch dimension
+#' ref <- ref$unsqueeze(1)
+#' pred <- pred$unsqueeze(1)
+#'
+#' #Duplicate tensors to have a batch of two
+#' ref <- torch::torch_cat(list(ref, ref), dim=1)
+#' pred <- torch::torch_cat(list(pred, pred), dim=1)
+#' #Calculate Macro-Averaged, Class Aggregated Precision
+#' metric<-luz_metric_precision(nCls=3,
+#'                              smooth=1e-8,
+#'                              mode = "multiclass",
+#'                              zeroStart=FALSE,
+#'                              usedDS=FALSE)
+#' metric<-metric$new()
+#' metric$update(pred,ref)
+#' metric$compute()
 #' @export
 luz_metric_precision <- luz::luz_metric(
 
@@ -146,6 +217,7 @@ luz_metric_precision <- luz::luz_metric(
                         mode = "multiclass",
                         biThresh=0.5,
                         zeroStart=TRUE,
+                        clsWghts = rep(1, nCls),
                         usedDS=TRUE){
 
     self$nCls <- nCls
@@ -153,6 +225,7 @@ luz_metric_precision <- luz::luz_metric(
     self$mode <- mode
     self$biThresh <- biThresh
     self$zeroStart <- zeroStart
+    self$clsWghts <- clsWghts
     self$usedDS <- usedDS
 
     #initialize R vectors to store true positive, false negative, and false positive counts
@@ -244,7 +317,7 @@ luz_metric_precision <- luz::luz_metric(
 
   compute = function(){
     #Calculate precision: (tps + smooth)/(tps + fps + smooth)
-    base::mean((self$tps + self$smooth)/(self$tps + self$fps + self$smooth))
+    stats::weighted.mean(((self$tps + self$smooth)/(self$tps + self$fps + self$smooth)), self$clsWghts)
   }
 )
 
@@ -271,6 +344,41 @@ luz_metric_precision <- luz::luz_metric(
 #' @param zeroStart TRUE or FALSE. If class indices start at 0 as opposed to 1, this should be set to
 #' TRUE. This is required  to implement one-hot encoding since R starts indexing at 1. Default is TRUE.
 #' @return Calculated metric returned as a base-R vector as opposed to tensor.
+#' @examples
+#' #Generate example data as SpatRasters
+#' ref <- terra::rast(matrix(sample(c(1, 2, 3), 625, replace=TRUE), nrow=25, ncol=25))
+#' pred1 <- terra::rast(matrix(sample(c(1:150), 625, replace=TRUE), nrow=25, ncol=25))
+#' pred2 <- terra::rast(matrix(sample(c(1:150), 625, replace=TRUE), nrow=25, ncol=25))
+#' pred3 <- terra::rast(matrix(sample(c(1:150), 625, replace=TRUE), nrow=25, ncol=25))
+#' pred <- c(pred2, pred2, pred3)
+#'
+#' #Convert SpatRaster to array
+#' ref <- terra::as.array(ref)
+#' pred <- terra::as.array(pred)
+#'
+#' #Convert arrays to tensors and reshape
+#' ref <- torch::torch_tensor(ref, dtype=torch::torch_long())
+#' pred <- torch::torch_tensor(pred, dtype=torch::torch_float32())
+#' ref <- ref$permute(c(3,1,2))
+#' pred <- pred$permute(c(3,1,2))
+#'
+#' #Add mini-batch dimension
+#' ref <- ref$unsqueeze(1)
+#' pred <- pred$unsqueeze(1)
+#'
+#' #Duplicate tensors to have a batch of two
+#' ref <- torch::torch_cat(list(ref, ref), dim=1)
+#' pred <- torch::torch_cat(list(pred, pred), dim=1)
+#'
+#' #Calculate Macro-Averaged, Class Aggregated F1-Score
+#' metric<-luz_metric_f1score(nCls=3,
+#'                            smooth=1e-8,
+#'                            mode = "multiclass",
+#'                            zeroStart=FALSE,
+#'                            usedDS=FALSE)
+#' metric<-metric$new()
+#' metric$update(pred,ref)
+#' metric$compute()
 #' @export
 luz_metric_f1score <- luz::luz_metric(
 
@@ -280,6 +388,7 @@ luz_metric_f1score <- luz::luz_metric(
                         smooth=1,
                         mode = "multiclass",
                         biThresh = 0.5,
+                        clsWghts = rep(1, nCls),
                         zeroStart=TRUE,
                         usedDS = FALSE){
 
@@ -287,6 +396,7 @@ luz_metric_f1score <- luz::luz_metric(
     self$smooth <- smooth
     self$mode <- mode
     self$biThresh <- biThresh
+    self$clsWghts <- clsWghts
     self$zeroStart <- zeroStart
     self$usedDS <- usedDS
 
@@ -357,8 +467,8 @@ luz_metric_f1score <- luz::luz_metric(
     recalls <- (self$tps + self$smooth)/(self$tps + self$fns + self$smooth)
     precisions <- (self$tps + self$smooth)/(self$tps + self$fps + self$smooth)
 
-    recAgg <- base::mean(recalls)
-    precAgg <- base::mean(precisions)
+    recAgg <- stats::weighted.mean(recalls, self$clsWghts)
+    precAgg <- stats::weighted.mean(precisions, self$clsWghts)
 
     f1s <- (2.0*precAgg*recAgg)/(precAgg + recAgg + 1e-8)
     return(f1s)
@@ -388,6 +498,41 @@ luz_metric_f1score <- luz::luz_metric(
 #' @param zeroStart TRUE or FALSE. If class indices start at 0 as opposed to 1, this should be set to
 #' TRUE. This is required  to implement one-hot encoding since R starts indexing at 1. Default is TRUE.
 #' @return Calculated metric returned as a base-R vector as opposed to tensor.
+#' @examples
+#' #Generate example data as SpatRasters
+#' ref <- terra::rast(matrix(sample(c(1, 2, 3), 625, replace=TRUE), nrow=25, ncol=25))
+#' pred1 <- terra::rast(matrix(sample(c(1:150), 625, replace=TRUE), nrow=25, ncol=25))
+#' pred2 <- terra::rast(matrix(sample(c(1:150), 625, replace=TRUE), nrow=25, ncol=25))
+#' pred3 <- terra::rast(matrix(sample(c(1:150), 625, replace=TRUE), nrow=25, ncol=25))
+#' pred <- c(pred2, pred2, pred3)
+#'
+#' #Convert SpatRaster to array
+#' ref <- terra::as.array(ref)
+#' pred <- terra::as.array(pred)
+#'
+#' #Convert arrays to tensors and reshape
+#' ref <- torch::torch_tensor(ref, dtype=torch::torch_long())
+#' pred <- torch::torch_tensor(pred, dtype=torch::torch_float32())
+#' ref <- ref$permute(c(3,1,2))
+#' pred <- pred$permute(c(3,1,2))
+#'
+#' #Add mini-batch dimension
+#' ref <- ref$unsqueeze(1)
+#' pred <- pred$unsqueeze(1)
+#'
+#' #Duplicate tensors to have a batch of two
+#' ref <- torch::torch_cat(list(ref, ref), dim=1)
+#' pred <- torch::torch_cat(list(pred, pred), dim=1)
+#'
+#' #Calculate Overall Accuracy
+#' metric<-luz_metric_overall_accuracy(nCls=3,
+#'                                    smooth=1e-8,
+#'                                     mode = "multiclass",
+#'                                    zeroStart=FALSE,
+#'                                    usedDS=FALSE)
+#' metric<-metric$new()
+#' metric$update(pred,ref)
+#' metric$compute()
 #' @export
 luz_metric_overall_accuracy <- luz::luz_metric(
 

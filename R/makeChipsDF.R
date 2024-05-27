@@ -31,6 +31,15 @@
 #' @return Data frame with three columns (chpN, chpPth, and mskPth) and, optionally,
 #' a CSV file written to disk. If mode = "Divided", a division column is added to
 #' differentiate "positive" and "background" samples.
+#' @examples
+#' /dontrun{
+#' chpDF <- makeChipsDF(folder = "PATHT TO CHIPS FOLDER",
+#'                       outCSV = "OUTPUT CSV FILE AND PATH",
+#'                       extension = ".tif",
+#'                       mode="Positive",
+#'                       shuffle=TRUE,
+#'                       saveCSV=TRUE)
+#' }
 #' @export
 makeChipsDF <- function(folder,
                         outCSV,

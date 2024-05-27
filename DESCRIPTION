@@ -29,8 +29,11 @@ Imports:
   terra,
   luz,
   sf,
-  MultiscaleDTM
+  MultiscaleDTM,
+  psych
 License: GPL (>= 3)
+URL: https://github.com/maxwell-geospatial/geodl
+BugReports:  https://github.com/maxwell-geospatial/geodl/issues
 NeedsCompilation: no
 Encoding: UTF-8
 LazyData: true

@@ -47,6 +47,18 @@
 #' @return Single-band raster mask written to disk in TIFF format and, optionally,
 #' a copy of the image written to disk. Cropping may be applied as specified.
 #' No R objects are returned.
+#' @examples
+#' \dontrun{
+#' makeMasks(image = "INPUT IMAGE FILE AND PATH",
+#' features = "INPUT VECTOR FEATURES FILE AND PATH",
+#' crop = TRUE,
+#' extent = "INPUT VECTOR BOUNDARY and PATH",
+#' field = "ATTRIBUTE COLUMN NAME",
+#' background = 0,
+#' outImage = "OUTPUT IMAGE NAME AND PATH",
+#' outMask = "OUTPUT MASK NAME AND PATH",
+#' mode = "Both")
+#' }
 #' @export
 makeMasks <- function(image,
                       features,

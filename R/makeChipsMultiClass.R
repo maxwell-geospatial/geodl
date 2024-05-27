@@ -38,6 +38,17 @@
 #' if you want to add chips to an existing set of chips. Default is FALSE.
 #' @return Image and mask files written to disk in TIFF format. No R object is
 #' returned.
+#' @examples
+#' /dontrun{
+#' makeChipsMultiClass(image = "INPUT IMAGE NAME AND PATH",
+#'                     mask = "INPUT RASTER MASK NAME AND PATH",
+#'                     n_channels = 3,
+#'                     size = 512,
+#'                     stride_x = 512,
+#'                     stride_y = 512,
+#'                     outDir = "DIRECTORY IN WHICH TO SAVE CHIPS",
+#'                     useExistingDir=FALSE)
+#' }
 #' @export
 makeChipsMultiClass <- function(image,
                                 mask,

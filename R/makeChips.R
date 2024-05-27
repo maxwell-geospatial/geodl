@@ -51,6 +51,18 @@
 #' if you want to add chips to an existing set of chips. However, the "mode" should
 #' be the same as that used to generated the original chips. Default is FALSE.
 #' @return Image and mask files written to disk in TIFF format. No R object is returned.
+#' @examples
+#' /dontrun{
+#' makeChips(image = "INPUT IMAGE FILE NAME AND PATH",
+#'           mask = "INPUT RASTER MASK FILE NAME AND PATH",
+#'           n_channels = 3,
+#'           size = 256,
+#'           stride_x = 256,
+#'           stride_y = 256,
+#'           outDir = "OUTPUT DIRECTY IN WHICH TO SAVE CHIPS",
+#'           mode = "Positive",
+#'           useExistingDir=FALSE)
+#' }
 #' @export
 makeChips <- function(image,
                       mask,

@@ -62,6 +62,45 @@
 #' @param useLogCosH TRUE or FALSE. Whether or not to apply a logCosH transformation to the region-based
 #' loss. Default is FALSE.
 #' @return Loss metric for use in training process.
+#' @examples
+#' #Generate example data as SpatRasters
+#' ref <- terra::rast(matrix(sample(c(1, 2, 3), 625, replace=TRUE), nrow=25, ncol=25))
+#' pred1 <- terra::rast(matrix(sample(c(1:150), 625, replace=TRUE), nrow=25, ncol=25))
+#' pred2 <- terra::rast(matrix(sample(c(1:150), 625, replace=TRUE), nrow=25, ncol=25))
+#' pred3 <- terra::rast(matrix(sample(c(1:150), 625, replace=TRUE), nrow=25, ncol=25))
+#' pred <- c(pred2, pred2, pred3)
+#'
+#' #Convert SpatRaster to array
+#' ref <- terra::as.array(ref)
+#' pred <- terra::as.array(pred)
+#'
+#' #Convert arrays to tensors and reshape
+#' ref <- torch::torch_tensor(ref, dtype=torch::torch_long())
+#' pred <- torch::torch_tensor(pred, dtype=torch::torch_float32())
+#' ref <- ref$permute(c(3,1,2))
+#' pred <- pred$permute(c(3,1,2))
+#'
+#' #Add mini-batch dimension
+#' ref <- ref$unsqueeze(1)
+#' pred <- pred$unsqueeze(1)
+#'
+#' #Duplicate tensors to have a batch of two
+#' ref <- torch::torch_cat(list(ref, ref), dim=1)
+#' pred <- torch::torch_cat(list(pred, pred), dim=1)
+#'
+#' #Instantiate loss metric
+#' myDiceLoss <- defineUnifiedFocalLoss(nCls=3,
+#'                                     lambda=0, #Only use region-based loss
+#'                                     gamma= 1,
+#'                                     delta= 0.5, #Equal weights for FP and FN
+#'                                     smooth = 1e-8,
+#'                                     zeroStart=FALSE,
+#'                                     clsWghtsDist=1,
+#'                                     clsWghtsReg=1,
+#'                                     useLogCosH =FALSE,
+#'                                     device='cpu')
+#' #Calculate loss
+#' myDiceLoss(pred, ref)
 #' @export
 defineUnifiedFocalLoss <- torch::nn_module(#This is simply a class-based version of function defined above/implements function internally
   initialize = function(nCls=3,

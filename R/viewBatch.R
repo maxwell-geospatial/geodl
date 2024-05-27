@@ -17,6 +17,16 @@
 #' @param cColors Vector of color values to use to display the masks. Colors are applied based on the
 #' order of class indices. Length of vector must be the same as the number of classes.
 #' @return Image grids of example chips and masks loaded from a mini-batch produced by the DataLoader.
+#' @examples
+#' /dontrun{
+#' viewBatch(dataLoader=trainDL,
+#'           nCols = 5,
+#'           r = 1,
+#'           g = 2,
+#'           b = 3,
+#'           cNames=c("Background", "Mine"),
+#'           cColors=c("gray", "darksalmon"))
+#' }
 #' @export
 viewBatch <- function(dataLoader,
                       nCols = 3,

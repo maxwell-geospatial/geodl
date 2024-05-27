@@ -65,6 +65,25 @@
 #' @return A spatRast object and a raster grid saved to disk of predicted class
 #' indices (predType = "class"), logits (predType = "logit"), or rescaled logits
 #' (predType = "prob").
+#' @examples
+#' /dontrun{
+#' #Predict classification
+#' predCls <- predictSpatial(imgIn="INPUT IMAGE NAME AND PATH",
+#'                           model=model,
+#'                           predOut="OUPTU RASTER NAME AND PATH",
+#'                           mode="multiclass",
+#'                           predType="class",
+#'                           useCUDA=TRUE,
+#'                           nCls=2,
+#'                           chpSize=256,
+#'                           stride_x=128,V
+#'                           stride_y=128,
+#'                           crop=50,
+#'                           nChn=3,
+#'                           normalize=FALSE,
+#'                           rescaleFactor=255,
+#'                           usedDS=FALSE)
+#' }
 #' @export
 predictSpatial <- function(imgIn,
                            model,
