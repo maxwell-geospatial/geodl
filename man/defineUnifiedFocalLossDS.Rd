@@ -55,12 +55,7 @@ region-based loss. Default is for all classes to be equally weighted.}
 \item{useLogCosH}{TRUE or FALSE. Whether or not to apply a logCosH transformation to the region-based
 loss. Default is FALSE.}
 
-\item{pred}{Tensor of predicted class logits. Should be of shape (mini-batch,
-class logits, width, height) where the class dimension has a length equal to the number
-of classes being differentiated. The predictions should have a 32-bit float data type.}
-
-\item{target}{Tensor of reference class indices from 0 to n-1 or 1 to n where n is the
-number of classes. Shape must be (mini-batch, class indices, width, height), and a long integer data type must be used.}
+\item{device}{Define device being used for computation. Define using torch_device().}
 }
 \value{
 Loss metric for use in training process.

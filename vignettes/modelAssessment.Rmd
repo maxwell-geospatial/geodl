@@ -1,0 +1,323 @@
+---
+title: "Model Assessment"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{modelAssessment}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=TRUE, comment="", collapse=TRUE, warning=FALSE, message=FALSE, fit.cap="")
+```
+
+
+```r
+library(geodl)
+```
+
+## Terminology and Metrics
+
+Accuracy assessment is an important component of the modeling process. Specifically, it is important to assess your model against withheld data. Assessing the model relative to the training samples can be misleading due to issue of overfitting. As a result, using a withheld, randomized, unbiased test set to assess the final model is important to quantify how well the model generalizes to new data, which is generally the point of creating a model. Before we begin, here are a few notes on key terminology:
+
+* **Training Set**: samples used to update model parameters. These samples are used to calculated the loss and guide the model parameter updates as the mini-batches are processed.
+* **Validation Set**: data used to assess the model at the end of each training epoch during the training process. It is common to select the model that provides the best results relative to the validation data and as measured using an assessment metric. The model that provides the best performance for the training data may not be the best model do to overfitting.
+* **Test Set**: data used to assess the final selected model.
+
+In this example, we are primarily interested in the test set. Once a final model is generated, it can be used to predict to a test set. The test set labels can be compared to the predictions to generated a **confusion matrix** and associated assessment metrics.
+
+An example confusion matrix is shown below. **geodl** uses the confusion matrix configuration standard within the field of remote sensing where the columns represent the reference labels and the rows represent the predictions. In the example confusion matrix, 50 samples were predicted to Class A and were correctly predicted as Class A. 8 samples were examples of Class A but were incorrectly predicted as Class B. 10 samples were examples of Class B what were incorrectly labeled as Class A. Relative to Class A, the 8 samples there were mislabeled to Class B would represent omission errors: they were incorrectly omitted from Class A. In contrast, the 10 reference samples that were from Class B but incorrectly predicted to Class A would be examples of commission error relative to Class A: they were incorrectly included in Class A.
+
+In short, the confusion matrix describes not just the overall amount of error, but differentiates the types of errors. This allows analysts and users to understand which classes were most commonly confused or which classes were most difficult to map or differentiate.
+
+$$
+\begin{array}{c|ccc}
+ & \text{Reference A} & \text{Reference B} & \text{Reference C} \\
+\hline
+\text{Prediction A} & 50 & 10 & 5 \\
+\text{Prediction B} & 8 & 45 & 7 \\
+\text{Prediction C} & 2 & 5 & 60 \\
+\end{array}
+$$
+
+**Overall accuracy** represents the percentage or proportion of the total samples that were correctly predicted.
+
+$$
+\text{Accuracy} = \frac{\text{Number of Correct Predictions}}{\text{Total Number of Predictions}}
+$$
+
+Outside of an aggregated overall accuracy, it can be useful to report class-level metrics. In remote sensing 1 - omission error for a class is generally termed **producer's accuracy** while 1 - commission error is termed **user's accuracy**. When the confusion matrix is configured such that the reference labels define the columns and the predictions define the rows, producer's accuracy is calculated as the number correct for the class divided by the column total while user's accuracy is calculated as the number correct for the class divided by the associated row total.
+
+$$
+\text{Producer's Accuracy (PA)}\_i = \frac{\text{Number of Correctly Classified Samples of Class } i}{\text{Total Number of Reference Samples of Class } i}
+$$
+
+$$
+\text{User's Accuracy (UA)}\_i = \frac{\text{Number of Correctly Classified Samples of Class } i}{\text{Total Number of Samples Classified as Class } i}
+$$
+
+For a binary classification problem where one class is the positive case or case of interest and the other class is the background or negative case, it is common to use different terminology. The confusion matrix below represents a binary confusion matrix. Here is an explanation of the associated terminology:
+
+* **TP**: True Positive (positive case sample that was correctly predicted as positive)
+* **TN**: True Negative (negative case sample that was correctly predicted as negative)
+* **FP**: False Positive (negative case sample that was incorrectly labeled as positive)
+* **FN**: False Negative (positive case sample that was incorrectly labeled as negative)
+
+$$
+\begin{array}{c|cc}
+ & \text{Reference Positive} & \text{Reference Negative} \\
+\hline
+\text{Prediction Positive} & TP & FP \\
+\text{Prediction Negative} & FN & TN \\
+\end{array}
+$$
+
+From the binary confusion matrix, we can calculate overall accuracy as stated above. Overall accuracy can also be defined relative to TP, TN, FN, and FP counts as follows:
+
+$$
+\text{Accuracy} = \frac{\text{TP} + \text{TN}}{\text{TP} + \text{TN} + \text{FP} + \text{FN}}
+$$
+
+At the class-level, **recall** for each class can be calculated using the TP and FN counts. Recall is equivalent to class-level producer's accuracy and quantifies 1 - omission error relative to the positive case.
+
+$$
+\text{Recall} = \frac{\text{TP}}{\text{TP} + \text{FN}}
+$$
+
+Class-level **precision** quantifies 1 - commission error and is equivalent to user's accuracy for the positive case. It is calculated using the TP and FP counts.
+
+$$
+\text{Precision} = \frac{\text{TP}}{\text{TP} + \text{FP}}
+$$
+
+Precision and recall can be combined to a single class-level metric as the **F1-score**, which is the harmonic mean of precision and recall. It can be stated relative to precision and recall or relative to TP, FP, and FN counts.
+
+$$
+F1 = 2 \cdot \frac{\text{Precision} \cdot \text{Recall}}{\text{Precision} + \text{Recall}}
+$$
+
+$$
+F1 = 2 \cdot \frac{TP}{2TP + FP + FN}
+$$
+
+For the negative or background class, **specificity** represents 1 - omission error while **negative predictive value (NPV)** represents 1 - commission error.
+
+$$
+\text{Specificity} = \frac{TN}{TN + FP}
+$$
+$$
+\text{NPV} = \frac{TN}{TN + FN}
+$$
+
+Lastly, it might be of interest to aggregate class-level metrics. There are three general ways to do this.
+* **macro-averaging**: calculate the metric separately for each class then take the average such that each class is equally weighted in the aggregated metric.
+
+* **micro-averaging**: aggregate TP, TN, FP, and FN counts and calculate a single metric such that more abundant classes have a larger weight in the final calculation.
+
+* **weighted macro-averaging**: calculate a macro-average with user-specified class weights such that the classes are not equally weighted.
+
+For a multiclass problem, micro-averaged user's accuracy (precision) and producer's accuracy (recall) are equivalent to each other and also equivalent to overall accuracy and the micro-averaged F1-score. So, there is no need to calculate micro-averaged metrics if overall accuracy is reported. Instead, it makes more sense to report overall accuracy, macro-averaged class metrics, and non-aggregated class metrics. This is the method used within **geodl**.
+
+## Example 1: Multiclass Classification
+
+In this first example, geodl's *assessPnts()* function is used to calculate assessment metrics for a multiclass classification from a table or at point locations. The "ref" column represents the reference labels while the "pred" column represents the predictions. The *mappings* parameter allows for providing more meaningful class names and is especially useful when classes are represented using numeric codes.
+
+For a multiclass assessment, the following are returned: class names (\$Classes), count of samples per class in the reference data (\$referenceCounts), count of samples per class in the predictions (\$predictionCounts), confusion matrix (\$confusionMatrix), aggregated assessment metrics (\$aggMetrics) (OA = overall accuracy, macroF1 = macro-averaged class aggregated F1-score, macroPA = macro-averaged class aggregated producer's accuracy or recall, and macroUA = macro-averaged class aggregated user's accuracy or precision), class-level user's accuracies or precisions (\$userAccuracies), class-level producer's accuracies or recalls (\$producerAccuracies), and class-level F1-scores (\$F1Scores).
+
+
+```r
+mcIn <- readr::read_csv("C:/myFiles/data/tables/multiClassExample.csv")
+```
+
+
+```r
+myMetrics <- assessPnts(reference=mcIn$ref,
+                        predicted=mcIn$pred,
+                        multiclass=TRUE,
+                        mappings=c("Barren",
+                                   "Forest",
+                                   "Impervous",
+                                   "Low Vegetation",
+                                   "Mixed Developed",
+                                   "Water"))
+print(myMetrics)
+$Classes
+[1] "Barren"          "Forest"          "Impervous"       "Low Vegetation"  "Mixed Developed" "Water"          
+
+$referenceCounts
+         Barren          Forest       Impervous  Low Vegetation Mixed Developed           Water 
+            163           20807             426            3182             520             200 
+
+$predictionCounts
+         Barren          Forest       Impervous  Low Vegetation Mixed Developed           Water 
+            194           21440             281            2733             484             166 
+
+$confusionMatrix
+                 Reference
+Predicted         Barren Forest Impervous Low Vegetation Mixed Developed Water
+  Barren              75      7        59             46               1     6
+  Forest              13  20585        62            617             142    21
+  Impervous           10      8       196             33              22    12
+  Low Vegetation      63    138        34           2413              84     1
+  Mixed Developed      1     64        75             72             270     2
+  Water                1      5         0              1               1   158
+
+$aggMetrics
+      OA macroF1 macroPA macroUA
+1 0.9367  0.6991  0.6629  0.7395
+
+$userAccuracies
+         Barren          Forest       Impervous  Low Vegetation Mixed Developed           Water 
+         0.3866          0.9601          0.6975          0.8829          0.5579          0.9518 
+
+$producerAccuracies
+         Barren          Forest       Impervous  Low Vegetation Mixed Developed           Water 
+         0.4601          0.9893          0.4601          0.7583          0.5192          0.7900 
+
+$f1Scores
+         Barren          Forest       Impervous  Low Vegetation Mixed Developed           Water 
+         0.4202          0.9745          0.5545          0.8159          0.5378          0.8634 
+```
+
+## Example 2: Binary Classification
+
+A binary classification can also be assessed using the *assessPnts()* function and a table or point locations. For a binary classification the *multiclass* parameter should be set to FALSE. For a binary case, the \$Classes, \$referenceCounts,\$predictionCounts, and \$confusionMatrix objects are also returned; however, the \$aggMets object is replaced with \$Mets, which stores the following metrics: overall accuracy, recall, precision, specificity, negative predictive value (NPV), and F1-score. For binary cases, the second class is assumed to be the positive case.
+
+
+```r
+bIn <- readr::read_csv("C:/myFiles/data/tables/binaryExample.csv")
+```
+
+
+```r
+myMetrics <- assessPnts(reference=bIn$ref,
+                        predicted=bIn$pred,
+                        multiclass=FALSE,
+                        mappings=c("Not Mine", "Mine"))
+print(myMetrics)
+$Classes
+[1] "Not Mine" "Mine"    
+
+$referenceCounts
+Negative Positive 
+    4822      178 
+
+$predictionCounts
+Negative Positive 
+    4840      160 
+
+$ConfusionMatrix
+          Reference
+Predicted  Negative Positive
+  Negative     4820       20
+  Positive        2      158
+
+$Mets
+         OA Recall Precision Specificity    NPV F1Score
+Mine 0.9956 0.8876    0.9875      0.9996 0.9959  0.9349
+```
+
+## Example 3: Extract Raster Data at Points
+
+Before using the *assessPnts()* function, you may need to extract predictions into a table. This example demonstrates how to extract reference and prediction numeric codes from raster grids at point locations. Note that it is important to make sure all data layers use the same projection or coordinate reference system. The *extract()* function from the **terra** packages can be used to extract raster call values at point locations.
+
+Once data are extracted, the *assessPnts()* tool can be used with the resulting table. It may be useful to recode the class numeric codes to more meaningful names beforehand.
+
+
+```r
+pntsIn <- terra::vect("C:/myFiles/data/topoResult/topoPnts.shp")
+refG <- terra::rast("C:/myFiles/data/topoResult/topoRef.tif")
+predG <- terra::rast("C:/myFiles/data/topoResult/topoPred.tif")
+```
+
+
+```r
+pntsIn2 <- terra::project(pntsIn, terra::crs(refG))
+refIsect <- terra::extract(refG, pntsIn2)
+predIsect <- terra::extract(predG, pntsIn2)
+
+resultsIn <- data.frame(ref=as.factor(refIsect$topoRef),
+                        pred=as.factor(predIsect$topoPred))
+
+resultsIn$ref <- forcats::fct_recode(resultsIn$ref,
+                                   "Not Mine" = "0",
+                                   "Mine" = "1")
+resultsIn$pred <- forcats::fct_recode(resultsIn$pred,
+                                   "Not Mine" = "0",
+                                   "Mine" = "1")
+```
+
+
+```r
+myMetrics <- assessPnts(reference=bIn$ref,
+                        predicted=bIn$pred,
+                        multiclass=FALSE,
+                        mappings=c("Not Mine", "Mine")
+                        )
+print(myMetrics)
+$Classes
+[1] "Not Mine" "Mine"    
+
+$referenceCounts
+Negative Positive 
+    4822      178 
+
+$predictionCounts
+Negative Positive 
+    4840      160 
+
+$ConfusionMatrix
+          Reference
+Predicted  Negative Positive
+  Negative     4820       20
+  Positive        2      158
+
+$Mets
+         OA Recall Precision Specificity    NPV F1Score
+Mine 0.9956 0.8876    0.9875      0.9996 0.9959  0.9349
+```
+
+## Example 4: Use Rasters Grids as Opposed to Point Locations
+
+The *assessRaster()* function allows for calculating assessment metrics from reference and prediction categorical raster grids as opposed to point locations or tables. Note that the grids being compared should have the same spatial extent, coordinate reference system, and number of rows and columns of cells.
+
+```r
+refG <- terra::rast("C:/myFiles/data/topoResult/topoRef.tif")
+predG <- terra::rast("C:/myFiles/data/topoResult/topoPred.tif")
+```
+
+
+```r
+refG2 <- terra::crop(terra::project(refG, predG), predG)
+```
+
+
+```r
+myMetrics <- assessRaster(reference = refG2,
+                          predicted = predG,
+                          multiclass = FALSE,
+                          mappings = c("Not Mine", "Mine")
+                          )
+print(myMetrics)
+$Classes
+[1] "Not Mine" "Mine"    
+
+$referenceCounts
+Negative Positive 
+36022015  1301194 
+
+$predictionCounts
+Negative Positive 
+36146932  1176277 
+
+$ConfusionMatrix
+          Reference
+Predicted  Negative Positive
+  Negative 35994704   152228
+  Positive    27311  1148966
+
+$Mets
+         OA Recall Precision Specificity    NPV F1Score
+Mine 0.9952  0.883    0.9768      0.9992 0.9958  0.9275
+```

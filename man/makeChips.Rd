@@ -82,7 +82,7 @@ folder while any chip having only background pixels will be written to the
 "background" folder.
 }
 \examples{
-/dontrun{
+\dontrun{
 makeChips(image = "INPUT IMAGE FILE NAME AND PATH",
           mask = "INPUT RASTER MASK FILE NAME AND PATH",
           n_channels = 3,

@@ -32,7 +32,7 @@
 #' a CSV file written to disk. If mode = "Divided", a division column is added to
 #' differentiate "positive" and "background" samples.
 #' @examples
-#' /dontrun{
+#' \dontrun{
 #' chpDF <- makeChipsDF(folder = "PATHT TO CHIPS FOLDER",
 #'                       outCSV = "OUTPUT CSV FILE AND PATH",
 #'                       extension = ".tif",
@@ -62,7 +62,7 @@ makeChipsDF <- function(folder,
     chpDFB <- data.frame(chpN=lstChpsB, chpPth=lstChpsPthB, mskPth=lstMsksPthB)
     chpDFP <- data.frame(chpN=lstChpsP, chpPth=lstChpsPthP, mskPth=lstMsksPthP)
     chpDFP$division <- "Positive"
-    chpDFB$division <- "Backround"
+    chpDFB$division <- "Background"
     chpDF <- dplyr::bind_rows(chpDFB, chpDFP)
   }
   if(shuffle == TRUE){

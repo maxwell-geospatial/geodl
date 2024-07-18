@@ -71,7 +71,7 @@ assessPnts <- function(reference,
 
     colnames(t1) <- mappings
     rownames(t1) <- mappings
-    dimnames(t1) <- setNames(dimnames(t1),c("Predicted", "Reference"))
+    dimnames(t1) <- stats::setNames(dimnames(t1),c("Predicted", "Reference"))
 
     diag1 <- diag(t1)
     col1 <- colSums(t1)
@@ -108,7 +108,7 @@ assessPnts <- function(reference,
 
     colnames(t1) <- c("Negative", "Positive")
     rownames(t1) <- c("Negative", "Positive")
-    dimnames(t1) <- setNames(dimnames(t1),c("Predicted", "Reference"))
+    dimnames(t1) <- stats::setNames(dimnames(t1),c("Predicted", "Reference"))
 
     diag1 <- diag(t1)
     col1 <- colSums(t1)

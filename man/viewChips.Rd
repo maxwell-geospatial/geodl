@@ -37,6 +37,11 @@ for the image chips only. If "mask", a grid is produced for just the masks.
 If "both", grids are produced for both the image chips and masks. Default is
 "both".}
 
+\item{justPositive}{TRUE or FALSE. If makeChips() was executed using the "Divided" mode, you can
+choose to only show chips that contained some pixels mapped to the positive class.
+The default is FALSE. This should be left to the default or set to FALSE if chips
+were generated using a method other than "Divided".}
+
 \item{cCnt}{Number of columns in the grid. Row X Column count must sum to the number
 of samples being displayed (nSamps). Default is 4.}
 
@@ -67,11 +72,6 @@ in the vector. Colors must be provided.}
 reproducible (i.e., obtain the same samples). If FALSE, seed is ignored. Default is FALSE.}
 
 \item{seed}{Random seed value. Default is 42. This is ignored if useSeed is FALSE.}
-
-\item{justPostitive}{TRUE or FALSE. If makeChips() was executed using the "Divided" mode, you can
-choose to only show chips that contained some pixels mapped to the positive class.
-The default is FALSE. This should be left to the default or set to FALSE if chips
-were generated using a method other than "Divided".}
 }
 \value{
 Plot of image chip grid (if mode = "image"); plot of mask chip grid
@@ -86,7 +86,7 @@ as a means to visualize chips generated with the makeChips() or makeChipsMultiCl
 function. It can be used as a check to make sure chips were generated as expected.
 }
 \examples{
-/dontrun{
+\dontrun{
 viewChips(chpDF=chpDF,
           folder= "FOLDER CONTAINING CHIPS",
           nSamps = 16,

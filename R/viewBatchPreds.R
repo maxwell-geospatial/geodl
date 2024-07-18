@@ -17,6 +17,7 @@
 #' @param b Index of channel to assign to blue channel. Default is 3 or the third channel.
 #' For gray scale or single-band images, assign the same index to all three bands.
 #' @param cNames Vector of class names. Must be the same length as number of classes.
+#' @param cCodes Integer codes assigned to each class. Should be in the same order as cNames.
 #' @param cColors Vector of color values to use to display the masks. Colors are applied based on the
 #' order of class indices. Length of vector must be the same as the number of classes.
 #' @param useCUDA TRUE or FALSE. Default is FALSE. If TRUE, GPU will be used to predict
@@ -30,7 +31,7 @@
 #' or it is assumed that deep supervision is not used.
 #' @return Image grids of example chips, reference masks, and predictions loaded from a mini-batch provided by the DataLoader.
 #' @examples
-#' /dontrun{
+#' \dontrun{
 #' viewBatchPreds(dataLoader=testDL,
 #'                model=model,
 #'                mode="multiclass",
@@ -60,6 +61,8 @@ viewBatchPreds <- function(dataLoader,
                            probs=FALSE,
                            usedDS=FALSE){
 
+  model <- model
+
   batch1 <- dataLoader$.iter()$.next()
 
   nSamps <- dataLoader$batch_size
@@ -73,14 +76,14 @@ viewBatchPreds <- function(dataLoader,
   }
 
 
-  masks <- torch::torch_tensor(masks, dtype=torch_float32())
+  masks <- torch::torch_tensor(masks, dtype=torch::torch_float32())
 
   if(useCUDA == TRUE){
     images <- images$to(device="cuda")
   }
 
   if(usedDS==TRUE){
-    preds <- model2(images)
+    preds <- predict(model2, images)
   }else{
     preds <- predict(model, batch1$image)
   }

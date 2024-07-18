@@ -18,7 +18,7 @@
 #' order of class indices. Length of vector must be the same as the number of classes.
 #' @return Image grids of example chips and masks loaded from a mini-batch produced by the DataLoader.
 #' @examples
-#' /dontrun{
+#' \dontrun{
 #' viewBatch(dataLoader=trainDL,
 #'           nCols = 5,
 #'           r = 1,

@@ -1,6 +1,34 @@
-url: ~
+url: https://github.com/maxwell-geospatial/geodl
 template:
   bootstrap: 5
-  bootswatch: superhero
-  theme: arrow-dark
-
+  bootswatch: sandstone
+navbar:
+ components:
+   articles:
+    text: Articles
+    menu:
+    - text: Full Workflows
+    - text: topoDL (Binary)
+      href: articles/topoDLDemo.html
+    - text: landcover.ai (Multiclass)
+      href: articles/lcaiDemo.html
+    - text: Spatial Predictions
+      href: articles/spatialPredictionDemo.html
+    - text: ---------
+    - text: Data Preparation
+    - text: Make Masks
+      href: articles/createMasks.html
+    - text: Make Chips
+      href: articles/makeChips.html
+    - text: DataSets and DataLoaders
+      href: articles/createDataSetDataLoader.html
+    - text: Terrain Derivatives
+      href: articles/terrainDerDemo.html
+    - text: ---------
+    - text: Losses, Metrics, and Assessment
+    - text: Unified Focal Loass
+      href: articles/unifiedFocalLossDemo.html
+    - text: luz Metrics
+      href: articles/metricsDemo.html
+    - text: Assessment Metrics
+      href: articles/modelAssessment.html

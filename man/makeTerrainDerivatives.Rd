@@ -42,7 +42,7 @@ feature extraction from digital terrain data, Earth and Space Science,
 10: e2023EA002845. https://doi.org/10.1029/2023EA002845.
 }
 \examples{
-/dontrun{
+\dontrun{
 inDTM <- terra::rast("INPUT DTM NAME AND PATH")
 terrOut <- makeTerrainDerivatives(dtm=inDTM,
                                  res=2,

@@ -88,6 +88,7 @@ bottleneck with a modified atrous spatial pyramid pooling (ASPP) module, and/or 
 implement deep supervision using predictions generated at each stage in the decoder.
 }
 \examples{
+require(torch)
 # example code
 #Generate example data as torch tensor
 tensorIn <- torch::torch_rand(c(12,4,128,128))

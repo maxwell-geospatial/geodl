@@ -32,14 +32,17 @@
 #' @param decimals Number of decimal places to return for assessment metrics. Default is 4.
 #' @return List object containing the resulting metrics and ancillary information.
 #' @examples
+#' if(requireNamespace("terra", quietly = TRUE)){
+#' require(torch)
+#' require(terra)
 #' #Multiclass example
 #'
 #' #Generate example data as SpatRasters
-#'  ref <- terra::rast(matrix(sample(c(1, 2, 3), 625, replace=TRUE), nrow=25, ncol=25))
-#'  pred <- terra::rast(matrix(sample(c(1, 2, 3), 625, replace=TRUE), nrow=25, ncol=25))
+#' ref <- terra::rast(matrix(sample(c(1, 2, 3), 625, replace=TRUE), nrow=25, ncol=25))
+#' pred <- terra::rast(matrix(sample(c(1, 2, 3), 625, replace=TRUE), nrow=25, ncol=25))
 #'
-#'  #Calculate metrics
-#'  metsOut <- assessRaster(reference=ref,
+#' #Calculate metrics
+#' metsOut <- assessRaster(reference=ref,
 #'                         predicted=pred,
 #'                         multiclass=TRUE,
 #'                         mappings=c("Class A", "Class B", "Class C"),
@@ -47,20 +50,21 @@
 #'
 #' print(metsOut)
 #'
-#'  #Binary example
+#' #Binary example
 #'
-#'  Generate example data as SpatRasters
-#'  ref <- terra::rast(matrix(sample(c(0, 1), 625, replace=TRUE), nrow=25, ncol=25))
-#'  pred <- terra::rast(matrix(sample(c(0, 1), 625, replace=TRUE), nrow=25, ncol=25))
+#' #Generate example data as SpatRasters
+#' ref <- terra::rast(matrix(sample(c(0, 1), 625, replace=TRUE), nrow=25, ncol=25))
+#' pred <- terra::rast(matrix(sample(c(0, 1), 625, replace=TRUE), nrow=25, ncol=25))
 #'
-#'  #Calculate metrics
-#'  metsOut <- assessRaster(reference=ref,
+#' #Calculate metrics
+#' metsOut <- assessRaster(reference=ref,
 #'                         predicted=pred,
 #'                         multiclass=FALSE,
 #'                         mappings=c("Background", "Positive"),
 #'                         decimals=4)
 #'
 #' print(metsOut)
+#' }
 #' @export
 assessRaster <- function(reference,
                          predicted,
@@ -74,7 +78,7 @@ assessRaster <- function(reference,
     if(multiclass == TRUE){
       colnames(t1) <- mappings
       rownames(t1) <- mappings
-      dimnames(t1) <- setNames(dimnames(t1),c("Predicted", "Reference"))
+      dimnames(t1) <- stats::setNames(dimnames(t1),c("Predicted", "Reference"))
 
       diag1 <- diag(t1)
       col1 <- colSums(t1)
@@ -106,7 +110,7 @@ assessRaster <- function(reference,
     }else{
       colnames(t1) <- c("Negative", "Positive")
       rownames(t1) <- c("Negative", "Positive")
-      dimnames(t1) <- setNames(dimnames(t1),c("Predicted", "Reference"))
+      dimnames(t1) <- stats::setNames(dimnames(t1),c("Predicted", "Reference"))
 
       diag1 <- diag(t1)
       col1 <- colSums(t1)

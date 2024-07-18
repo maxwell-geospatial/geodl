@@ -56,8 +56,10 @@
 #' or no augmentations. Must be changed if augmentations are desired.
 #' @param probHue 0 to 1. Probability of applying hue augmentations. Default is 0
 #' or no augmentations. Must be changed if augmentations are desired.
+#' This is only applicable to RGB data.
 #' @param probSaturation 0 to 1. Probability of applying saturation augmentations.
 #' Default is 0 or no augmentations. Must be changed if augmentations are desired.
+#' This is only applicable to RGB data.
 #' @param brightFactor Vector of smallest and largest brightness adjustment factors.
 #' Random value will be selected between these extremes. The default is 0.8 to 1.2.
 #' Can be any non negative number. For example, 0 gives a black image, 1 gives the original
@@ -80,11 +82,11 @@
 #' 0 gives the original image.
 #' @param saturationFactor Vector of smallest and largest saturation adjustment factors.
 #' Random value will be selected between these extremes. The default is 0.8 to 1.2.
-#' For example, 0 will give a black-and-white image, 1`will give the original image while 2 will
+#' For example, 0 will give a black-and-white image, 1 will give the original image, and 2 will
 #' enhance the saturation by a factor of 2.
 #' @return A dataset object that can be provided to torch::dataloader().
 #' @examples
-#' /dontrun{
+#' \dontrun{
 #' #Define training dataset and augmentations
 #' trainDS <- defineSegDataSet(
 #'   chpDF=trainDF,

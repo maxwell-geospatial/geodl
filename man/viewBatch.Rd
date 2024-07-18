@@ -36,7 +36,7 @@ The goal of this function is to provide a visual check of a mini-batch of image 
 generated from a DataLoader.
 }
 \examples{
-/dontrun{
+\dontrun{
 viewBatch(dataLoader=trainDL,
           nCols = 5,
           r = 1,

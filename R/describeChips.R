@@ -38,7 +38,7 @@
 #' @return List object containing the summary metrics for each band in the
 #' $ImageStats object and the count of pixels by class in the $maskStats object.
 #' @examples
-#' /dontrun{
+#' \dontrun{
 #' chpDescript <- describeChips(folder= "PATH TO CHIPS FOLDER",
 #'                              extension = ".tif",
 #'                              mode = "Positive",

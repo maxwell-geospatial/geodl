@@ -27,10 +27,9 @@ or predictor variables as mini-batch size, number of channels, width pixel count
 count of pixels in each class in the mini-batch (maskCnts); and minimum (minIndex) and maximum (maxIndex) class indices present in the mini-batch.
 }
 \examples{
-/dontrun{
+\dontrun{
 trainStats <- describeBatch(trainDL,
 tzeroStart=TRUE,
 tusedDS=FALSE)
 }
-
 }

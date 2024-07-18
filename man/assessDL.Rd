@@ -52,20 +52,6 @@ We recommend using a CUDA-enabled GPU if one is available since this will speed 
 }
 \value{
 List object containing the resulting metrics and ancillary information.
-examples
-/dontrun{
-metricsOut <- assessDL(dl=testDL,
-model=model,
-batchSize=15,
-size=256,
-nCls=2,
-mode="binary",
-cCodes=c(1,2),
-cNames=c("Not Mine", "Mine"),
-usedDS=FALSE,
-useCUDA=TRUE,
-decimals=4)
-}
 }
 \description{
 Assess semantic segmentation model using all samples in a torch DataLoader.
@@ -86,4 +72,19 @@ $predictionCounts, and $confusionMatrix objects are also returned; however, the 
 object is replaced with $Mets, which stores the following metrics: overall accuracy, recall,
 precision, specificity, negative predictive value (NPV), and F1-score.
 For binary cases, the second class is assumed to be the positive case.
+}
+\examples{
+\dontrun{
+metricsOut <- assessDL(dl=testDL,
+                       model=model,
+                       batchSize=15,
+                       size=256,
+                       nCls=2,
+                       mode="binary",
+                       cCodes=c(1,2),
+                       cNames=c("Not Mine", "Mine"),
+                       usedDS=FALSE,
+                       useCUDA=TRUE,
+                       decimals=4)
+}
 }

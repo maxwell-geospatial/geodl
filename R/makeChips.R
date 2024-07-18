@@ -52,7 +52,7 @@
 #' be the same as that used to generated the original chips. Default is FALSE.
 #' @return Image and mask files written to disk in TIFF format. No R object is returned.
 #' @examples
-#' /dontrun{
+#' \dontrun{
 #' makeChips(image = "INPUT IMAGE FILE NAME AND PATH",
 #'           mask = "INPUT RASTER MASK FILE NAME AND PATH",
 #'           n_channels = 3,

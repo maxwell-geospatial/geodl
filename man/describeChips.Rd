@@ -66,7 +66,7 @@ can be useful for data normalization and determining class weightings in loss
 calculations.
 }
 \examples{
-/dontrun{
+\dontrun{
 chpDescript <- describeChips(folder= "PATH TO CHIPS FOLDER",
                              extension = ".tif",
                              mode = "Positive",

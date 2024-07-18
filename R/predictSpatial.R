@@ -66,7 +66,7 @@
 #' indices (predType = "class"), logits (predType = "logit"), or rescaled logits
 #' (predType = "prob").
 #' @examples
-#' /dontrun{
+#' \dontrun{
 #' #Predict classification
 #' predCls <- predictSpatial(imgIn="INPUT IMAGE NAME AND PATH",
 #'                           model=model,
@@ -220,7 +220,7 @@ predictSpatial <- function(imgIn,
       ten1 = image[1:n_channels, r1b:r2b, c1b:c2b]
       ten1 <- torch::torch_unsqueeze(ten1, 1)
 
-      preds <- model2(ten1)
+      preds <- predict(model, ten1)
 
       if(usedDS==TRUE){
         preds <- preds[[1]]

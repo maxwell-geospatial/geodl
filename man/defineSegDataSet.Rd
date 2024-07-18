@@ -89,10 +89,12 @@ Default is 0 or no augmentations. Must be changed if augmentations are desired.}
 or no augmentations. Must be changed if augmentations are desired.}
 
 \item{probHue}{0 to 1. Probability of applying hue augmentations. Default is 0
-or no augmentations. Must be changed if augmentations are desired.}
+or no augmentations. Must be changed if augmentations are desired.
+This is only applicable to RGB data.}
 
 \item{probSaturation}{0 to 1. Probability of applying saturation augmentations.
-Default is 0 or no augmentations. Must be changed if augmentations are desired.}
+Default is 0 or no augmentations. Must be changed if augmentations are desired.
+This is only applicable to RGB data.}
 
 \item{brightFactor}{Vector of smallest and largest brightness adjustment factors.
 Random value will be selected between these extremes. The default is 0.8 to 1.2.
@@ -120,7 +122,7 @@ Therefore, both -0.5 and 0.5 will give an image with complementary colors while
 
 \item{saturationFactor}{Vector of smallest and largest saturation adjustment factors.
 Random value will be selected between these extremes. The default is 0.8 to 1.2.
-For example, 0 will give a black-and-white image, 1`will give the original image while 2 will
+For example, 0 will give a black-and-white image, 1 will give the original image, and 2 will
 enhance the saturation by a factor of 2.}
 }
 \value{
@@ -142,7 +144,7 @@ the number of channels/variables. Masks are generated as three dimensional tenso
 (class index, width, height).
 }
 \examples{
-/dontrun{
+\dontrun{
 #Define training dataset and augmentations
 trainDS <- defineSegDataSet(
   chpDF=trainDF,

@@ -114,7 +114,7 @@ to disk and provided as a spatRaster object. If you are experiencing memory issu
 break larger raster extents into smaller tiles for processing.
 }
 \examples{
-/dontrun{
+\dontrun{
 #Predict classification
 predCls <- predictSpatial(imgIn="INPUT IMAGE NAME AND PATH",
                           model=model,

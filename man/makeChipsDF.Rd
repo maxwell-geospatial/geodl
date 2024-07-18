@@ -56,7 +56,7 @@ the full file path so that the results can still be used if the data are copied
 to a new location on disk or to a new computer.
 }
 \examples{
-/dontrun{
+\dontrun{
 chpDF <- makeChipsDF(folder = "PATHT TO CHIPS FOLDER",
                       outCSV = "OUTPUT CSV FILE AND PATH",
                       extension = ".tif",

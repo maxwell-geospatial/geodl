@@ -67,7 +67,7 @@ Within the provided directory, image chips will be written to an "images" folder
 and masks will be written to a "masks" folder.
 }
 \examples{
-/dontrun{
+\dontrun{
 makeChipsMultiClass(image = "INPUT IMAGE NAME AND PATH",
                     mask = "INPUT RASTER MASK NAME AND PATH",
                     n_channels = 3,

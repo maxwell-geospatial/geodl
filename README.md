@@ -1,12 +1,17 @@
+---
+output: github_document
+---
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# geodl <img src="geodlHex.png" align="right" width="132" />
+# geodl <img src="vignettes/figure/geodlHex.png" align="right" width="132" />
 
 <!-- badges: start -->
 <!-- badges: end -->
 
 This package provides tools for semantic segmentation of geospatial data using convolutional neural network-based deep learning. Utility functions allow for creating masks, image chips, data frames listing image chips in a directory, and DataSets for use within DataLoaders. Additional functions are provided to serve as checks during the data preparation and training process. 
+
+Full details about the package are documented in a [preprint article](https://doi.org/10.31223/X53M6T) available on EarthArXiv.
 
 A UNet architecture can be defined with 4 blocks in the encoder, a bottleneck block, and 4 blocks in the decoder. The UNet can accept a variable number of input channels, and the user can define the number of feature maps produced in each encoder and decoder block and the bottleneck. Users can also choose to (1) replace all ReLU activation functions with leaky ReLU or swish, (2) implement attention gates along the skip connections, (3) implement squeeze and excitation modules within the encoder blocks, (4) add residual connections within all blocks, (5) replace the bottleneck with a modified atrous spatial pyramid pooling (ASPP) module, and/or (6) implement deep supervision using predictions generated at each stage in the decoder. A second UNet architecture is implemented with a MobileNet-v2 backbone. 
 
@@ -31,52 +36,7 @@ You can install the development version of geodl from
 # install.packages("devtools")
 devtools::install_github("maxwell-geospatial/geodl")
 ```
-Example scripts and data are available via [FigShare](https://figshare.com/articles/dataset/geodl_example_data/23835165): 
 
-<table>
-  <tr>
-    <th>File</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>accAssessmentExamples.R</td>
-    <td>
-      Calculation of accuracy assessment metrics at point locations and from
-      raster predictions and raster labels
-    </td>
-  </tr>
-  <tr>
-    <td>classificationExampleLCAI.R</td>
-    <td>Complete workflow for classification of landcover.ai dataset</td>
-  </tr>
-  <tr>
-    <td>classificationExampleTopoDL.R</td>
-    <td>Complete workflow for classification of topoDL dataset</td>
-  </tr>
-  <tr>
-    <td>dataPrepExamples.R</td>
-    <td>
-      Data prep examples including generating masks, image chips, and land
-      surface parameters from digital terrain models
-    </td>
-  </tr>
-  <tr>
-    <td>dataSetLoadExamples.R</td>
-    <td>Define and use dataset and data loaders</td>
-  </tr>
-  <tr>
-    <td>luzMetricsExamples.R</td>
-    <td>Calculate assessment metrics from predictions and labels</td>
-  </tr>
-  <tr>
-    <td>spatialPredictionExample.R</td>
-    <td>
-      Use a trained model to create a prediction of an entire spatial extent
-    </td>
-  </tr>
-  <tr>
-    <td>unifiedFocalLossExamples.R</td>
-    <td>Configuration and calculation of loss metrics</td>
-  </tr>
-</table>
+## Example
 
+Please see the preprint article and articles/vignettes for details and example workflows and explanations. 

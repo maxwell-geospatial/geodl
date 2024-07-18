@@ -54,14 +54,17 @@ precision, specificity, negative predictive value (NPV), and F1-score.
 For binary cases, the second class is assumed to be the positive case.
 }
 \examples{
+if(requireNamespace("terra", quietly = TRUE)){
+require(torch)
+require(terra)
 #Multiclass example
 
 #Generate example data as SpatRasters
- ref <- terra::rast(matrix(sample(c(1, 2, 3), 625, replace=TRUE), nrow=25, ncol=25))
- pred <- terra::rast(matrix(sample(c(1, 2, 3), 625, replace=TRUE), nrow=25, ncol=25))
+ref <- terra::rast(matrix(sample(c(1, 2, 3), 625, replace=TRUE), nrow=25, ncol=25))
+pred <- terra::rast(matrix(sample(c(1, 2, 3), 625, replace=TRUE), nrow=25, ncol=25))
 
- #Calculate metrics
- metsOut <- assessRaster(reference=ref,
+#Calculate metrics
+metsOut <- assessRaster(reference=ref,
                         predicted=pred,
                         multiclass=TRUE,
                         mappings=c("Class A", "Class B", "Class C"),
@@ -69,18 +72,19 @@ For binary cases, the second class is assumed to be the positive case.
 
 print(metsOut)
 
- #Binary example
+#Binary example
 
- Generate example data as SpatRasters
- ref <- terra::rast(matrix(sample(c(0, 1), 625, replace=TRUE), nrow=25, ncol=25))
- pred <- terra::rast(matrix(sample(c(0, 1), 625, replace=TRUE), nrow=25, ncol=25))
+#Generate example data as SpatRasters
+ref <- terra::rast(matrix(sample(c(0, 1), 625, replace=TRUE), nrow=25, ncol=25))
+pred <- terra::rast(matrix(sample(c(0, 1), 625, replace=TRUE), nrow=25, ncol=25))
 
- #Calculate metrics
- metsOut <- assessRaster(reference=ref,
+#Calculate metrics
+metsOut <- assessRaster(reference=ref,
                         predicted=pred,
                         multiclass=FALSE,
                         mappings=c("Background", "Positive"),
                         decimals=4)
 
 print(metsOut)
+}
 }

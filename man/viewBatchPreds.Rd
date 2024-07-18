@@ -40,6 +40,8 @@ For gray scale or single-band images, assign the same index to all three bands.}
 \item{b}{Index of channel to assign to blue channel. Default is 3 or the third channel.
 For gray scale or single-band images, assign the same index to all three bands.}
 
+\item{cCodes}{Integer codes assigned to each class. Should be in the same order as cNames.}
+
 \item{cNames}{Vector of class names. Must be the same length as number of classes.}
 
 \item{cColors}{Vector of color values to use to display the masks. Colors are applied based on the
@@ -67,7 +69,7 @@ Generate image grid of mini-batch of image chips, masks, and predictions for all
 The goal of this function is to provide a visual check of predictions for a mini-batch of data.
 }
 \examples{
-/dontrun{
+\dontrun{
 viewBatchPreds(dataLoader=testDL,
                model=model,
                mode="multiclass",

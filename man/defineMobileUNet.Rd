@@ -58,6 +58,7 @@ deep supervision (useDS = TRUE) and attention gates along the skip connections (
 requires three input bands or channels.
 }
 \examples{
+require(torch)
 #Generate example data as torch tensor
 tensorIn <- torch::torch_rand(c(12,3,128,128))
 

@@ -15,7 +15,7 @@
 #' for the image chips only. If "mask", a grid is produced for just the masks.
 #' If "both", grids are produced for both the image chips and masks. Default is
 #' "both".
-#' @param justPostitive TRUE or FALSE. If makeChips() was executed using the "Divided" mode, you can
+#' @param justPositive TRUE or FALSE. If makeChips() was executed using the "Divided" mode, you can
 #' choose to only show chips that contained some pixels mapped to the positive class.
 #' The default is FALSE. This should be left to the default or set to FALSE if chips
 #' were generated using a method other than "Divided".
@@ -42,7 +42,7 @@
 #' @return Plot of image chip grid (if mode = "image"); plot of mask chip grid
 #' (if mode ="mask"); plot of image and mask chip grids (if model = "both").
 #' @examples
-#' /dontrun{
+#' \dontrun{
 #' viewChips(chpDF=chpDF,
 #'           folder= "FOLDER CONTAINING CHIPS",
 #'           nSamps = 16,

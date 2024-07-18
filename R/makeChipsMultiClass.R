@@ -39,7 +39,7 @@
 #' @return Image and mask files written to disk in TIFF format. No R object is
 #' returned.
 #' @examples
-#' /dontrun{
+#' \dontrun{
 #' makeChipsMultiClass(image = "INPUT IMAGE NAME AND PATH",
 #'                     mask = "INPUT RASTER MASK NAME AND PATH",
 #'                     n_channels = 3,

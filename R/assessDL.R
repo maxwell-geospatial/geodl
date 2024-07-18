@@ -40,8 +40,8 @@
 #' We recommend using a CUDA-enabled GPU if one is available since this will speed up computation.
 #' @param decimals Number of decimal places to return for assessment metrics. Default is 4.
 #' @return List object containing the resulting metrics and ancillary information.
-#' examples
-#' /dontrun{
+#' @examples
+#' \dontrun{
 #' metricsOut <- assessDL(dl=testDL,
 #'                        model=model,
 #'                        batchSize=15,
@@ -87,7 +87,7 @@ assessDL <- function(dl,
   }
 
   # disable gradient tracking to reduce memory usage
-  with_no_grad({
+  torch::with_no_grad({
     coro::loop(for (b in dl) {
 
           masks <- b$mask
@@ -98,7 +98,7 @@ assessDL <- function(dl,
         }
 
         if(usedDS == TRUE){
-          preds <- model2(images)
+          preds <- predict(model2, images)
         }else{
           preds <- predict(model, images)
         }
@@ -136,11 +136,11 @@ assessDL <- function(dl,
 
 
   if(multiclass == TRUE){
-    t1 <- xtabs(n ~ Prediction + Reference, data = cm)
+    t1 <- stats::xtabs(n ~ Prediction + Reference, data = cm)
 
     colnames(t1) <- cNames
     rownames(t1) <- cNames
-    dimnames(t1) <- setNames(dimnames(t1),c("Predicted", "Reference"))
+    dimnames(t1) <- stats::setNames(dimnames(t1),c("Predicted", "Reference"))
 
     diag1 <- diag(t1)
     col1 <- colSums(t1)
@@ -170,11 +170,11 @@ assessDL <- function(dl,
                     producerAccuracies = round(pa, digits=decimals),
                     f1Scores = round(f1, digits=decimals))
   }else{
-    t1 <- xtabs(n ~ Prediction + Reference, data = cm)
+    t1 <- stats::xtabs(n ~ Prediction + Reference, data = cm)
 
     colnames(t1) <- c("Negative", "Positive")
     rownames(t1) <- c("Negative", "Positive")
-    dimnames(t1) <- setNames(dimnames(t1),c("Predicted", "Reference"))
+    dimnames(t1) <- stats::setNames(dimnames(t1),c("Predicted", "Reference"))
 
     diag1 <- diag(t1)
     col1 <- colSums(t1)

@@ -561,6 +561,7 @@ asppBlkR <- torch::nn_module(
 #' @param seRatio Ratio to use in squeeze and excitation module. The default is 8.
 #' @return Unet model instance as torch nnn_module
 #' @examples
+#' require(torch)
 #' # example code
 #' #Generate example data as torch tensor
 #' tensorIn <- torch::torch_rand(c(12,4,128,128))
@@ -895,6 +896,7 @@ defineUNet <- torch::nn_module(
 #' to use. Default is 0.01.
 #' @return ModileUNet model instance as torch nn_module
 #' @examples
+#' require(torch)
 #' #Generate example data as torch tensor
 #' tensorIn <- torch::torch_rand(c(12,3,128,128))
 #'

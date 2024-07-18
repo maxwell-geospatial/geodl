@@ -5,26 +5,24 @@
 #' Calculates recall based on luz_metric() for use within training and validation
 #' loops.
 #'
-#' @param preds Tensor of class predicted probabilities with shape
-#' (Mini-Batch, Class Logits, Width, Height) and a 32-bit float data type.
-#' @param target Tensor of target class labels with shape
-#' (Mini-Batch, Class Indices, Width, Height) and a long integer data type. For
-#' binary classification, the class index must be 1 for the positive class and
-#' 0 for the background case.
-#' @param nCLs Number of classes being differentiated.
+#' @param nCls Number of classes being differentiated.
 #' @param smooth A smoothing factor to avoid divide by zero errors. Default is 1.
 #' @param mode Either "binary" or "multiclass". If "binary", only the logit for
 #' the positive class prediction should be provided. If both the positive and negative
 #' or background class probability is provided for a binary classification, use
 #' the "multiclass" mode. Note that this package is designed to treat all predictions as multiclass.
 #' The "binary" mode is only provided for use outside of the standard geodl workflow.
+#' @param biThresh Probability threshold to define postive case prediction. Default is 0.5.
 #' @param zeroStart TRUE or FALSE. If class indices start at 0 as opposed to 1, this should be set to
 #' TRUE. This is required  to implement one-hot encoding since R starts indexing at 1. Default is TRUE.
+#' @param clsWghts Vector of class weightings loss calculatokn. Default is equal weightings.
 #' @param usedDS TRUE or FALSE. If deep supervision was implemented and masks are produced at varying scales using
 #' the defineSegDataSetDS() function, this should be set to TRUE. Only the original resolution is used
 #' to calculate assessment metrics. Default is FALSE.
 #' @return Calculated metric returned as a base-R vector as opposed to tensor.
 #' @examples
+#' library(terra)
+#' library(torch)
 #' #Generate example data as SpatRasters
 #' ref <- terra::rast(matrix(sample(c(1, 2, 3), 625, replace=TRUE), nrow=25, ncol=25))
 #' pred1 <- terra::rast(matrix(sample(c(1:150), 625, replace=TRUE), nrow=25, ncol=25))
@@ -157,23 +155,24 @@ luz_metric_recall <- luz::luz_metric(
 #' Calculates precision based on luz_metric() for use within training and validation
 #' loops.
 #'
-#' @param preds Tensor of class predicted probabilities with shape
-#' (Mini-Batch, Class Logits, Width, Height) and a 32-bit float data type.
-#' @param target Tensor of target class labels with shape
-#' (Mini-Batch, Class Indices, Width, Height) and a long integer data type. For
-#' binary classification, the class index must be 1 for the positive class and
-#' 0 for the background case.
-#' @param nCLs Number of classes being differentiated.
+#' @param nCls Number of classes being differentiated.
 #' @param smooth A smoothing factor to avoid divide by zero errors. Default is 1.
 #' @param mode Either "binary" or "multiclass". If "binary", only the logit for
 #' the positive class prediction should be provided. If both the positive and negative
 #' or background class probability is provided for a binary classification, use
 #' the "multiclass" mode. Note that this package is designed to treat all predictions as multiclass.
 #' The "binary" mode is only provided for use outside of the standard geodl workflow.
+#' @param biThresh Probability threshold to define postive case prediction. Default is 0.5.
 #' @param zeroStart TRUE or FALSE. If class indices start at 0 as opposed to 1, this should be set to
 #' TRUE. This is required  to implement one-hot encoding since R starts indexing at 1. Default is TRUE.
+#' @param clsWghts Vector of class weightings loss calculatokn. Default is equal weightings.
+#' @param usedDS TRUE or FALSE. If deep supervision was implemented and masks are produced at varying scales using
+#' the defineSegDataSetDS() function, this should be set to TRUE. Only the original resolution is used
+#' to calculate assessment metrics. Default is FALSE.
 #' @return Calculated metric returned as a base-R vector as opposed to tensor.
 #' @examples
+#' library(terra)
+#' library(torch)
 #' #Generate example data as SpatRasters
 #' ref <- terra::rast(matrix(sample(c(1, 2, 3), 625, replace=TRUE), nrow=25, ncol=25))
 #' pred1 <- terra::rast(matrix(sample(c(1:150), 625, replace=TRUE), nrow=25, ncol=25))
@@ -328,23 +327,24 @@ luz_metric_precision <- luz::luz_metric(
 #' Calculates F1-score based on luz_metric() for use within training and validation
 #' loops.
 #'
-#' @param preds Tensor of class predicted probabilities with shape
-#' (Mini-Batch, Class Logits, Width, Height) and a 32-bit float data type.
-#' @param target Tensor of target class labels with shape
-#' (Mini-Batch, Class Indices, Width, Height) and a long integer data type. For
-#' binary classification, the class index must be 1 for the positive class and
-#' 0 for the background case.
-#' @param nCLs Number of classes being differentiated.
+#' @param nCls Number of classes being differentiated.
 #' @param smooth A smoothing factor to avoid divide by zero errors. Default is 1.
 #' @param mode Either "binary" or "multiclass". If "binary", only the logit for
 #' the positive class prediction should be provided. If both the positive and negative
 #' or background class probability is provided for a binary classification, use
 #' the "multiclass" mode. Note that this package is designed to treat all predictions as multiclass.
 #' The "binary" mode is only provided for use outside of the standard geodl workflow.
+#' @param biThresh Probability threshold to define postive case prediction. Default is 0.5.
 #' @param zeroStart TRUE or FALSE. If class indices start at 0 as opposed to 1, this should be set to
 #' TRUE. This is required  to implement one-hot encoding since R starts indexing at 1. Default is TRUE.
+#' @param clsWghts Vector of class weightings loss calculatokn. Default is equal weightings.
+#' @param usedDS TRUE or FALSE. If deep supervision was implemented and masks are produced at varying scales using
+#' the defineSegDataSetDS() function, this should be set to TRUE. Only the original resolution is used
+#' to calculate assessment metrics. Default is FALSE.
 #' @return Calculated metric returned as a base-R vector as opposed to tensor.
 #' @examples
+#' library(terra)
+#' library(torch)
 #' #Generate example data as SpatRasters
 #' ref <- terra::rast(matrix(sample(c(1, 2, 3), 625, replace=TRUE), nrow=25, ncol=25))
 #' pred1 <- terra::rast(matrix(sample(c(1:150), 625, replace=TRUE), nrow=25, ncol=25))
@@ -482,23 +482,23 @@ luz_metric_f1score <- luz::luz_metric(
 #'
 #' luz_metric function to calculate overall accuracy ((correct/total)*100)
 #'
-#' @param preds Tensor of class predicted probabilities with shape
-#' (Mini-Batch, Class Logits, Width, Height) and a 32-bit float data type.
-#' @param target Tensor of target class labels with shape
-#' (Mini-Batch, Class Indices, Width, Height) and a long integer data type. For
-#' binary classification, the class index must be 1 for the positive class and
-#' 0 for the background case.
-#' @param nCLs Number of classes being differentiated.
+#' @param nCls Number of classes being differentiated.
 #' @param smooth A smoothing factor to avoid divide by zero errors. Default is 1.
 #' @param mode Either "binary" or "multiclass". If "binary", only the logit for
 #' the positive class prediction should be provided. If both the positive and negative
 #' or background class probability is provided for a binary classification, use
 #' the "multiclass" mode. Note that this package is designed to treat all predictions as multiclass.
 #' The "binary" mode is only provided for use outside of the standard geodl workflow.
+#' @param biThresh Probability threshold to define postive case prediction. Default is 0.5.
 #' @param zeroStart TRUE or FALSE. If class indices start at 0 as opposed to 1, this should be set to
 #' TRUE. This is required  to implement one-hot encoding since R starts indexing at 1. Default is TRUE.
+#' @param usedDS TRUE or FALSE. If deep supervision was implemented and masks are produced at varying scales using
+#' the defineSegDataSetDS() function, this should be set to TRUE. Only the original resolution is used
+#' to calculate assessment metrics. Default is FALSE.
 #' @return Calculated metric returned as a base-R vector as opposed to tensor.
 #' @examples
+#' require(terra)
+#' require(torch)
 #' #Generate example data as SpatRasters
 #' ref <- terra::rast(matrix(sample(c(1, 2, 3), 625, replace=TRUE), nrow=25, ncol=25))
 #' pred1 <- terra::rast(matrix(sample(c(1:150), 625, replace=TRUE), nrow=25, ncol=25))

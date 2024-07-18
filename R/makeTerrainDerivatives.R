@@ -28,7 +28,7 @@
 #' Image (".img") format.
 #' @return Three-band raster grid written to disk in TIFF format and spatRaster object.
 #' @examples
-#' /dontrun{
+#' \dontrun{
 #' inDTM <- terra::rast("INPUT DTM NAME AND PATH")
 #' terrOut <- makeTerrainDerivatives(dtm=inDTM,
 #'                                  res=2,

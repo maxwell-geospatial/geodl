@@ -33,11 +33,6 @@
 #' including cross entropy loss, weighted cross entropy loss, focal cross entropy loss, focal weighted cross entropy loss,
 #' Dice loss, focal Dice loss, Tversky loss, and focal Tversky loss.
 #'
-#' @param pred Tensor of predicted class logits. Should be of shape (mini-batch,
-#' class logits, width, height) where the class dimension has a length equal to the number
-#' of classes being differentiated. The predictions should have a 32-bit float data type.
-#' @param target Tensor of reference class indices from 0 to n-1 or 1 to n where n is the
-#' number of classes. Shape must be (mini-batch, class indices, width, height), and a long integer data type must be used.
 #' @param nCls Number of classes being differentiated.
 #' @param lambda Term used to control the relative weighting of the distribution- and region-based
 #' losses. Default is 0.5, or equal weighting between the losses. If lambda = 1, only the distribution-
@@ -61,8 +56,11 @@
 #' region-based loss. Default is for all classes to be equally weighted.
 #' @param useLogCosH TRUE or FALSE. Whether or not to apply a logCosH transformation to the region-based
 #' loss. Default is FALSE.
+#' @param device Define device being used for computation. Define using torch_device().
 #' @return Loss metric for use in training process.
 #' @examples
+#' library(terra)
+#' library(torch)
 #' #Generate example data as SpatRasters
 #' ref <- terra::rast(matrix(sample(c(1, 2, 3), 625, replace=TRUE), nrow=25, ncol=25))
 #' pred1 <- terra::rast(matrix(sample(c(1:150), 625, replace=TRUE), nrow=25, ncol=25))
@@ -312,11 +310,6 @@ defineUnifiedFocalLoss <- torch::nn_module(#This is simply a class-based version
 #' including cross entropy loss, weighted cross entropy loss, focal cross entropy loss, focal weighted cross entropy loss,
 #' Dice loss, focal Dice loss, Tversky loss, and focal Tversky loss.
 #'
-#' @param pred Tensor of predicted class logits. Should be of shape (mini-batch,
-#' class logits, width, height) where the class dimension has a length equal to the number
-#' of classes being differentiated. The predictions should have a 32-bit float data type.
-#' @param target Tensor of reference class indices from 0 to n-1 or 1 to n where n is the
-#' number of classes. Shape must be (mini-batch, class indices, width, height), and a long integer data type must be used.
 #' @param nCls Number of classes being differentiated.
 #' @param dsWghts Vector of 4 weights. Weights to apply to the losses calculated at each spatial
 #' resolution when using deep supervision. The default is c(.6, .2, .1, .1) where larger weights are
@@ -343,6 +336,7 @@ defineUnifiedFocalLoss <- torch::nn_module(#This is simply a class-based version
 #' region-based loss. Default is for all classes to be equally weighted.
 #' @param useLogCosH TRUE or FALSE. Whether or not to apply a logCosH transformation to the region-based
 #' loss. Default is FALSE.
+#' @param device Define device being used for computation. Define using torch_device().
 #' @return Loss metric for use in training process.
 #' @export
 defineUnifiedFocalLossDS <- torch::nn_module(#This is simply a class-based version of function defined above/implements function internally
