@@ -50,6 +50,7 @@
 #'                     useExistingDir=FALSE)
 #' }
 #' @export
+#' @importFrom utils stack
 makeChipsMultiClass <- function(image,
                                 mask,
                                 n_channels = 3,

@@ -64,6 +64,7 @@
 #'           useExistingDir=FALSE)
 #' }
 #' @export
+#' @importFrom utils stack
 makeChips <- function(image,
                       mask,
                       n_channels = 3,

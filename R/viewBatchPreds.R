@@ -47,6 +47,9 @@
 #'                usedDS=FALSE)
 #' }
 #' @export
+#' @importFrom stats predict
+#' @importFrom torch torch_float32
+#' @importFrom terra map.pal
 viewBatchPreds <- function(dataLoader,
                            model,
                            mode="multiclass",

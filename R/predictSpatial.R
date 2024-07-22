@@ -85,6 +85,7 @@
 #'                           usedDS=FALSE)
 #' }
 #' @export
+#' @importFrom stats predict
 predictSpatial <- function(imgIn,
                            model,
                            predOut,

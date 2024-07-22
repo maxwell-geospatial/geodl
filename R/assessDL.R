@@ -55,6 +55,7 @@
 #'                        decimals=4)
 #' }
 #' @export
+#' @importFrom stats predict
 assessDL <- function(dl,
                      model,
                      multiclass=TRUE,
