@@ -1,7 +1,7 @@
 Package: geodl
 Type: Package
 Title: Geospatial Semantic Segmentation with Torch and Terra
-Version: 0.1.0
+Version: 0.2.0
 Date: 2027-07-22
 Authors@R: c(
   person(family="Maxwell", given="Aaron", email="Aaron.Maxwell@mail.wvu.edu", role=c("aut", "cre", "cph")),
