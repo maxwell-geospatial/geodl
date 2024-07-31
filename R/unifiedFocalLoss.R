@@ -59,6 +59,7 @@
 #' @param device Define device being used for computation. Define using torch_device().
 #' @return Loss metric for use in training process.
 #' @examples
+#' \donttest{
 #' library(terra)
 #' library(torch)
 #' #Generate example data as SpatRasters
@@ -99,6 +100,7 @@
 #'                                     device='cpu')
 #' #Calculate loss
 #' myDiceLoss(pred, ref)
+#' }
 #' @export
 defineUnifiedFocalLoss <- torch::nn_module(#This is simply a class-based version of function defined above/implements function internally
   initialize = function(nCls=3,

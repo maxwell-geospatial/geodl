@@ -71,9 +71,9 @@ viewChips(chpDF=trainDF,
           seed = 42)
 ```
 
-![Topo chips examples](figure/topoDLChips-1.png){width=60%}
+![Topo chips examples](figRend/topoDLChips-1.png){width=60%}
 
-![Topo mask chips examples](figure/topoDLChips-2.png){width=60%}
+![Topo mask chips examples](figRend/topoDLChips-2.png){width=60%}
 
 I am now ready to define the training and validation datasets. Here are a few key points:
 
@@ -173,9 +173,9 @@ viewBatch(dataLoader=trainDL,
           )
 ```
 
-![Training chips mini-batch](figure/topoDLBatch-1.png){width=60%}
+![Training chips mini-batch](figRend/topoDLBatch-1.png){width=60%}
 
-![Training masks mini-batch](figure/topoDLBatch-2.png){width=60%}
+![Training masks mini-batch](figRend/topoDLBatch-2.png){width=60%}
 
 ```r
 
@@ -189,9 +189,9 @@ viewBatch(dataLoader=valDL,
           )
 ```
 
-![Validation chips mini-batch](figure/topoDLBatch-3.png){width=60%}
+![Validation chips mini-batch](figRend/topoDLBatch-3.png){width=60%}
 
-![Validation masks mini-batch](figure/topoDLBatch-4.png){width=60%}
+![Validation masks mini-batch](figRend/topoDLBatch-4.png){width=60%}
 
 
 ```r
@@ -448,7 +448,7 @@ ggplot(allMets, aes(x=epoch, y=loss, color=set))+
   labs(x="Epoch", y="Loss", color="Set")
 ```
 
-![Loss graph](figure/topoDLLoss-1.png){width=60%}
+![Loss graph](figRend/topoDLLoss-1.png){width=60%}
 
 
 ```r
@@ -457,7 +457,7 @@ ggplot(allMets, aes(x=epoch, y=f1score, color=set))+
   labs(x="Epoch", y="F1-Score", color="Set")
 ```
 
-![F1-score graph](figure/topoDLF1-1.png){width=60%}
+![F1-score graph](figRend/topoDLF1-1.png){width=60%}
 
 
 ```r
@@ -466,7 +466,7 @@ ggplot(allMets, aes(x=epoch, y=recall, color=set))+
   labs(x="Epoch", y="Recall", color="Set")
 ```
 
-![Recall graph](figure/topoDLRecall-1.png){width=60%}
+![Recall graph](figRend/topoDLRecall-1.png){width=60%}
 
 
 ```r
@@ -475,7 +475,7 @@ ggplot(allMets, aes(x=epoch, y=precision, color=set))+
   labs(x="Epoch", y="Precision", color="Set")
 ```
 
-![Precision graph](figure/topoDLPrec-1.png){width=60%}
+![Precision graph](figRend/topoDLPrec-1.png){width=60%}
 
 Next, we load in the test data. This requires (1) listing the chips into a data frame using *makeChipsDF()*, (2) defining a DataSet using *defineSegDataset()*, and (3) creating a DataLoader with *torch::dataloader()*. It is important that the dataset is defined to be consistent with the training and validation datasets used to train and validate the model during the training process.
 
@@ -548,11 +548,11 @@ viewBatchPreds(dataLoader=testDL,
                usedDS=FALSE)
 ```
 
-![Chips to predict](figure/topoDLBatchPreds-1.png){width=60%}
+![Chips to predict](figRend/topoDLBatchPreds-1.png){width=60%}
 
-![Reference masks](figure/topoDLBatchPreds-2.png){width=60%}
+![Reference masks](figRend/topoDLBatchPreds-2.png){width=60%}
 
-![Predictions](figure/topoDLBatchPreds-3.png){width=60%}
+![Predictions](figRend/topoDLBatchPreds-3.png){width=60%}
 
 
 ```r

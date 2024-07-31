@@ -48,14 +48,14 @@ The *plotRGB()* function from the **terra** package can be used to visualize the
 terra::plotRGB(terra::rast("C:/myFiles/data/toChipBinary/output/topoOut.tif"))
 ```
 
-![Topo map example](figure/topoPlot-1.png){width=60%}
+![Topo map example](figRend/topoPlot-1.png){width=60%}
 
 
 ```r
 terra::plot(terra::rast("C:/myFiles/data/toChipBinary/output/mskOut.tif"))
 ```
 
-![Raster mask example](figure/mskPlot-1.png){width=60%}
+![Raster mask example](figRend/mskPlot-1.png){width=60%}
 
 It is important that the input predictor variables or images and the associated raster masks have the same coordinate reference system, spatial extent, cell size, and number of rows and columns of pixels. The *resample()*, *project()*, and *crop()* functions from **terra** are useful for aligning raster grids.
 
@@ -182,9 +182,9 @@ viewChips(chpDF=chpDF,
           seed = 42)
 ```
 
-![Topo chips](figure/chipPlot1-1.png){width=60%}
+![Topo chips](figRend/chipPlot1-1.png){width=60%}
 
-![Topo chip masks](figure/chipPlot1-2.png){width=60%}
+![Topo chip masks](figRend/chipPlot1-2.png){width=60%}
 
 ## Multiclass Example
 
@@ -307,8 +307,8 @@ viewChips(chpDF=chpDF,
           seed = 42)
 ```
 
-![Landcover.ai chips](figure/chipPlot2-1.png){width=60%}
+![Landcover.ai chips](figRend/chipPlot2-1.png){width=60%}
 
-![Landcover.ai mask chips](figure/chipPlot2-2.png){width=60%}
+![Landcover.ai mask chips](figRend/chipPlot2-2.png){width=60%}
 
 

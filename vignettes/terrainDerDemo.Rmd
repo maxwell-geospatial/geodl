@@ -46,6 +46,6 @@ Since the output is a three-layer raster stack, it can be visualized using the *
 terra::plotRGB(terrOut*255)
 ```
 
-![Example terrain derivative output](figure/outLSP-1.png)
+![Example terrain derivative output](figRend/outLSP-1.png)
 
 If you are interested in applying deep learning semantic segmentation workflows to extract landforms or geomorphic features from DTMs, we recommend considering this three-band terrain stack as an input feature space.

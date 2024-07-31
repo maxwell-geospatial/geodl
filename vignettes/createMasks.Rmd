@@ -47,10 +47,10 @@ The *plotRGB()* function from the **terra** package can be used to visualized th
 terra::plotRGB(terra::rast("C:/myFiles/data/toChipBinary/output/topoOut.tif"))
 ```
 
-![Example cropped image](figure/exampleImgMsk-1.png){width=60%}
+![Example cropped image](figRend/exampleImgMsk-1.png){width=60%}
 
 ```r
 terra::plot(terra::rast("C:/myFiles/data/toChipBinary/output/mskOut.tif"))
 ```
 
-![Example raster mask](figure/exampleImgMsk-2.png){width=60%}
+![Example raster mask](figRend/exampleImgMsk-2.png){width=60%}

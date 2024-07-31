@@ -118,13 +118,13 @@ break larger raster extents into smaller tiles for processing.
 #Predict classification
 predCls <- predictSpatial(imgIn="INPUT IMAGE NAME AND PATH",
                           model=model,
-                          predOut="OUPTU RASTER NAME AND PATH",
+                          predOut="OUTPUT RASTER NAME AND PATH",
                           mode="multiclass",
                           predType="class",
                           useCUDA=TRUE,
                           nCls=2,
                           chpSize=256,
-                          stride_x=128,V
+                          stride_x=128,
                           stride_y=128,
                           crop=50,
                           nChn=3,

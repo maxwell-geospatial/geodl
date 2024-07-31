@@ -311,6 +311,6 @@ makeChips <- function(image,
       }
     }
   } else {
-    print("Invalid Mode Provided.")
+    message("Invalid Mode Provided.")
   }
 }

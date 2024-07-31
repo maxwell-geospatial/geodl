@@ -50,14 +50,14 @@
 #' @examples
 #' \dontrun{
 #' makeMasks(image = "INPUT IMAGE FILE AND PATH",
-#' features = "INPUT VECTOR FEATURES FILE AND PATH",
-#' crop = TRUE,
-#' extent = "INPUT VECTOR BOUNDARY and PATH",
-#' field = "ATTRIBUTE COLUMN NAME",
-#' background = 0,
-#' outImage = "OUTPUT IMAGE NAME AND PATH",
-#' outMask = "OUTPUT MASK NAME AND PATH",
-#' mode = "Both")
+#'           features = "INPUT VECTOR FEATURES FILE AND PATH",
+#'           crop = TRUE,
+#'           extent = "INPUT VECTOR BOUNDARY and PATH",
+#'           field = "ATTRIBUTE COLUMN NAME",
+#'           background = 0,
+#'           outImage = "OUTPUT IMAGE NAME AND PATH",
+#'           outMask = "OUTPUT MASK NAME AND PATH",
+#'           mode = "Both")
 #' }
 #' @export
 makeMasks <- function(image,
@@ -88,6 +88,6 @@ makeMasks <- function(image,
   } else if(mode=="Mask"){
     terra::writeRaster(maskR, outMask)
   } else{
-    print("Invalid Mode.")
+    message("Invalid Mode.")
   }
 }

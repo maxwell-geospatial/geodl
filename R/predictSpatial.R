@@ -70,13 +70,13 @@
 #' #Predict classification
 #' predCls <- predictSpatial(imgIn="INPUT IMAGE NAME AND PATH",
 #'                           model=model,
-#'                           predOut="OUPTU RASTER NAME AND PATH",
+#'                           predOut="OUTPUT RASTER NAME AND PATH",
 #'                           mode="multiclass",
 #'                           predType="class",
 #'                           useCUDA=TRUE,
 #'                           nCls=2,
 #'                           chpSize=256,
-#'                           stride_x=128,V
+#'                           stride_x=128,
 #'                           stride_y=128,
 #'                           crop=50,
 #'                           nChn=3,
@@ -182,7 +182,7 @@ predictSpatial <- function(imgIn,
 
   columnCount <- length(across_seq2)
   rowCount <- length(down_seq2)
-  print(paste0("Processing ",
+  message(paste0("Processing ",
                as.character(columnCount),
                " columns by ",
                as.character(rowCount),
@@ -329,6 +329,6 @@ predictSpatial <- function(imgIn,
   outGrd[] <- p_arrA
   terra::writeRaster(outGrd, predOut, overwrite=TRUE)
 
-  print("Prediction completed!")
+  message("Prediction completed!")
   return(outGrd)
 }

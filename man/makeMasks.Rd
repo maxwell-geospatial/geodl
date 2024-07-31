@@ -80,13 +80,13 @@ cell size, and coordinate reference system as the input image.
 \examples{
 \dontrun{
 makeMasks(image = "INPUT IMAGE FILE AND PATH",
-features = "INPUT VECTOR FEATURES FILE AND PATH",
-crop = TRUE,
-extent = "INPUT VECTOR BOUNDARY and PATH",
-field = "ATTRIBUTE COLUMN NAME",
-background = 0,
-outImage = "OUTPUT IMAGE NAME AND PATH",
-outMask = "OUTPUT MASK NAME AND PATH",
-mode = "Both")
+          features = "INPUT VECTOR FEATURES FILE AND PATH",
+          crop = TRUE,
+          extent = "INPUT VECTOR BOUNDARY and PATH",
+          field = "ATTRIBUTE COLUMN NAME",
+          background = 0,
+          outImage = "OUTPUT IMAGE NAME AND PATH",
+          outMask = "OUTPUT MASK NAME AND PATH",
+          mode = "Both")
 }
 }

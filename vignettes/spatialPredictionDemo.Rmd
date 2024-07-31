@@ -251,7 +251,7 @@ predProbs <- predictSpatial(imgIn="C:/myFiles/data/toChipMultiClass/multiclassLC
 terra::plotRGB(terra::rast("C:/myFiles/data/toChipMultiClass/multiclassLCAISub.tif"))
 ```
 
-![Image to predict](figure/lcaiImage-1.png){width=60%}
+![Image to predict](figRend/lcaiImage-1.png){width=60%}
 
 
 ```r
@@ -261,11 +261,11 @@ terra::plot(predCls, type="classes",
             col=c("gray", "red", "green", "blue", "black"))
 ```
 
-![Resulting classification](figure/lcaiSpatPrediction-1.png){width=60%}
+![Resulting classification](figRend/lcaiSpatPrediction-1.png){width=60%}
 
 
 ```r
 terra::plot(predProbs, type="continuous",axes=FALSE, col=terra::map.pal("grey"))
 ```
 
-![Resulting class estimated probabilities](figure/lcaiSpatProbs-1.png){width=60%}
+![Resulting class estimated probabilities](figRend/lcaiSpatProbs-1.png){width=60%}

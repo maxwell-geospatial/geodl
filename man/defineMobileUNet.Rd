@@ -58,6 +58,7 @@ deep supervision (useDS = TRUE) and attention gates along the skip connections (
 requires three input bands or channels.
 }
 \examples{
+\donttest{
 require(torch)
 #Generate example data as torch tensor
 tensorIn <- torch::torch_rand(c(12,3,128,128))
@@ -73,4 +74,5 @@ model <- defineMobileUNet(nCls = 3,
                           negative_slope = 0.01)
 
 pred <- model(tensorIn)
+}
 }

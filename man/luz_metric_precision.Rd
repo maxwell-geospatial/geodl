@@ -47,6 +47,7 @@ Calculates precision based on luz_metric() for use within training and validatio
 loops.
 }
 \examples{
+\donttest{
 library(terra)
 library(torch)
 #Generate example data as SpatRasters
@@ -82,4 +83,5 @@ metric<-luz_metric_precision(nCls=3,
 metric<-metric$new()
 metric$update(pred,ref)
 metric$compute()
+}
 }

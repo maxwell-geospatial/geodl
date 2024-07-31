@@ -40,6 +40,7 @@ Calculated metric returned as a base-R vector as opposed to tensor.
 luz_metric function to calculate overall accuracy ((correct/total)*100)
 }
 \examples{
+\donttest{
 require(terra)
 require(torch)
 #Generate example data as SpatRasters
@@ -76,4 +77,5 @@ metric<-luz_metric_overall_accuracy(nCls=3,
 metric<-metric$new()
 metric$update(pred,ref)
 metric$compute()
+}
 }

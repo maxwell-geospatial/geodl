@@ -91,6 +91,7 @@ including cross entropy loss, weighted cross entropy loss, focal cross entropy l
 Dice loss, focal Dice loss, Tversky loss, and focal Tversky loss.
 }
 \examples{
+\donttest{
 library(terra)
 library(torch)
 #Generate example data as SpatRasters
@@ -131,4 +132,5 @@ myDiceLoss <- defineUnifiedFocalLoss(nCls=3,
                                     device='cpu')
 #Calculate loss
 myDiceLoss(pred, ref)
+}
 }

@@ -32,6 +32,7 @@
 #' @return List object containing the resulting metrics and ancillary information.
 #' @examples
 #' #Multiclass example
+#'
 #' #Generate example data as data frame of class predictions
 #' inDF <- data.frame(ref = sample(c("Class A", "Class B", "Class C"), 1000, replace=TRUE),
 #' pred = sample(c("Class A", "Class B", "Class C"), 1000, replace=TRUE))

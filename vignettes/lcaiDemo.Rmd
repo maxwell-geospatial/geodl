@@ -80,8 +80,8 @@ viewChips(chpDF=trainDF,
           seed = 42)
 ```
 
-![Example image chips](figure/lcaiChips-1.png){widtth=60%}
-![Example mask chips](figure/lcaiChips-2.png){widtth=60%}
+![Example image chips](figRend/lcaiChips-1.png){widtth=60%}
+![Example mask chips](figRend/lcaiChips-2.png){widtth=60%}
 
 I am now ready to define the training and validation datasets. Here are a few key points:
 
@@ -179,8 +179,8 @@ viewBatch(dataLoader=trainDL,
           cColors=c("gray", "red", "green", "blue", "black"))
 ```
 
-![Training image chips mini-batch](figure/lcaiTrainBatch-1.png){widtth=60%}
-![Training mask chips mini-batch](figure/lcaiTrainBatch-2.png){widtth=60%}
+![Training image chips mini-batch](figRend/lcaiTrainBatch-1.png){widtth=60%}
+![Training mask chips mini-batch](figRend/lcaiTrainBatch-2.png){widtth=60%}
 
 
 ```r
@@ -193,8 +193,8 @@ viewBatch(dataLoader=valDL,
           cColors=c("gray", "red", "green", "blue", "black"))
 ```
 
-![Validation image chips mini-batch](figure/locaiValBatch-1.png){widtth=60%}
-![Validation mask chips mini-batch](figure/locaiValBatch-2.png){widtth=60%}
+![Validation image chips mini-batch](figRend/locaiValBatch-1.png){widtth=60%}
+![Validation mask chips mini-batch](figRend/locaiValBatch-2.png){widtth=60%}
 
 
 ```r
@@ -440,7 +440,7 @@ ggplot(allMets, aes(x=epoch, y=loss, color=set))+
   labs(x="Epoch", y="Loss", color="Set")
 ```
 
-![Loss graph](figure/lcaiLoss-1.png){widtth=60%}
+![Loss graph](figRend/lcaiLoss-1.png){widtth=60%}
 
 
 ```r
@@ -449,7 +449,7 @@ ggplot(allMets, aes(x=epoch, y=f1score, color=set))+
   labs(x="Epoch", y="F1-Score", color="Set")
 ```
 
-![F1-score graph](figure/lcaiF1-1.png){widtth=60%}
+![F1-score graph](figRend/lcaiF1-1.png){widtth=60%}
 
 
 ```r
@@ -458,7 +458,7 @@ ggplot(allMets, aes(x=epoch, y=recall, color=set))+
   labs(x="Epoch", y="Recall", color="Set")
 ```
 
-![Recall graph](figure/lcaiRecall-1.png){widtth=60%}
+![Recall graph](figRend/lcaiRecall-1.png){widtth=60%}
 
 
 ```r
@@ -467,7 +467,7 @@ ggplot(allMets, aes(x=epoch, y=precision, color=set))+
   labs(x="Epoch", y="Precision", color="Set")
 ```
 
-![Precision graph](figure/lcaiPrec-1.png){widtth=60%}
+![Precision graph](figRend/lcaiPrec-1.png){widtth=60%}
 
 Next, we load in the test data. This requires (1) listing the chips into a data frame using *makeChipsDF()* (this was already done above), (2) defining a DataSet using *defineSegDataset()*, and (3) creating a DataLoader with *torch::dataloader()*. It is important that the dataset is defined to be consistent with the training and validation datasets used to train and validate the model during the training process.
 
@@ -531,9 +531,9 @@ viewBatchPreds(dataLoader=testDL,
                usedDS=FALSE)
 ```
 
-![Image chips to predict](figure/lcaiPreds-1.png){widtth=60%}
-![Reference masks](figure/lcaiPreds-2.png){widtth=60%}
-![Example predictions](figure/lcaiPreds-3.png){widtth=60%}
+![Image chips to predict](figRend/lcaiPreds-1.png){widtth=60%}
+![Reference masks](figRend/lcaiPreds-2.png){widtth=60%}
+![Example predictions](figRend/lcaiPreds-3.png){widtth=60%}
 
 
 ```r

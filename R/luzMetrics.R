@@ -21,6 +21,7 @@
 #' to calculate assessment metrics. Default is FALSE.
 #' @return Calculated metric returned as a base-R vector as opposed to tensor.
 #' @examples
+#' \donttest{
 #' library(terra)
 #' library(torch)
 #' #Generate example data as SpatRasters
@@ -57,6 +58,7 @@
 #' metric<-metric$new()
 #' metric$update(pred,ref)
 #' metric$compute()
+#' }
 #' @export
 luz_metric_recall <- luz::luz_metric(
 
@@ -171,6 +173,7 @@ luz_metric_recall <- luz::luz_metric(
 #' to calculate assessment metrics. Default is FALSE.
 #' @return Calculated metric returned as a base-R vector as opposed to tensor.
 #' @examples
+#' \donttest{
 #' library(terra)
 #' library(torch)
 #' #Generate example data as SpatRasters
@@ -206,6 +209,7 @@ luz_metric_recall <- luz::luz_metric(
 #' metric<-metric$new()
 #' metric$update(pred,ref)
 #' metric$compute()
+#' }
 #' @export
 luz_metric_precision <- luz::luz_metric(
 
@@ -343,6 +347,7 @@ luz_metric_precision <- luz::luz_metric(
 #' to calculate assessment metrics. Default is FALSE.
 #' @return Calculated metric returned as a base-R vector as opposed to tensor.
 #' @examples
+#' \donttest{
 #' library(terra)
 #' library(torch)
 #' #Generate example data as SpatRasters
@@ -379,6 +384,7 @@ luz_metric_precision <- luz::luz_metric(
 #' metric<-metric$new()
 #' metric$update(pred,ref)
 #' metric$compute()
+#' }
 #' @export
 luz_metric_f1score <- luz::luz_metric(
 
@@ -497,6 +503,7 @@ luz_metric_f1score <- luz::luz_metric(
 #' to calculate assessment metrics. Default is FALSE.
 #' @return Calculated metric returned as a base-R vector as opposed to tensor.
 #' @examples
+#' \donttest{
 #' require(terra)
 #' require(torch)
 #' #Generate example data as SpatRasters
@@ -533,6 +540,7 @@ luz_metric_f1score <- luz::luz_metric(
 #' metric<-metric$new()
 #' metric$update(pred,ref)
 #' metric$compute()
+#' }
 #' @export
 luz_metric_overall_accuracy <- luz::luz_metric(
 

@@ -37,3 +37,27 @@ user system elapsed
 defineMobileUNet 3.91   1.13    1.05
 
 **Response**: Do we need to reduce run time or is this acceptable?
+
+
+### Abbreviations in DESCRIPTION
+
+Based on a prior comment during CRAN review, we have defined all abbreviations in the DESCRIPTION file. Note that UNet is not an abbreviation. 
+
+### Citations in DESCRIPTION
+
+The citation in the description was changed to the form Authr (YEAR) <doi>.
+
+### spatialPredict() Error
+
+The error in the spatialPredict() function example was corrected. This was a typo. 
+
+### print() statements
+
+All print statements have have converted to messages()
+
+### dontrun{} vs. donttest{}
+
+We have edited the examples so that all examples that can run on the test server are executed. 
+For examples that require reading and writing data from disk, we use dontrun{}.
+For examples that need the torch C++ backend, we use donttest{}.
+

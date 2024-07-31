@@ -28,7 +28,7 @@ Yeung, M., Sala, E., Schönlieb, C.B. and Rundo, L., 2022. Unified focal loss: G
 
 The table below describes the loss parameterization. Our implementation is different from the originally proposed implementation because we do not implement symmetric and asymmetric forms. Instead, we allow the user to define class weights for both the distribution- and region-based loss components.
 
-![Modified unified focal loss parameterization](figure/unifiedFocalLossTable.PNG){width=80%}
+![Modified unified focal loss parameterization](figRend/unifiedFocalLossTable.PNG){width=80%}
 
 The *lambda* parameter controls the relative weighting between the distribution- and region-based losses. When *lambda* = 1, only the distribution-based loss is used. When *lambda* = 0, only the region-based loss is used. Values between 0 and 1 yield a loss metric that incorporate both the distribution- and region-based loss components. A *lambda* of 0.5 yield equal weighting, values larger than 0.5 put more weight on the distribution-based loss, and values lower than 0.5 put more weighting on the region-based loss.
 

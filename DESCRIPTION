@@ -15,17 +15,16 @@ Description: Provides tools for semantic segmentation of geospatial data using c
   during the data preparation and training process. A UNet architecture can be defined with 4 blocks in the encoder, a 
   bottleneck block, and 4 blocks in the decoder. The UNet can accept a variable number of input channels, and the user 
   can define the number of feature maps produced in each encoder and decoder block and the bottleneck. Users can also 
-  choose to (1) replace all ReLU activation functions with leaky ReLU or swish, (2) implement attention gates along the 
+  choose to (1) replace all rectified linear unit (ReLU) activation functions with leaky ReLU or swish, (2) implement attention gates along the 
   skip connections, (3) implement squeeze and excitation modules within the encoder blocks, (4) add residual connections 
   within all blocks, (5) replace the bottleneck with a modified atrous spatial pyramid pooling (ASPP) module, and/or 
-  (6) implement deep supervision using predictions generated at each stage in the decoder. A unified focal loss framework is implemented after:
-  Yeung, M., Sala, E., Schönlieb, C.B. and Rundo, L., 2022. Unified focal loss: Generalising dice and cross entropy-based losses 
-  to handle class imbalanced medical image segmentation. Computerized Medical Imaging and Graphics, 95, p.102026. We have also implemented 
-  assessment metrics using the luz package including F1-score, recall, and precision. Trained models can be used to predict to spatial 
+  (6) implement deep supervision using predictions generated at each stage in the decoder. A unified focal loss framework is implemented after
+  Yeung et al. (2022) <https://doi.org/10.1016/j.compmedimag.2021.102026>. We have also implemented 
+  assessment metrics using the 'luz' package including F1-score, recall, and precision. Trained models can be used to predict to spatial 
   data without the need to generate chips from larger spatial extents. Functions are available for performing accuracy assessment. The package 
   relies on 'torch' for implementing deep learning, which does not require the installation of a 'Python' environment. Raster geospatial 
-  data are handled with 'terra'. Models can be trained using a CUDA-enabled GPU; however, multi-GPU training is not supported by 'torch' 
-  in 'R'. This package is still experimental and is a work-in-progress.
+  data are handled with 'terra'. Models can be trained using a Compute Unified Device Architecture (CUDA)-enabled graphics processing unit (GPU); 
+  however, multi-GPU training is not supported by 'torch' in 'R'. 
 Depends: R (>= 4.1)
 Imports:
     torch (>= 0.11.0),
