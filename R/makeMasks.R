@@ -83,10 +83,10 @@ makeMasks <- function(image,
   }
   maskR <- terra::rasterize(featData, imgData, field=field, background=background)
   if(mode=="Both"){
-    terra::writeRaster(imgData, outImage)
-    terra::writeRaster(maskR, outMask)
+    terra::writeRaster(imgData, outImage, overwrite=TRUE)
+    terra::writeRaster(maskR, outMask, overwrite=TRUE)
   } else if(mode=="Mask"){
-    terra::writeRaster(maskR, outMask)
+    terra::writeRaster(maskR, outMask, overwrite=TRUE)
   } else{
     message("Invalid Mode.")
   }

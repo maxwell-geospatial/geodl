@@ -6,6 +6,10 @@
 #' loops.
 #'
 #' @param nCls Number of classes being differentiated.
+#' @param cropFactorMsk Number of rows and columns of cells to not include for mask in assessment to
+#' minimize edge effects. Default is 0 or no cropping.
+#' @param cropFactorPred Number of rows and columns of cells to not include for prediction in assessment to
+#' minimize edge effects. Default is 0 or no cropping.
 #' @param smooth A smoothing factor to avoid divide by zero errors. Default is 1.
 #' @param mode Either "binary" or "multiclass". If "binary", only the logit for
 #' the positive class prediction should be provided. If both the positive and negative
@@ -61,24 +65,25 @@
 #' }
 #' @export
 luz_metric_recall <- luz::luz_metric(
-
   abbrev = "recall",
 
   initialize = function(nCls=3,
+                        cropFactorMsk=0,
+                        cropFactorPred=0,
                         smooth=1,
                         mode = "multiclass",
                         biThresh = 0.5,
                         zeroStart=TRUE,
-                        clsWghts=rep(1.0, nCls),
-                        usedDS = TRUE){
+                        clsWghts=rep(1.0, nCls)){
 
     self$nCls <- nCls
+    self$cropFactorMsk = cropFactorMsk
+    self$cropFactorPred = cropFactorPred
     self$smooth <- smooth
     self$mode <- mode
     self$biThresh <- biThresh
     self$zeroStart <- zeroStart
     self$clsWghts <- clsWghts
-    self$usedDS <- usedDS
 
     if(self$mode == "multiclass"){
       self$tps <- rep(0.0, nCls)
@@ -92,10 +97,9 @@ luz_metric_recall <- luz::luz_metric(
   },
 
   update = function(preds, target){
-    if(self$usedDS == TRUE){
-      preds <- preds[[1]]
-      target <- target
-    }
+
+    preds <- cropTensor(preds, crpFactor=self$cropFactorPred)
+    target <- cropTensor(target, crpFactor=self$cropFactorMsk)
 
     if(self$mode == "multiclass"){
       predsMax <- torch::torch_argmax(preds, dim = 2)
@@ -158,6 +162,10 @@ luz_metric_recall <- luz::luz_metric(
 #' loops.
 #'
 #' @param nCls Number of classes being differentiated.
+#' @param cropFactorMsk Number of rows and columns of cells to not include for mask in assessment to
+#' minimize edge effects. Default is 0 or no cropping.
+#' @param cropFactorPred Number of rows and columns of cells to not include for prediction in assessment to
+#' minimize edge effects. Default is 0 or no cropping.
 #' @param smooth A smoothing factor to avoid divide by zero errors. Default is 1.
 #' @param mode Either "binary" or "multiclass". If "binary", only the logit for
 #' the positive class prediction should be provided. If both the positive and negative
@@ -216,20 +224,22 @@ luz_metric_precision <- luz::luz_metric(
   abbrev = "precision",
 
   initialize = function(nCls=3,
+                        cropFactorMsk=0,
+                        cropFactorPred=0,
                         smooth=1,
                         mode = "multiclass",
                         biThresh=0.5,
                         zeroStart=TRUE,
-                        clsWghts = rep(1, nCls),
-                        usedDS=TRUE){
+                        clsWghts = rep(1, nCls)){
 
     self$nCls <- nCls
+    self$cropFactorMsk = cropFactorMsk
+    self$cropFactorPred = cropFactorPred
     self$smooth <- smooth
     self$mode <- mode
     self$biThresh <- biThresh
     self$zeroStart <- zeroStart
     self$clsWghts <- clsWghts
-    self$usedDS <- usedDS
 
     #initialize R vectors to store true positive, false negative, and false positive counts
     #For a binary and micro-averaged multiclass metric, will obtain a vector with a length of one.
@@ -246,10 +256,9 @@ luz_metric_precision <- luz::luz_metric(
   },
 
   update = function(preds, target){
-    if(self$usedDS == TRUE){
-      preds <- preds[[1]]
-      target <- target
-    }
+
+    preds <- cropTensor(preds, crpFactor=self$cropFactorPred)
+    target <- cropTensor(target, crpFactor=self$cropFactorMsk)
 
     #For multiclass problems
     if(self$mode == "multiclass"){
@@ -292,7 +301,7 @@ luz_metric_precision <- luz::luz_metric(
                                 torch::as_array() |>
                                 as.vector())
 
-    #Processing for binary classification
+      #Processing for binary classification
     }else{
       #Convert logits to probs using sigmoid function
       preds <- torch::nnf_sigmoid(preds)
@@ -324,6 +333,8 @@ luz_metric_precision <- luz::luz_metric(
   }
 )
 
+
+
 #' luz_metric_f1score
 #'
 #' luz_metric function to calculate the macro-averaged, class aggregated F1-score
@@ -332,6 +343,10 @@ luz_metric_precision <- luz::luz_metric(
 #' loops.
 #'
 #' @param nCls Number of classes being differentiated.
+#' @param cropFactorMsk Number of rows and columns of cells to not include for mask in assessment to
+#' minimize edge effects. Default is 0 or no cropping.
+#' @param cropFactorPred Number of rows and columns of cells to not include for prediction in assessment to
+#' minimize edge effects. Default is 0 or no cropping.
 #' @param smooth A smoothing factor to avoid divide by zero errors. Default is 1.
 #' @param mode Either "binary" or "multiclass". If "binary", only the logit for
 #' the positive class prediction should be provided. If both the positive and negative
@@ -391,37 +406,38 @@ luz_metric_f1score <- luz::luz_metric(
   abbrev = "F1Score",
 
   initialize = function(nCls=1,
+                        cropFactorMsk=0,
+                        cropFactorPred=0,
                         smooth=1,
                         mode = "multiclass",
                         biThresh = 0.5,
                         clsWghts = rep(1, nCls),
-                        zeroStart=TRUE,
-                        usedDS = FALSE){
+                        zeroStart=TRUE){
 
     self$nCls <- nCls
+    self$cropFactorMsk = cropFactorMsk
+    self$cropFactorPred = cropFactorPred
     self$smooth <- smooth
     self$mode <- mode
     self$biThresh <- biThresh
     self$clsWghts <- clsWghts
     self$zeroStart <- zeroStart
-    self$usedDS <- usedDS
 
     if(self$mode == "multiclass"){
       self$tps <- rep(0.0, nCls)
       self$fns <- rep(0.0, nCls)
       self$fps <- rep(0.0, nCls)
     }else{
-     self$tps <- 0
-     self$fns <- 0
-     self$fps <- 0
+      self$tps <- 0
+      self$fns <- 0
+      self$fps <- 0
     }
   },
 
   update = function(preds, target){
-    if(self$usedDS == TRUE){
-      preds <- preds[[1]]
-      target <- target
-    }
+
+    preds <- cropTensor(preds, crpFactor=self$cropFactorPred)
+    target <- cropTensor(target, crpFactor=self$cropFactorMsk)
 
     if(self$mode == "multiclass"){
       predsMax <- torch::torch_argmax(preds, dim = 2)
@@ -441,16 +457,17 @@ luz_metric_f1score <- luz::luz_metric(
       dims <- c(1, 3, 4)
 
       self$tps <- self$tps + (torch::torch_sum(preds_one_hot * target_one_hot, dims)$cpu() |>
-        torch::as_array() |>
-        as.vector())
+                                torch::as_array() |>
+                                as.vector())
       self$fps <- self$fps + (torch::torch_sum(preds_one_hot * (-target_one_hot + 1.0), dims)$cpu() |>
-        torch::as_array() |>
-        as.vector())
+                                torch::as_array() |>
+                                as.vector())
       self$fns <- self$fns + (torch::torch_sum((-preds_one_hot + 1.0) * target_one_hot, dims)$cpu() |>
-        torch::as_array() |>
-        as.vector())
+                                torch::as_array() |>
+                                as.vector())
 
     }else{
+
       preds <- torch::nnf_sigmoid(preds)
       preds <- preds > self$biThresh
       preds <- torch::torch_tensor(preds, dtype=torch::torch_float32())
@@ -489,6 +506,10 @@ luz_metric_f1score <- luz::luz_metric(
 #' luz_metric function to calculate overall accuracy ((correct/total)*100)
 #'
 #' @param nCls Number of classes being differentiated.
+#' @param cropFactorMsk Number of rows and columns of cells to not include for mask in assessment to
+#' minimize edge effects. Default is 0 or no cropping.
+#' @param cropFactorPred Number of rows and columns of cells to not include for prediction in assessment to
+#' minimize edge effects. Default is 0 or no cropping.
 #' @param smooth A smoothing factor to avoid divide by zero errors. Default is 1.
 #' @param mode Either "binary" or "multiclass". If "binary", only the logit for
 #' the positive class prediction should be provided. If both the positive and negative
@@ -547,18 +568,20 @@ luz_metric_overall_accuracy <- luz::luz_metric(
   abbrev = "OverallAcc",
 
   initialize = function(nCls=1,
+                        cropFactorMsk=0,
+                        cropFactorPred=0,
                         smooth=1,
                         mode = "multiclass",
                         biThresh=0.5,
-                        zeroStart=TRUE,
-                        usedDS = FALSE){
+                        zeroStart=TRUE){
 
     self$nCls <- nCls
+    self$cropFactorMsk = cropFactorMsk
+    self$cropFactorPred = cropFactorPred
     self$smooth <- smooth
     self$mode <- mode
     self$biThresh <- biThresh
     self$zeroStart <- zeroStart
-    self$usedDS <- usedDS
 
     self$correct <- 0
     self$total <- 0
@@ -566,10 +589,9 @@ luz_metric_overall_accuracy <- luz::luz_metric(
 
   update = function(preds, target) {
 
-    if(self$usedDS == TRUE){
-      preds <- preds[[1]]
-      target <- target
-    }
+    preds <- cropTensor(preds, crpFactor=self$cropFactorPred)
+    target <- cropTensor(target, crpFactor=self$cropFactorMsk)
+
 
     if(self$mode == "multiclass"){
 
@@ -577,7 +599,7 @@ luz_metric_overall_accuracy <- luz::luz_metric(
       target1 <- torch::torch_tensor(target, dtype=torch::torch_long())
 
       if(self$zeroStart == TRUE){
-          target1 <- torch::torch_tensor(target1+1, dtype=torch::torch_long())
+        target1 <- torch::torch_tensor(target1+1, dtype=torch::torch_long())
       }
 
       preds_one_hot <- torch::nnf_one_hot(predsMax, num_classes = self$nCls)
@@ -595,23 +617,23 @@ luz_metric_overall_accuracy <- luz::luz_metric(
       dims <- c(1, 2, 3, 4)
 
       self$correct <- self$correct + (torch::torch_sum(preds_one_hot * target_one_hot, dims)$cpu() |>
-                                torch::as_array() |>
-                                as.vector())
+                                        torch::as_array() |>
+                                        as.vector())
       self$total <- self$total + currentCnt
-  }else{
-    preds <- torch::nnf_sigmoid(preds)
-    preds <- preds > self$biThresh
-    preds <- torch::torch_tensor(preds, dtype=torch::torch_float32())
-    preds <- preds$flatten()
-    target <- target$flatten()
+    }else{
+      preds <- torch::nnf_sigmoid(preds)
+      preds <- preds > self$biThresh
+      preds <- torch::torch_tensor(preds, dtype=torch::torch_float32())
+      preds <- preds$flatten()
+      target <- target$flatten()
 
-    self$correct <- self$correct + torch::torch_sum(preds == target)$
-      to(dtype = torch::torch_float())$
-      sum()$
-      item()
-    self$total <- self$total + preds$numel()
+      self$correct <- self$correct + torch::torch_sum(preds == target)$
+        to(dtype = torch::torch_float())$
+        sum()$
+        item()
+      self$total <- self$total + preds$numel()
 
-  }
+    }
   },
 
   compute = function() {

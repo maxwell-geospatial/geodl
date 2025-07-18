@@ -13,6 +13,8 @@ assessDL(
   nCls,
   cCodes,
   cNames,
+  cropFactorMsk = 0,
+  cropFactorPred = 0,
   usedDS = FALSE,
   useCUDA = FALSE,
   decimals = 4
@@ -21,26 +23,27 @@ assessDL(
 \arguments{
 \item{dl}{torch DataLoader object.}
 
-\item{model}{trained model object.}
+\item{model}{instantiated model object as nn_module subclass as opposed to luz fitted object.
+Make sure to place model in evaluation mode.}
 
 \item{multiclass}{TRUE or FALSE. If more than two classes are differentiated,
 use TRUE. If only two classes are differentiated and there are positive and
 background/negative classes, use FALSE. Default is TRUE. For binary cases, the second
 class is assumed to be the positive case.}
 
-\item{batchSize}{Batch size used in torch DataLoader.}
+\item{batchSize}{mini-batch size used in torch DataLoader.}
 
-\item{size}{Size of image chips in spatial dimensions (e.g., 128, 256, 512).}
+\item{size}{size of image chips in spatial dimensions (e.g., 128, 256, 512).}
 
-\item{nCls}{Number of classes being differentiated.}
+\item{nCls}{number of classes being differentiated.}
 
-\item{cCodes}{Class indices as a vector of integer values equal in length to the number of
+\item{cCodes}{class indices as a vector of integer values equal in length to the number of
 classes.}
 
-\item{cNames}{Class names as a vector of character strings with a length equal to the number of
-classes and in the correct order. Class codes and names are matched by position in the
-cCodes and cNames vectors. For binary case, this argument is ignored, and the first class is
-called "Negative" while the second class is called "Positive".}
+\item{cNames}{class names as a vector of character strings with a length equal to the
+number of classes and in the correct order. Class codes and names are matched by position in
+the cCodes and cNames vectors. For binary case, this argument is ignored, and the first
+class is called "Negative" while the second class is called "Positive".}
 
 \item{usedDS}{TRUE or FALSE. Whether or not deep supervision was used. Default is FALSE, or
 it is assumed that deep supervision was not used.}

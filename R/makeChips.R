@@ -131,18 +131,22 @@ makeChips <- function(image,
           chip_data2 <- c(stack(chip_data)[,1])
           chip_array <- array(chip_data2, c(size,size,n_channels))
           image1 <- terra::rast(chip_array)
-          terra::writeRaster(image1,
-                             paste0(outDir,
-                                    "/images/",
-                                    substr(fName, 1, nchar(fName)-4), "_", c1, "_", r1, ".tif"))
           names(mask_data) <- c("C")
           Cx <- as.vector(mask_data$C)
           mask_array <- array(Cx, c(size,size,1))
           msk1 <-terra::rast(mask_array)
-          terra::writeRaster(msk1,
-                             paste0(outDir,
-                                    "/masks/",
-                                    substr(fName, 1, nchar(fName)-4), "_", c1, "_", r1, ".tif"))
+          naCntImg = terra::global(is.na(image1), fun = "sum")[1,1]
+          naCntMsk = terra::global(is.na(msk1), fun = "sum")[1,1]
+          if(naCntImg == 0 & naCntMsk == 0){
+            terra::writeRaster(image1,
+                               paste0(outDir,
+                                      "/images/",
+                                      substr(fName, 1, nchar(fName)-4), "_", c1, "_", r1, ".tif"))
+            terra::writeRaster(msk1,
+                               paste0(outDir,
+                                      "/masks/",
+                                      substr(fName, 1, nchar(fName)-4), "_", c1, "_", r1, ".tif"))
+          }
         }
       }
     }
@@ -207,7 +211,9 @@ makeChips <- function(image,
           Cx <- as.vector(mask_data$C)
           mask_array <- array(Cx, c(size,size,1))
           msk1 <-terra::rast(mask_array)
-          if(max(mask_array) > 0){
+          naCntImg = terra::global(is.na(image1), fun = "sum")[1,1]
+          naCntMsk = terra::global(is.na(msk1), fun = "sum")[1,1]
+          if(max(mask_array) > 0 &  naCntImg == 0 & naCntMsk == 0){
             terra::writeRaster(image1,
                                paste0(outDir,
                                       "/images/",
@@ -288,7 +294,9 @@ makeChips <- function(image,
           Cx <- as.vector(mask_data$C)
           mask_array <- array(Cx, c(size,size,1))
           msk1 <- terra::rast(mask_array)
-          if(max(mask_array) > 0){
+          naCntImg = terra::global(is.na(image1), fun = "sum")[1,1]
+          naCntMsk = terra::global(is.na(msk1), fun = "sum")[1,1]
+          if(max(mask_array) > 0 &  naCntImg == 0 & naCntMsk == 0){
             terra::writeRaster(image1,
                                paste0(outDir,
                                       "/images/positive/",
@@ -297,7 +305,7 @@ makeChips <- function(image,
                                paste0(outDir,
                                       "/masks/positive/",
                                       substr(fName, 1, nchar(fName)-4), "_", c1, "_", r1, ".tif"))
-          }else{
+          }else if(naCntImg == 0 & naCntMsk == 0){
             terra::writeRaster(image1,
                                paste0(outDir,
                                       "/images/background/",

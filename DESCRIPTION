@@ -19,7 +19,7 @@ Description: Provides tools for semantic segmentation of geospatial data using c
   skip connections, (3) implement squeeze and excitation modules within the encoder blocks, (4) add residual connections 
   within all blocks, (5) replace the bottleneck with a modified atrous spatial pyramid pooling (ASPP) module, and/or 
   (6) implement deep supervision using predictions generated at each stage in the decoder. A unified focal loss framework is implemented after
-  Yeung et al. (2022) <https://doi.org/10.1016/j.compmedimag.2021.102026>. We have also implemented 
+  Yeung et al. (2022) <doi:10.1016/j.compmedimag.2021.102026>. We have also implemented 
   assessment metrics using the 'luz' package including F1-score, recall, and precision. Trained models can be used to predict to spatial 
   data without the need to generate chips from larger spatial extents. Functions are available for performing accuracy assessment. The package 
   relies on 'torch' for implementing deep learning, which does not require the installation of a 'Python' environment. Raster geospatial 
@@ -43,7 +43,7 @@ URL: https://github.com/maxwell-geospatial/geodl, https://doi.org/10.31223/X53M6
 BugReports: https://github.com/maxwell-geospatial/geodl/issues
 NeedsCompilation: no
 Encoding: UTF-8
-RoxygenNote: 7.3.1
+RoxygenNote: 7.3.2
 Roxygen: list(markdown = TRUE)
 Suggests: 
     knitr,

@@ -6,6 +6,7 @@
 \usage{
 defineUnifiedFocalLossDS(
   nCls = 3,
+  cropFactor = 0,
   dsWghts = c(0.6, 0.2, 0.1, 0.1),
   lambda = 0.5,
   gamma = 0.5,
@@ -20,6 +21,9 @@ defineUnifiedFocalLossDS(
 }
 \arguments{
 \item{nCls}{Number of classes being differentiated.}
+
+\item{cropFactor}{Number of rows and columns of cells to not include in assessment to
+minimize edge effects. Default is 0 or no cropping.}
 
 \item{dsWghts}{Vector of 4 weights. Weights to apply to the losses calculated at each spatial
 resolution when using deep supervision. The default is c(.6, .2, .1, .1) where larger weights are

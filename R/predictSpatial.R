@@ -14,7 +14,8 @@
 #' current working directory) or a SpatRaster object. Should have the same number
 #' of bands as the data used to train the model. Bands must also be in the same
 #' order.
-#' @param model Trained model to use to infer to new data.
+#' @param model instantiated model object as nn_module subclass as opposed to luz fitted object.
+#' Make sure to place model in evaluation mode.
 #' @param predOut Name of output prediction with full path or path relative to
 #' the working directory. Must also include the file extension (e.g., ".tif).
 #' @param mode Either "multiclass" or "binary". Default is "multiclass". If model
@@ -32,6 +33,10 @@
 #' activation is applied. Default is 0.5. If the rescaled logit is greater than or equal
 #' to this threshold, pixel will be mapped to the positive case. Otherwise, it will be
 #' mapped to the negative or background class. This parameter is ignored for multiclass classification.
+#' @param doPad TRUE or FALSE. Whehter or not to add padding to chips. This is only necessary when using defineTerrainSeg().
+#' Default is FALSE.
+#' @param predPad Only needed when using defineTerrainSeg() and doPad = TRUE. Should be the same
+#' as tCrop parameter in defineTerrainSeg(). Default is 0.
 #' @param useCUDA TRUE or FALSE. Whether or not to perform the inference on a GPU.
 #' If TRUE, the GPU is used. If FALSE, the CPU is used. Must have access to a CUDA-
 #' enabled graphics card. Default is FALSE. Note that using a GPU significantly
@@ -92,6 +97,8 @@ predictSpatial <- function(imgIn,
                            mode="multiclass",
                            predType="class",
                            biThresh = 0.5,
+                           doPad = FALSE,
+                           predPad = 0,
                            useCUDA=FALSE,
                            nCls,
                            chpSize,
@@ -105,7 +112,8 @@ predictSpatial <- function(imgIn,
                            rescaleFactor=1,
                            usedDS=FALSE){
 
-  model2 <- model$model
+  model2 <- model
+  model2$eval()
 
   image <- terra::rast(imgIn)
 
@@ -221,7 +229,7 @@ predictSpatial <- function(imgIn,
       ten1 = image[1:n_channels, r1b:r2b, c1b:c2b]
       ten1 <- torch::torch_unsqueeze(ten1, 1)
 
-      preds <- predict(model, ten1)
+      preds <- model2(ten1)
 
       if(usedDS==TRUE){
         preds <- preds[[1]]
@@ -248,6 +256,10 @@ predictSpatial <- function(imgIn,
 
       if(length(dim(preds))==4){
         preds <- torch::torch_squeeze(preds, dim=1)
+      }
+
+      if(doPad == TRUE){
+        preds <- torch::nnf_pad(preds, pad = c(predPad, predPad, predPad, predPad), mode = "constant", value = 0)
       }
 
       if(r1b == 1 & c1b == 1){ #Write first row, first column

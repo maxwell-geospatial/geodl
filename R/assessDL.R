@@ -20,20 +20,21 @@
 #'
 #'
 #' @param dl torch DataLoader object.
-#' @param model trained model object.
+#' @param model instantiated model object as nn_module subclass as opposed to luz fitted object.
+#' Make sure to place model in evaluation mode.
 #' @param multiclass TRUE or FALSE. If more than two classes are differentiated,
 #' use TRUE. If only two classes are differentiated and there are positive and
 #' background/negative classes, use FALSE. Default is TRUE. For binary cases, the second
 #' class is assumed to be the positive case.
-#' @param batchSize Batch size used in torch DataLoader.
-#' @param size Size of image chips in spatial dimensions (e.g., 128, 256, 512).
-#' @param nCls Number of classes being differentiated.
-#' @param cCodes Class indices as a vector of integer values equal in length to the number of
+#' @param batchSize mini-batch size used in torch DataLoader.
+#' @param size size of image chips in spatial dimensions (e.g., 128, 256, 512).
+#' @param nCls number of classes being differentiated.
+#' @param cCodes class indices as a vector of integer values equal in length to the number of
 #' classes.
-#' @param cNames Class names as a vector of character strings with a length equal to the number of
-#' classes and in the correct order. Class codes and names are matched by position in the
-#' cCodes and cNames vectors. For binary case, this argument is ignored, and the first class is
-#' called "Negative" while the second class is called "Positive".
+#' @param cNames class names as a vector of character strings with a length equal to the
+#' number of classes and in the correct order. Class codes and names are matched by position in
+#' the cCodes and cNames vectors. For binary case, this argument is ignored, and the first
+#' class is called "Negative" while the second class is called "Positive".
 #' @param usedDS TRUE or FALSE. Whether or not deep supervision was used. Default is FALSE, or
 #' it is assumed that deep supervision was not used.
 #' @param useCUDA TRUE or FALSE. Whether or not to use GPU. Default is FALSE, or GPU is not used.
@@ -64,9 +65,14 @@ assessDL <- function(dl,
                      nCls,
                      cCodes,
                      cNames,
+                     cropFactorMsk=0,
+                     cropFactorPred=0,
                      usedDS=FALSE,
                      useCUDA=FALSE,
                      decimals=4){
+
+  model2 <- model
+  model$eval()
 
   cm <- data.frame(Prediction=as.character(),
                    Reference=as.character(),
@@ -80,13 +86,6 @@ assessDL <- function(dl,
                          classes = c("Negative", "Positive"))
   }
 
-
-  if(usedDS == TRUE){
-    model2 <- model$model
-  }else{
-    model <- model
-  }
-
   # disable gradient tracking to reduce memory usage
   torch::with_no_grad({
     coro::loop(for (b in dl) {
@@ -94,15 +93,16 @@ assessDL <- function(dl,
           masks <- b$mask
           images <- b$image
 
+          images <- cropTensor(images, crpFactor=cropFactorPred)
+          masks <- cropTensor(masks, crpFactor=cropFactorMsk)
+
         if(useCUDA == TRUE){
           images <- images$to(device="cuda")
         }
 
-        if(usedDS == TRUE){
-          preds <- predict(model2, images)
-        }else{
-          preds <- predict(model, images)
-        }
+
+        preds <- model2(images)
+
 
         if(usedDS==TRUE){
           preds <- preds[[1]]

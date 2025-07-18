@@ -43,7 +43,7 @@ in the reference data ($referenceCounts), count of samples per class in the
 predictions ($predictionCounts), confusion matrix ($confusionMatrix),
 aggregated assessment metrics ($aggMetrics) (OA = overall accuracy, macroF1 = macro-averaged
 class aggregated F1-score, macroPA = macro-averaged class aggregated producer's
-accuracy or recall, amd macroUA = macro-averaged class aggregated user's accuracy or
+accuracy or recall, and macroUA = macro-averaged class aggregated user's accuracy or
 precision), class-level user's accuracies or precisions ($userAccuracies),
 class-level producer's accuracies or recalls ($producerAccuracies), and class-level
 F1-scores ($F1Scores). For a binary case, the $Classes, $referenceCounts,

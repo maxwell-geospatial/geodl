@@ -32,6 +32,8 @@
 #' @param rescale TRUE or FALSE. Whether or not to rescale image data. Default is FALSE or no rescaling.
 #' @param rescaleVal If rescale is TRUE, value used to rescale data. For example, 255 could
 #' be used to rescale the chips from 0 to 1 to 0 to 255.
+#' @param cCodes class indices as a vector of integer values equal in length to the number of
+#' classes.
 #' @param cNames Vector of class names. Class names must be provided.
 #' @param cColors Vector of colors (named colors, hex codes, or rgb()).
 #' Color used to visualize each class is matched based on position
@@ -55,6 +57,7 @@
 #'           b = 3,
 #'           rescale = FALSE,
 #'           rescaleVal = 1,
+#'           cCodes=c(0,1,2,3,4),
 #'           cNames=c("Background",
 #'                    "Building",
 #'                    "Woodland",
@@ -81,10 +84,15 @@ viewChips <- function(chpDF,
                       b = 3,
                       rescale = FALSE,
                       rescaleVal = 1,
+                      cCodes,
                       cNames,
                       cColors,
                       useSeed = FALSE,
                       seed = 42){
+
+  catData <- data.frame(cCodes=cCodes,
+                        cNames=cNames,
+                        cColors=cColors)
 
   if(justPositive == TRUE){
     chpDF <- chpDF |> dplyr::filter(division == "Positive")
@@ -93,11 +101,15 @@ viewChips <- function(chpDF,
   if(useSeed == TRUE){
       set.seed(seed)
   }
+
   subset1 <- chpDF |> dplyr::sample_n(nSamps, replace=FALSE)
+
   testImg <- terra::rast(paste0(folder,subset1[1,"chpPth"]))
+
   w <- terra::nrow(testImg)
   h <- terra::ncol(testImg)
   l <- terra::nlyr(testImg)
+
   blankR <- terra::rast(ncols=cCnt*h,
                         nrows=rCnt*w,
                         nlyrs=l,
@@ -110,6 +122,7 @@ viewChips <- function(chpDF,
   theGrid <- expand.grid(rSeq, cSeq)
   names(theGrid) <- c("rI", "cI")
   subset1 <- dplyr::bind_cols(subset1, theGrid)
+
   if(mode == "both"){
     blankM <- terra::subset(blankR, 1)
     blankM[] <- 0
@@ -124,8 +137,20 @@ viewChips <- function(chpDF,
       blankR[currentR:(currentR+w-1), currentC:(currentC+h-1), 1:l] <- img1[]
       blankM[currentR:(currentR+w-1), currentC:(currentC+h-1), 1] <- msk1[]
     }
+
+    used <- usedCodes <- terra::unique(blankM) |> as.vector() |> unlist()
+
+    catData <- catData |> dplyr::filter(cCodes %in% used)
+
+    layout(matrix(1:2, nrow = 2), heights = c(1, 1))
+
+    par(mar = c(1, 1, 1, 1))
+
     imgPlot = terra::plotRGB(blankR, r=1, g=2, b=3, scale=255, axes=FALSE, stretch="lin", maxcell=1000000)
     mskPlot = terra::plot(blankM, type="classes", axes=FALSE, levels=cNames, col=cColors, maxcell=1000000)
+
+    layout(1)
+
   }else if(mode == "image"){
     for(i in 1:nrow(subset1)){
       img1 <- terra::rast(paste0(folder,subset1[i,"chpPth"]))
@@ -136,7 +161,9 @@ viewChips <- function(chpDF,
       currentC <-subset1[i, "cI"]
       blankR[currentR:(currentR+w-1), currentC:(currentC+h-1), 1:l] <- img1[]
     }
+
     terra::plotRGB(blankR, r=r, g=g, b=b, scale=255, axes=FALSE, stretch="lin", maxcell=1000000)
+
   }else{
     blankM <- terra::subset(blankR, 1)
     blankM[] <- 0
@@ -146,6 +173,16 @@ viewChips <- function(chpDF,
       currentC <-subset1[i, "cI"]
       blankM[currentR:(currentR+w-1), currentC:(currentC+h-1), 1] <- msk1[]
     }
-    terra::plot(blankM, type="classes", axes=FALSE, levels=cNames, col=cColors, maxcell=1000000)
+
+    catData <- data.frame(cCodes=cCodes,
+                          cNames=cNames,
+                          cColors=cColors)
+
+    used <- usedCodes <- terra::unique(blankM) |> as.vector() |> unlist()
+
+    catData <- catData |> dplyr::filter(cCodes %in% used)
+
+    terra::plot(blankM, type="classes", axes=FALSE, levels=catData$cNames, col=catData$cColors, maxcell=1000000)
+
   }
 }

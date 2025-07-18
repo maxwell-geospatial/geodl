@@ -9,6 +9,7 @@ viewBatchPreds(
   model,
   mode = "multiclass",
   nCols = 4,
+  padding = 10,
   r = 1,
   g = 2,
   b = 3,

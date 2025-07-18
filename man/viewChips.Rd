@@ -17,6 +17,7 @@ viewChips(
   b = 3,
   rescale = FALSE,
   rescaleVal = 1,
+  cCodes,
   cNames,
   cColors,
   useSeed = FALSE,
@@ -62,6 +63,9 @@ For gray scale or single-band images, assign the same index to all three bands.}
 \item{rescaleVal}{If rescale is TRUE, value used to rescale data. For example, 255 could
 be used to rescale the chips from 0 to 1 to 0 to 255.}
 
+\item{cCodes}{class indices as a vector of integer values equal in length to the number of
+classes.}
+
 \item{cNames}{Vector of class names. Class names must be provided.}
 
 \item{cColors}{Vector of colors (named colors, hex codes, or rgb()).
@@ -99,6 +103,7 @@ viewChips(chpDF=chpDF,
           b = 3,
           rescale = FALSE,
           rescaleVal = 1,
+          cCodes=c(0,1,2,3,4),
           cNames=c("Background",
                    "Building",
                    "Woodland",

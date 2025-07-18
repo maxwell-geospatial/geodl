@@ -6,6 +6,8 @@
 \usage{
 defineUnifiedFocalLoss(
   nCls = 3,
+  cropFactorMsk = 0,
+  cropFactorPred = 0,
   lambda = 0.5,
   gamma = 0.5,
   delta = 0.6,
@@ -19,6 +21,12 @@ defineUnifiedFocalLoss(
 }
 \arguments{
 \item{nCls}{Number of classes being differentiated.}
+
+\item{cropFactorMsk}{Number of rows and columns of cells to not include for mask in assessment to
+minimize edge effects. Default is 0 or no cropping.}
+
+\item{cropFactorPred}{Number of rows and columns of cells to not include for prediction in assessment to
+minimize edge effects. Default is 0 or no cropping.}
 
 \item{lambda}{Term used to control the relative weighting of the distribution- and region-based
 losses. Default is 0.5, or equal weighting between the losses. If lambda = 1, only the distribution-
@@ -86,9 +94,10 @@ The delta term controls the relative weight of
 false positive and false negative errors for each class. The default is 0.6 for each class, which results in
 placing a higher weight on false negative as opposed to false positive errors relative to that class.
 
-By adjusting the lambda, gamma, delta, and class weight terms, the user can implement a variety of different loss metrics
-including cross entropy loss, weighted cross entropy loss, focal cross entropy loss, focal weighted cross entropy loss,
-Dice loss, focal Dice loss, Tversky loss, and focal Tversky loss.
+By adjusting the lambda, gamma, delta, and class weight terms, the user can implement a variety of
+different loss metrics including cross entropy loss, weighted cross entropy loss, focal cross entropy
+loss, focal weighted cross entropy loss, Dice loss, focal Dice loss, Tversky loss, and focal Tversky
+loss.
 }
 \examples{
 \donttest{

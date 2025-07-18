@@ -48,6 +48,8 @@
 #' or no augmentations. Must be changed if augmentations are desired.
 #' @param probHFlip 0 to 1. Probability of applying horizontal flips. Default is 0
 #' or no augmentations. Must be changed if augmentations are desired.
+#' @param probRotate  0 to 1. Probability of applying rotation by 0-, 90-, 180- or 270-degrees.
+#' Default is 0 or no augmentations. Must be changed if augmentations are desired.
 #' @param probBrightness 0 to 1. Probability of applying brightness augmentation.
 #' Default is 0 or no augmentations. Must be changed if augmentations are desired.
 #' @param probContrast 0 to 1. Probability of applying contrast augmentations.
@@ -104,6 +106,7 @@
 #'   probContrast = 0,
 #'   probGamma = 0,
 #'   probHue = 0,
+#'   probRotation = 0,
 #'   probSaturation = 0,
 #'   brightFactor = c(.9,1.1),
 #'   contrastFactor = c(.9,1.1),
@@ -129,6 +132,7 @@ defineSegDataSet <- torch::dataset(
                         maxAugs = 0,
                         probVFlip = 0,
                         probHFlip = 0,
+                        probRotation = 0,
                         probBrightness = 0,
                         probContrast = 0,
                         probGamma = 0,
@@ -152,6 +156,7 @@ defineSegDataSet <- torch::dataset(
      self$maxAugs <- maxAugs
      self$probVFlip <- probVFlip
      self$probHFlip <- probHFlip
+     self$probRotation <- probRotation
      self$probBrightness <- probBrightness
      self$probContrast <- probContrast
      self$probGamma <- probGamma
@@ -198,6 +203,7 @@ defineSegDataSet <- torch::dataset(
        probGammaX <- runif(1) < self$probGamma
        probHueX <- runif(1) < self$probHue
        probSaturationX <- runif(1) < self$probSaturation
+       probRotateX <- runif(1) < self$probRotation
 
        augIndex <- sample(c(1:7), self$maxAugs, replace=FALSE)
 
@@ -236,6 +242,12 @@ defineSegDataSet <- torch::dataset(
        if(probSaturationX == TRUE & 7 %in% augIndex){
          saturationFactor = runif(1, self$saturationFactor[1], self$saturationFactor[2])
          image <- torchvision::transform_adjust_saturation(image, saturation_factor=saturationFactor)
+       }
+
+       if(probRotateX == TRUE & 8 %in% augIndex){
+         selectedAngle <- dplyr::sample_n(data.frame(angles = c(0, 90, 180, 270)), 1, replace=FALSE)[1,1]
+         image <- torchvision::transform_rotate(image, angle=selectedAngle)
+         mask <- torchvision::transform_rotate(mask, angle=selectedAngle)
        }
      }
      return(list(image = image, mask = mask))

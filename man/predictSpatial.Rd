@@ -11,6 +11,8 @@ predictSpatial(
   mode = "multiclass",
   predType = "class",
   biThresh = 0.5,
+  doPad = FALSE,
+  predPad = 0,
   useCUDA = FALSE,
   nCls,
   chpSize,
@@ -31,7 +33,8 @@ current working directory) or a SpatRaster object. Should have the same number
 of bands as the data used to train the model. Bands must also be in the same
 order.}
 
-\item{model}{Trained model to use to infer to new data.}
+\item{model}{instantiated model object as nn_module subclass as opposed to luz fitted object.
+Make sure to place model in evaluation mode.}
 
 \item{predOut}{Name of output prediction with full path or path relative to
 the working directory. Must also include the file extension (e.g., ".tif).}
@@ -53,6 +56,12 @@ the presence class. This threshold is applied to the rescaled logits after a sig
 activation is applied. Default is 0.5. If the rescaled logit is greater than or equal
 to this threshold, pixel will be mapped to the positive case. Otherwise, it will be
 mapped to the negative or background class. This parameter is ignored for multiclass classification.}
+
+\item{doPad}{TRUE or FALSE. Whehter or not to add padding to chips. This is only necessary when using defineTerrainSeg().
+Default is FALSE.}
+
+\item{predPad}{Only needed when using defineTerrainSeg() and doPad = TRUE. Should be the same
+as tCrop parameter in defineTerrainSeg(). Default is 0.}
 
 \item{useCUDA}{TRUE or FALSE. Whether or not to perform the inference on a GPU.
 If TRUE, the GPU is used. If FALSE, the CPU is used. Must have access to a CUDA-

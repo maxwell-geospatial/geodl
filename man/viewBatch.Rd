@@ -4,7 +4,17 @@
 \alias{viewBatch}
 \title{viewBatch}
 \usage{
-viewBatch(dataLoader, nCols = 3, r = 1, g = 2, b = 3, cNames, cColors)
+viewBatch(
+  dataLoader,
+  nCols = 3,
+  r = 1,
+  g = 2,
+  b = 3,
+  cCodes,
+  cNames,
+  cColors,
+  padding = 10
+)
 }
 \arguments{
 \item{dataLoader}{Instantiated instance of a DataLoader created using torch::dataloader().}
@@ -18,12 +28,16 @@ For gray scale or single-band images, assign the same index to all three bands.}
 For gray scale or single-band images, assign the same index to all three bands.}
 
 \item{b}{Index of channel to assign to blue channel. Default is 3 or the third channel.
-For gray scale or single-band images, assign the same index to all three bands.}
+For gray scale or single-band images, assign the same index to all three bands.
+@param cCodes class indices as a vector of integer values equal in length to the number of
+classes.}
 
 \item{cNames}{Vector of class names. Must be the same length as number of classes.}
 
 \item{cColors}{Vector of color values to use to display the masks. Colors are applied based on the
 order of class indices. Length of vector must be the same as the number of classes.}
+
+\item{padding}{to place between chips in plot. Default is 10.}
 }
 \value{
 Image grids of example chips and masks loaded from a mini-batch produced by the DataLoader.
@@ -42,6 +56,7 @@ viewBatch(dataLoader=trainDL,
           r = 1,
           g = 2,
           b = 3,
+          cCodes=c(1,2),
           cNames=c("Background", "Mine"),
           cColors=c("gray", "darksalmon"))
 }

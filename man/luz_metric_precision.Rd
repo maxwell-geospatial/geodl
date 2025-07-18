@@ -6,16 +6,23 @@
 \usage{
 luz_metric_precision(
   nCls = 3,
+  cropFactorMsk = 0,
+  cropFactorPred = 0,
   smooth = 1,
   mode = "multiclass",
   biThresh = 0.5,
   zeroStart = TRUE,
-  clsWghts = rep(1, nCls),
-  usedDS = TRUE
+  clsWghts = rep(1, nCls)
 )
 }
 \arguments{
 \item{nCls}{Number of classes being differentiated.}
+
+\item{cropFactorMsk}{Number of rows and columns of cells to not include for mask in assessment to
+minimize edge effects. Default is 0 or no cropping.}
+
+\item{cropFactorPred}{Number of rows and columns of cells to not include for prediction in assessment to
+minimize edge effects. Default is 0 or no cropping.}
 
 \item{smooth}{A smoothing factor to avoid divide by zero errors. Default is 1.}
 

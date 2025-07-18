@@ -29,11 +29,16 @@
 #' false positive and false negative errors for each class. The default is 0.6 for each class, which results in
 #' placing a higher weight on false negative as opposed to false positive errors relative to that class.
 #'
-#' By adjusting the lambda, gamma, delta, and class weight terms, the user can implement a variety of different loss metrics
-#' including cross entropy loss, weighted cross entropy loss, focal cross entropy loss, focal weighted cross entropy loss,
-#' Dice loss, focal Dice loss, Tversky loss, and focal Tversky loss.
+#' By adjusting the lambda, gamma, delta, and class weight terms, the user can implement a variety of
+#' different loss metrics including cross entropy loss, weighted cross entropy loss, focal cross entropy
+#' loss, focal weighted cross entropy loss, Dice loss, focal Dice loss, Tversky loss, and focal Tversky
+#' loss.
 #'
 #' @param nCls Number of classes being differentiated.
+#' @param cropFactorMsk Number of rows and columns of cells to not include for mask in assessment to
+#' minimize edge effects. Default is 0 or no cropping.
+#' @param cropFactorPred Number of rows and columns of cells to not include for prediction in assessment to
+#' minimize edge effects. Default is 0 or no cropping.
 #' @param lambda Term used to control the relative weighting of the distribution- and region-based
 #' losses. Default is 0.5, or equal weighting between the losses. If lambda = 1, only the distribution-
 #' based loss is considered. If lambda = 0, only the region-based loss is considered. Values between 0.5
@@ -104,6 +109,8 @@
 #' @export
 defineUnifiedFocalLoss <- torch::nn_module(#This is simply a class-based version of function defined above/implements function internally
   initialize = function(nCls=3,
+                        cropFactorMsk=0,
+                        cropFactorPred=0,
                         lambda=.5,
                         gamma=.5,
                         delta=0.6,
@@ -115,6 +122,8 @@ defineUnifiedFocalLoss <- torch::nn_module(#This is simply a class-based version
                         device="cuda"){
 
     self$nCls = nCls
+    self$cropFactorMsk = cropFactorMsk
+    self$cropFactorPred = cropFactorPred
     self$lambda = lambda
     self$gamma = gamma
     self$delta= delta
@@ -128,6 +137,9 @@ defineUnifiedFocalLoss <- torch::nn_module(#This is simply a class-based version
   },
 
   forward = function(pred, target){
+
+    pred <- cropTensor(pred, crpFactor=self$cropFactorPred)
+    target <- cropTensor(target, crpFactor=self$cropFactorMsk)
 
     # Preparation ------------------------------------------------------------
 
@@ -313,6 +325,8 @@ defineUnifiedFocalLoss <- torch::nn_module(#This is simply a class-based version
 #' Dice loss, focal Dice loss, Tversky loss, and focal Tversky loss.
 #'
 #' @param nCls Number of classes being differentiated.
+#' @param cropFactor Number of rows and columns of cells to not include in assessment to
+#' minimize edge effects. Default is 0 or no cropping.
 #' @param dsWghts Vector of 4 weights. Weights to apply to the losses calculated at each spatial
 #' resolution when using deep supervision. The default is c(.6, .2, .1, .1) where larger weights are
 #' placed on the results at a higher spatial resolution.
@@ -343,6 +357,7 @@ defineUnifiedFocalLoss <- torch::nn_module(#This is simply a class-based version
 #' @export
 defineUnifiedFocalLossDS <- torch::nn_module(#This is simply a class-based version of function defined above/implements function internally
   initialize = function(nCls=3,
+                        cropFactor = 0,
                         dsWghts = c(.6,.2,.1,.1),
                         lambda=.5,
                         gamma=.5,
@@ -355,6 +370,7 @@ defineUnifiedFocalLossDS <- torch::nn_module(#This is simply a class-based versi
                         device="cuda"){
 
     self$nCls = nCls
+    self$cropFactor = cropFactor
     self$dsWghts = dsWghts
     self$lambda = lambda
     self$gamma = gamma
@@ -372,6 +388,7 @@ defineUnifiedFocalLossDS <- torch::nn_module(#This is simply a class-based versi
     self$wght8 <- torch::torch_tensor(dsWghts[4], dtype=torch::torch_float32(), device=device)
 
     self$loss1 <- defineUnifiedFocalLoss(self$nCls,
+                                  self$cropFactor,
                                   self$lambda,
                                   self$gamma,
                                   self$delta,
@@ -383,6 +400,7 @@ defineUnifiedFocalLossDS <- torch::nn_module(#This is simply a class-based versi
                                   self$device)
 
     self$loss2 <- defineUnifiedFocalLoss(self$nCls,
+                                  self$cropFactor,
                                   self$lambda,
                                   self$gamma,
                                   self$delta,
@@ -394,6 +412,7 @@ defineUnifiedFocalLossDS <- torch::nn_module(#This is simply a class-based versi
                                   self$device)
 
     self$loss4 <- defineUnifiedFocalLoss(self$nCls,
+                                  self$cropFactor,
                                   self$lambda,
                                   self$gamma,
                                   self$delta,
@@ -405,6 +424,7 @@ defineUnifiedFocalLossDS <- torch::nn_module(#This is simply a class-based versi
                                   self$device)
 
     self$loss8 <- defineUnifiedFocalLoss(self$nCls,
+                                  self$cropFactor,
                                   self$lambda,
                                   self$gamma,
                                   self$delta,
