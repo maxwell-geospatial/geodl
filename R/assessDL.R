@@ -35,6 +35,10 @@
 #' number of classes and in the correct order. Class codes and names are matched by position in
 #' the cCodes and cNames vectors. For binary case, this argument is ignored, and the first
 #' class is called "Negative" while the second class is called "Positive".
+#' @param cropFactorMsk Number of rows and columns of cells to not include in assessment to
+#' minimize edge effects for reference mask. Default is 0 or no cropping.
+#' @param cropFactorPred Number of rows and columns of cells to not include in assessment to
+#' minimize edge effects for prediction. Default is 0 or no cropping.
 #' @param usedDS TRUE or FALSE. Whether or not deep supervision was used. Default is FALSE, or
 #' it is assumed that deep supervision was not used.
 #' @param useCUDA TRUE or FALSE. Whether or not to use GPU. Default is FALSE, or GPU is not used.

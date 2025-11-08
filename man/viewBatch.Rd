@@ -28,8 +28,9 @@ For gray scale or single-band images, assign the same index to all three bands.}
 For gray scale or single-band images, assign the same index to all three bands.}
 
 \item{b}{Index of channel to assign to blue channel. Default is 3 or the third channel.
-For gray scale or single-band images, assign the same index to all three bands.
-@param cCodes class indices as a vector of integer values equal in length to the number of
+For gray scale or single-band images, assign the same index to all three bands.}
+
+\item{cCodes}{class indices as a vector of integer values equal in length to the number of
 classes.}
 
 \item{cNames}{Vector of class names. Must be the same length as number of classes.}

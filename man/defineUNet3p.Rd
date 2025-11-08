@@ -7,11 +7,14 @@
 defineUNet3p(
   inChn = 3,
   nCls = 2,
-  useDS = FALSE,
   enChn = c(16, 32, 64, 128),
-  dcChn = c(128, 64, 32, 16),
+  outChn = 64,
   btnChn = 256,
-  negative_slope = 0.01
+  useASPP = TRUE,
+  dilRates = c(6, 12, 18),
+  dilChn = c(256, 256, 256, 256),
+  negative_slope = 0.01,
+  useDS = FALSE
 )
 }
 \arguments{
@@ -23,20 +26,29 @@ this can be either 1 or 2. If 2, the problem is treated as a multiclass problem,
 and a multiclass loss metric should be used. Default is 3.
 double convolution operation. Default is FALSE or the ASPP module is not used as the bottleneck.}
 
+\item{enChn}{Vector of 4 integers defining the number of output
+feature maps for each of the four encoder blocks. Default is 16, 32, 64, and 128.
+maps for each of the 4 decoder blocks. Default is 128, 64, 32, and 16.}
+
+\item{outChn}{Number of output channels for each decoder block. Default is 64.}
+
+\item{btnChn}{Number of output feature maps from the bottleneck block. Default is 256.}
+
+\item{useASPP}{TRUE or FALSE. Whether to use an ASPP module as the bottleneck as opposed to a
+double convolution operation. Default is FALSE or the ASPP module is not used as the bottleneck.}
+
+\item{dilRates}{Vector of 3 values specifying the dilation rates used in the ASPP module.
+Default is 6, 12, and 18.}
+
+\item{dilChn}{Vector of 4 values specifying the number of channels to produce at each dilation
+rate within the ASPP module. Default is 256 for each dilation rate.}
+
+\item{negative_slope}{Specifies the negative slope term for leaky ReLU activation. Default is 0.01.}
+
 \item{useDS}{TRUE or FALSE. Whether or not to use deep supervision. If TRUE, four predictions are
 made, one at each decoder block resolution, and the predictions are returned as a list object
 containing the 4 predictions. If FALSE, only the final prediction at the original resolution is
 returned. Default is FALSE or deep supervision is not implemented.}
-
-\item{enChn}{Vector of 4 integers defining the number of output
-feature maps for each of the four encoder blocks. Default is 16, 32, 64, and 128.}
-
-\item{dcChn}{Vector of 4 integers defining the number of output feature
-maps for each of the 4 decoder blocks. Default is 128, 64, 32, and 16.}
-
-\item{btnChn}{Number of output feature maps from the bottleneck block. Default}
-
-\item{negative_slope}{Specifies the negative slope term for leaky ReLU activation. Default is 0.01.}
 }
 \value{
 UNet3+ model using nn_module().
@@ -45,10 +57,11 @@ UNet3+ model using nn_module().
 Define a UNet3+ architecture for use in luz training loop.
 }
 \details{
-Define a UNet3+ architecture for use in luz training loop. User can specify the
+Define a UNet3+-like architecture for use in luz training loop. User can specify the
 number of output feature maps from each encoder and decoder block and the bottleneck
-block. Deep supervision can also be implemented. A variable number of input predictor
-variables and output classes can be defined.
+block. Deep supervision can also be implemented. The default bottleneck block can be replaced
+with a atrous spatial pyramid pooling module. Leaky ReLU is used throughout.
+A variable number of input predictor variables and output classes can be defined.
 
 The architecture was inspired by:
 
@@ -59,8 +72,17 @@ conference on acoustics, speech and signal processing (ICASSP) (pp. 1055-1059). 
 \examples{
 \donttest{
 library(torch)
-u3pMod <- defineUNet3p(inChn=4,nCls=2,useDS=FALSE,enChn=c(16,32,64,128),dcCh=c(128,64,32,16),btnChn=256,negative_slope=0.01)$to(device="cuda")
-t1 <- torch_rand(12,4,256,256)$to(device="cuda")
-p1 <- u3pMod(t1)
+model <- defineUNet3p(inChn=4,
+nCls=2,
+enChn = c(16,32,64,128),
+outChn = 64,
+btnChn = 256,
+useASPP = TRUE,
+dilRates=c(6,12,18),
+dilChn=c(256,256,256,256),
+negative_slope=0.01,
+useDS = FALSE)$to(device="cuda")
+t1 <- torch::torch_rand(2,4,512,512)$to(device="cuda")
+tp <- model(t1)
 }
 }

@@ -12,7 +12,8 @@ luz_metric_f1score(
   mode = "multiclass",
   biThresh = 0.5,
   clsWghts = rep(1, nCls),
-  zeroStart = TRUE
+  zeroStart = TRUE,
+  usedDS = FALSE
 )
 }
 \arguments{

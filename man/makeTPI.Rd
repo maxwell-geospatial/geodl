@@ -48,6 +48,12 @@ Radii are specified using cell counts as opposed to map distance.
 \dontrun{
 pth <- "OUTPUT PATH"
 dtm <- rast(paste0(pth, "dtm.tif"))
-tpiA3_11 <- makeTPI(dtm,cellSize=1,innerRadius=3,outerRadius=11,mode="circle",writeRaster=TRUE,outName=paste0(pth, "tpiA3_11.tif"),device="cuda")
+tpiA3_11 <- makeTPI(dtm,cellSize=1,
+innerRadius=3,
+outerRadius=11,
+mode="circle",
+writeRaster=TRUE,
+outName=paste0(pth, "tpiA3_11.tif"),
+device="cuda")
 }
 }

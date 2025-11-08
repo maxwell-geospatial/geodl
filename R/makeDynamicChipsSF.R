@@ -33,7 +33,9 @@
 #' of reference features.
 #' @param useSeed Whether or not to set a random seed for replicability. Default is FALSE.
 #' @param seed Random seed value.
-#' @param doSuffle Whether or to shuffle the rows in the resulting table. Default is FALSE or no shuffling.
+#' @param doShuffle Whether or to shuffle the rows in the resulting table. Default is FALSE or no shuffling.
+#' @importFrom graphics layout par
+#' @importFrom stats rnorm
 #' @return sf dataframe object of center locations for chip creation with associated information as attributes.
 #' @export
 makeDynamicChipsSF <- function(featPth,

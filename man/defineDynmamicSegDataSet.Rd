@@ -37,6 +37,8 @@ defineDynmamicSegDataSet(
 )
 }
 \arguments{
+\item{chipsSF}{sf object created by makeDynamicChipsSF().}
+
 \item{chipSize}{Size of desired image chips. Default is 512 (512x512 cells)}
 
 \item{cellSize}{Cells size of input data. Default is 1 m.}
@@ -140,8 +142,6 @@ Therefore, both -0.5 and 0.5 will give an image with complementary colors while
 Random value will be selected between these extremes. The default is 0.8 to 1.2.
 For example, 0 will give a black-and-white image, 1 will give the original image, and 2 will
 enhance the saturation by a factor of 2.}
-
-\item{chipsDF}{sf object created by makeDynamicChipsSF().}
 }
 \value{
 A dataset object that can be provided to torch::dataloader().

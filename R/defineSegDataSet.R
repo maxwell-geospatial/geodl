@@ -48,7 +48,7 @@
 #' or no augmentations. Must be changed if augmentations are desired.
 #' @param probHFlip 0 to 1. Probability of applying horizontal flips. Default is 0
 #' or no augmentations. Must be changed if augmentations are desired.
-#' @param probRotate  0 to 1. Probability of applying rotation by 0-, 90-, 180- or 270-degrees.
+#' @param probRotation 0 to 1. Probability of applying rotation by 0-, 90-, 180- or 270-degrees.
 #' Default is 0 or no augmentations. Must be changed if augmentations are desired.
 #' @param probBrightness 0 to 1. Probability of applying brightness augmentation.
 #' Default is 0 or no augmentations. Must be changed if augmentations are desired.

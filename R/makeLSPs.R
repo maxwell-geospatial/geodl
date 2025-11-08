@@ -1,7 +1,7 @@
 compute_aspect <- function(dx, dy) {
   # Case 1: When dx is non-zero
-  aspect_rad_nonzero <- torch_atan2(dy, -dx)
-  aspect_rad_nonzero <- torch_where(aspect_rad_nonzero < 0,
+  aspect_rad_nonzero <- torch::torch_atan2(dy, -dx)
+  aspect_rad_nonzero <- torch::torch_where(aspect_rad_nonzero < 0,
                                     aspect_rad_nonzero + (2 * pi),
                                     aspect_rad_nonzero)
 
@@ -9,16 +9,16 @@ compute_aspect <- function(dx, dy) {
   #   If dy > 0 then aspect = pi/2,
   #   else if dy < 0 then aspect = 2*pi - pi/2,
   #   else (if dy == 0) then we set aspect = 0.
-  aspect_rad_zero <- torch_where(dy > 0,
-                                 torch_tensor(pi / 2, dtype = torch_float()),
-                                 torch_where(dy < 0,
-                                             torch_tensor(2 * pi - pi / 2, dtype = torch_float()),
-                                             torch_tensor(0, dtype = torch_float())))
+  aspect_rad_zero <- torch::torch_where(dy > 0,
+                                 torch::torch_tensor(pi / 2, dtype = torch::torch_float()),
+                                 torch::torch_where(dy < 0,
+                                             torch::torch_tensor(2 * pi - pi / 2, dtype = torch::torch_float()),
+                                             torch::torch_tensor(0, dtype = torch::torch_float())))
 
   # Combine the two cases:
   # When dx is non-zero, use aspect_rad_nonzero;
   # when dx equals zero, use aspect_rad_zero.
-  aspect_rad <- torch_where(dx != 0, aspect_rad_nonzero, aspect_rad_zero)
+  aspect_rad <- torch::torch_where(dx != 0, aspect_rad_nonzero, aspect_rad_zero)
 
   return(aspect_rad)
 }
@@ -226,7 +226,12 @@ makeAspectModule <- torch::nn_module(
 #' \dontrun{
 #' pth <- "OUTPUT PATH"
 #' dtm <- rast(paste0(pth, "dtm.tif"))
-#' aspR <- makeAspect(dtm, cellSize=1, flatThreshold=1, mode= "aspect", writeRaster=TRUE, outName=paste0(pth, "asp.tif"),device="cuda")
+#' aspR <- makeAspect(dtm, cellSize=1,
+#' flatThreshold=1,
+#' mode= "aspect",
+#' writeRaster=TRUE,
+#' outName=paste0(pth, "asp.tif"),
+#' device="cuda")
 #' }
 #' @export
 makeAspect <- function(dtm, cellSize=1, flatThreshold = 1, mode="aspect", writeRaster=FALSE, outName, device="cpu"){
@@ -363,7 +368,13 @@ makeHillshadeModule <- torch::nn_module(
 #' \dontrun{
 #' pth <- "OUTPUT PATH"
 #' dtm <- rast(paste0(pth, "dtm.tif"))
-#' hsR <- makeHillshade(dtm,cellSize=1,sunAzimuth=315,sunAltitude=45,doMD = FALSE, writeRaster=TRUE,outName=paste0(pth, "hs.tif"), device="cuda")
+#' hsR <- makeHillshade(dtm,
+#' cellSize=1,
+#' sunAzimuth=315,
+#' sunAltitude=45,
+#' doMD = FALSE,
+#' writeRaster=TRUE,
+#' outName=paste0(pth, "hs.tif"), device="cuda")
 #' }
 #' @export
 makeHillshade <- function(dtm,
@@ -488,7 +499,13 @@ makeTPIModule <- torch::nn_module(
 #' \dontrun{
 #' pth <- "OUTPUT PATH"
 #' dtm <- rast(paste0(pth, "dtm.tif"))
-#' tpiA3_11 <- makeTPI(dtm,cellSize=1,innerRadius=3,outerRadius=11,mode="circle",writeRaster=TRUE,outName=paste0(pth, "tpiA3_11.tif"),device="cuda")
+#' tpiA3_11 <- makeTPI(dtm,cellSize=1,
+#' innerRadius=3,
+#' outerRadius=11,
+#' mode="circle",
+#' writeRaster=TRUE,
+#' outName=paste0(pth, "tpiA3_11.tif"),
+#' device="cuda")
 #' }
 #' @export
 makeTPI <- function(dtm,
@@ -613,7 +630,12 @@ makeTRIModule <- torch::nn_module(
 #' \dontrun{
 #' pth <- "OUTPUT PATH"
 #' dtm <- rast(paste0(pth, "dtm.tif"))
-#' tri11 <- makeTRI(dtm, cellSize=1,roughRadius=11,writeRaster=TRUE,outName=paste0(pth, "tri11f.tif"),device="cuda")
+#' tri11 <- makeTRI(dtm,
+#' cellSize=1,
+#' roughRadius=11,
+#' writeRaster=TRUE,
+#' outName=paste0(pth, "tri11f.tif"),
+#' device="cuda")
 #' }
 #' @export
 makeTRI <- function(dtm, cellSize=1,
@@ -804,7 +826,13 @@ makeCrvModule <- torch::nn_module(
 #' \dontrun{
 #' pth <- "OUTPUT PATH"
 #' dtm <- rast(paste0(pth, "dtm.tif"))
-#' crvPro7 <- makeCrv(dtm, cellSize=1,mode="profile",smoothRadius=7,writeRaster=TRUE,outName=paste0(pth, "crvPro7.tif"),device="cuda")
+#' crvPro7 <- makeCrv(dtm,
+#' cellSize=1,
+#' mode="profile",
+#' smoothRadius=7,
+#' writeRaster=TRUE,
+#' outName=paste0(pth, "crvPro7.tif"),
+#' device="cuda")
 #' }
 #' @export
 makeCrv <- function(dtm,
@@ -994,12 +1022,21 @@ makeTerrVisModule <- torch::nn_module(
 #' @param hsRadius outer radisu for circular moving window used for hillslope TPI calculation.
 #' @param writeRaster TRUE or FALSE. Save output to disk. Default is TRUE.
 #' @param outName Name of output raster with full file path and extension.
+#' @param device Device on which to perform calculations. "cpu" or "cuda". Default is "cpu".
+#' Recommend "cuda". Recommend "cuda" to speed up calculations.
 #' @return Three-band raster grid written to disk in TIFF format and spatRaster object.
 #' @examples
 #' \dontrun{
 #' pth <- "OUTPUT PATH"
 #' dtm <- rast(paste0(pth, "dtm.tif"))
-#' tVis <- makeTerrainVisTorch(dtm, cellSize=1,innerRadius=2,outerRadius=5,hsRadius=50, writeRaster=TRUE,outName=paste0(pth, "tVisTorch.tif"),device="cuda")
+#' tVis <- makeTerrainVisTorch(dtm,
+#' cellSize=1,
+#' innerRadius=2,
+#' outerRadius=5,
+#' hsRadius=50,
+#' writeRaster=TRUE,
+#' outName=paste0(pth, "tVisTorch.tif"),
+#' device="cuda")
 #' }
 #' @export
 makeTerrainVisTorch <- function(dtm,
@@ -1074,7 +1111,13 @@ makeTerrainVisTorch <- function(dtm,
 #' \dontrun{
 #' pth <- "OUTPUT PATH"
 #' dtm <- rast(paste0(pth, "dtm.tif"))
-#' tVisT <- makeTerrainVisTerra(dtm, cellSize=1,innerRadius=2,outerRadius=5,hsRadius=50, writeRaster=TRUE,outName=paste0(pth, "tVisTerra.tif"))
+#' tVisT <- makeTerrainVisTerra(dtm,
+#' cellSize=1,
+#' innerRadius=2,
+#' outerRadius=5,
+#' hsRadius=50,
+#' writeRaster=TRUE,
+#' outName=paste0(pth, "tVisTerra.tif"))
 #' }
 #' @export
 makeTerrainVisTerra <- function(dtm,

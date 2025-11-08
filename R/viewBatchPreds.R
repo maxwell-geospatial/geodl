@@ -10,6 +10,7 @@
 #' for a binary classification problem, use "binary". If 2 or more class logits are returned,
 #' use "multiclass". This package treats all cases as multiclass.
 #' @param nCols Number of columns in the image grid. Default is 3.
+#' @param padding Number of cells of padding to add around each example in resulting image.
 #' @param r Index of channel to assign to red channel. Default is 1 or the first channel.
 #' For gray scale or single-band images, assign the same index to all three bands.
 #' @param g Index of channel to assign to green channel. Default is 2 or the second channel.

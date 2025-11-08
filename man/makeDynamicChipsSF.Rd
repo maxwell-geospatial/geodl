@@ -47,7 +47,7 @@ of reference features.}
 
 \item{seed}{Random seed value.}
 
-\item{doSuffle}{Whether or to shuffle the rows in the resulting table. Default is FALSE or no shuffling.}
+\item{doShuffle}{Whether or to shuffle the rows in the resulting table. Default is FALSE or no shuffling.}
 }
 \value{
 sf dataframe object of center locations for chip creation with associated information as attributes.

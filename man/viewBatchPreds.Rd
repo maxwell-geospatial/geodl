@@ -32,6 +32,8 @@ use "multiclass". This package treats all cases as multiclass.}
 
 \item{nCols}{Number of columns in the image grid. Default is 3.}
 
+\item{padding}{Number of cells of padding to add around each example in resulting image.}
+
 \item{r}{Index of channel to assign to red channel. Default is 1 or the first channel.
 For gray scale or single-band images, assign the same index to all three bands.}
 

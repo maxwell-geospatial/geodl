@@ -1,8 +1,8 @@
 Package: geodl
 Type: Package
 Title: Geospatial Semantic Segmentation with Torch and Terra
-Version: 0.2.0
-Date: 2027-07-22
+Version: 0.3.0
+Date: 2025-11-08
 Authors@R: c(
   person(family="Maxwell", given="Aaron", email="Aaron.Maxwell@mail.wvu.edu", role=c("aut", "cre", "cph")),
   person(family="Farhadpour", given="Sarah", email="sf00039@mix.wvu.edu", role=c("aut")),
@@ -37,9 +37,10 @@ Imports:
     coro (>= 1.0.3),
     R6 (>= 2.5.1),
     readr (>= 2.1.3),
-    rlang (>= 1.1.1)
+    rlang (>= 1.1.1),
+    sf
 License: GPL (>= 3)
-URL: https://github.com/maxwell-geospatial/geodl, https://doi.org/10.31223/X53M6T, https://www.wvview.org/geodl/index.html
+URL: https://github.com/maxwell-geospatial/geodl, https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0315127, https://wvview.org/gslr/index.html
 BugReports: https://github.com/maxwell-geospatial/geodl/issues
 NeedsCompilation: no
 Encoding: UTF-8

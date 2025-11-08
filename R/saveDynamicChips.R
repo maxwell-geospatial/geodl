@@ -13,7 +13,7 @@
 #' If "Positive", only chips and masks containing positive cells are maintained. if "Divided",
 #' background-only and positive-containing chips are saved but written to separate directories.
 #' For multiclass, use "All". Default is "All".
-#' @param useExisitingDir TRUE or FALSE. Whether or not to use a directory that that already
+#' @param useExistingDir TRUE or FALSE. Whether or not to use a directory that that already
 #' contains chips. Default is FALSE.
 #' @param doJitter whether or not to add random jitter to center coordinate of chips. Default is FALSE.
 #' @param jitterSD standard deviation to use when applying jitter. Default is 15.
@@ -87,7 +87,7 @@ saveDynamicChips <- function(chipsSF,
                               seed=seed)
         naCntImg = terra::global(is.na(c1$image), fun = "sum")[1,1]
         naCntMsk = terra::global(is.na(c1$mask), fun = "sum")[1,1]
-        max_value_df <- global(c1$mask, fun = max, na.rm = TRUE)[1,1]
+        max_value_df <- terra::global(c1$mask, fun = max, na.rm = TRUE)[1,1]
 
         if(naCntImg == 0 & naCntMsk == 0 & max_value_df > 0){
           terra::writeRaster(c1$image,
@@ -131,7 +131,7 @@ saveDynamicChips <- function(chipsSF,
                               seed=seed)
         naCntImg = terra::global(is.na(c1$image), fun = "sum")[1,1]
         naCntMsk = terra::global(is.na(c1$mask), fun = "sum")[1,1]
-        max_value_df <- global(c1$mask, fun = max, na.rm = TRUE)[1,1]
+        max_value_df <- terra::global(c1$mask, fun = max, na.rm = TRUE)[1,1]
 
         if(naCntImg == 0 & naCntMsk == 0 & max_value_df > 0){
           terra::writeRaster(c1$image,

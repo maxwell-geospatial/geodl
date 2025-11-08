@@ -10,7 +10,7 @@
 #' ("naCntImg" and "naCntMsk"). This function is used primarily to check the chips prior to attempting
 #' to use them in a training or validation process.
 #'
-#' @param chipsDF sf object created by makeDynamicChipsSF().
+#' @param chipsSF sf object created by makeDynamicChipsSF().
 #' @param chipSize Size of desired image chips. Default is 512 (512x512 cells)
 #' @param cellSize Cells size of input data. Default is 1 m.
 #' @param doJitter Whether or not to add random noise to chip center coordinates. Default is FALSE.

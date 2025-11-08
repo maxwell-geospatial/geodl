@@ -12,7 +12,8 @@ luz_metric_precision(
   mode = "multiclass",
   biThresh = 0.5,
   zeroStart = TRUE,
-  clsWghts = rep(1, nCls)
+  clsWghts = rep(1, nCls),
+  usedDS = FALSE
 )
 }
 \arguments{

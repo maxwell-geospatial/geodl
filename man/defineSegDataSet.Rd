@@ -80,6 +80,9 @@ or no augmentations. Must be changed if augmentations are desired.}
 \item{probHFlip}{0 to 1. Probability of applying horizontal flips. Default is 0
 or no augmentations. Must be changed if augmentations are desired.}
 
+\item{probRotation}{0 to 1. Probability of applying rotation by 0-, 90-, 180- or 270-degrees.
+Default is 0 or no augmentations. Must be changed if augmentations are desired.}
+
 \item{probBrightness}{0 to 1. Probability of applying brightness augmentation.
 Default is 0 or no augmentations. Must be changed if augmentations are desired.}
 
@@ -125,9 +128,6 @@ Therefore, both -0.5 and 0.5 will give an image with complementary colors while
 Random value will be selected between these extremes. The default is 0.8 to 1.2.
 For example, 0 will give a black-and-white image, 1 will give the original image, and 2 will
 enhance the saturation by a factor of 2.}
-
-\item{probRotate}{0 to 1. Probability of applying rotation by 0-, 90-, 180- or 270-degrees.
-Default is 0 or no augmentations. Must be changed if augmentations are desired.}
 }
 \value{
 A dataset object that can be provided to torch::dataloader().

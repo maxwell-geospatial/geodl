@@ -31,6 +31,9 @@ If "Positive", only chips and masks containing positive cells are maintained. if
 background-only and positive-containing chips are saved but written to separate directories.
 For multiclass, use "All". Default is "All".}
 
+\item{useExistingDir}{TRUE or FALSE. Whether or not to use a directory that that already
+contains chips. Default is FALSE.}
+
 \item{doJitter}{whether or not to add random jitter to center coordinate of chips. Default is FALSE.}
 
 \item{jitterSD}{standard deviation to use when applying jitter. Default is 15.}
@@ -39,9 +42,6 @@ For multiclass, use "All". Default is "All".}
 applies if using jitter.}
 
 \item{seed}{random seed value. Default is 42.}
-
-\item{useExisitingDir}{TRUE or FALSE. Whether or not to use a directory that that already
-contains chips. Default is FALSE.}
 }
 \value{
 chips and masks written to disk. No R object is returned.

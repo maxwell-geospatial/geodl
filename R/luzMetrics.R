@@ -24,6 +24,7 @@
 #' the defineSegDataSetDS() function, this should be set to TRUE. Only the original resolution is used
 #' to calculate assessment metrics. Default is FALSE.
 #' @return Calculated metric returned as a base-R vector as opposed to tensor.
+#' @importFrom luz luz_metric
 #' @examples
 #' \donttest{
 #' library(terra)
@@ -74,7 +75,8 @@ luz_metric_recall <- luz::luz_metric(
                         mode = "multiclass",
                         biThresh = 0.5,
                         zeroStart=TRUE,
-                        clsWghts=rep(1.0, nCls)){
+                        clsWghts=rep(1.0, nCls),
+                        usedDS=FALSE){
 
     self$nCls <- nCls
     self$cropFactorMsk = cropFactorMsk
@@ -180,6 +182,7 @@ luz_metric_recall <- luz::luz_metric(
 #' the defineSegDataSetDS() function, this should be set to TRUE. Only the original resolution is used
 #' to calculate assessment metrics. Default is FALSE.
 #' @return Calculated metric returned as a base-R vector as opposed to tensor.
+#' @importFrom luz luz_metric
 #' @examples
 #' \donttest{
 #' library(terra)
@@ -230,7 +233,8 @@ luz_metric_precision <- luz::luz_metric(
                         mode = "multiclass",
                         biThresh=0.5,
                         zeroStart=TRUE,
-                        clsWghts = rep(1, nCls)){
+                        clsWghts = rep(1, nCls),
+                        usedDS=FALSE){
 
     self$nCls <- nCls
     self$cropFactorMsk = cropFactorMsk
@@ -361,6 +365,7 @@ luz_metric_precision <- luz::luz_metric(
 #' the defineSegDataSetDS() function, this should be set to TRUE. Only the original resolution is used
 #' to calculate assessment metrics. Default is FALSE.
 #' @return Calculated metric returned as a base-R vector as opposed to tensor.
+#' @importFrom luz luz_metric
 #' @examples
 #' \donttest{
 #' library(terra)
@@ -412,7 +417,8 @@ luz_metric_f1score <- luz::luz_metric(
                         mode = "multiclass",
                         biThresh = 0.5,
                         clsWghts = rep(1, nCls),
-                        zeroStart=TRUE){
+                        zeroStart=TRUE,
+                        usedDS=FALSE){
 
     self$nCls <- nCls
     self$cropFactorMsk = cropFactorMsk
@@ -523,6 +529,7 @@ luz_metric_f1score <- luz::luz_metric(
 #' the defineSegDataSetDS() function, this should be set to TRUE. Only the original resolution is used
 #' to calculate assessment metrics. Default is FALSE.
 #' @return Calculated metric returned as a base-R vector as opposed to tensor.
+#' @importFrom luz luz_metric
 #' @examples
 #' \donttest{
 #' require(terra)
@@ -573,7 +580,8 @@ luz_metric_overall_accuracy <- luz::luz_metric(
                         smooth=1,
                         mode = "multiclass",
                         biThresh=0.5,
-                        zeroStart=TRUE){
+                        zeroStart=TRUE,
+                        usedDS=FALSE){
 
     self$nCls <- nCls
     self$cropFactorMsk = cropFactorMsk

@@ -332,40 +332,42 @@ lspModule <- torch::nn_module(
 #' a single band DTM of elevation measurements as input.
 #'
 #' @param segModel Segmentation architecture to use. Either UNet ("UNet"), UNet3+
-#' ("UNet3p"), UNet with a MobileNetv2 encoder ("MobileUNet") or HRNet ("HRNet")
+#' ("UNet3p"), or UNet with a MobileNetv2 encoder.
 #' @param cellSize Input resolution of DTM data. Default in 1 m.
 #' @param nCls Number of classes being differentiated. For a binary classification,
 #' this can be either 1 or 2. If 2, the problem is treated as a multiclass problem,
-#' and a multiclass loss metric should be used. Default is 3.
-#' @param spatDim Input chip size. Default is 512 (512x512 cells)
-#' @param tCrop Number of rows and columns to crop prior to passing LSPs to UNet3+.
+#' and a multiclass loss metric should be used. Default is 2.
+#' @param spatDim Input chip size. Default is 640 (640x640 cells)
+#' @param tCrop Number of rows and columns to crop from each side prior to passing LSPs to trainable model. Default is 64.
 #' @param doGP Whether or not to include Gaussian Pyramids of DTM and calulate LSPs at
 #' different scales. Default is FALSE. If FALSE, 6 LSPs are passed to model. If TRUE,
 #' 31 LSPs are passed to model.
-#' @param negative_slope Negative slope term for leaky ReLU
-#' @param innterRadius Inner radius for annulus window for local TPI calculation. Default is 2 cells.
+#' @param negative_slope Negative slope term for leaky ReLU. Default is 0.01.
+#' @param innerRadius Inner radius for annulus window for local TPI calculation. Default is 2 cells.
 #' @param outerRadius Outer radius for annulus window for local TPI calculation. Default is 10 cells.
 #' @param hsRadius Radius for circular moving window for hillslope TPI calculation. Defaults is 50 cells.
 #' @param smoothRadius Radius of circular moving window to smooth DTM prior to curvature calculations.
 #' Default is 11 cells.
-#' @param actFunc Defines activation function to use throughout the network. "relu" =
+#' @param actFunc Defines activation function to use throughout the network when using UNet. "relu" =
 #' rectified linear unit (ReLU); "lrelu" = leaky ReLU; "swish" = swish. Default is "relu".
-#' @param useAttn TRUE or FALSE. Whether to add attention gates along the skip connections.
+#' @param useAttn TRUE or FALSE. Whether to add attention gates along the skip connections when using UNet, UNet with a MobileNet-V2 backbone, or UNet3+.
 #' Default is FALSE or no attention gates are added.
 #' @param useSE TRUE or FALSE. Whether or not to include squeeze and excitation modules in
-#' the encoder. Default is FALSE or no squeeze and excitation modules are used.
+#' the encoder when using UNet. Default is FALSE or no squeeze and excitation modules are used.
 #' @param useRes TRUE or FALSE. Whether to include residual connections in the encoder, decoder,
-#' and bottleneck/ASPP module blocks. Default is FALSE or no residual connections are included.
+#' and bottleneck/ASPP module blocks when using UNet. Default is FALSE or no residual connections are included.
 #' @param useASPP TRUE or FALSE. Whether to use an ASPP module as the bottleneck as opposed to a
-#' double convolution operation. Default is FALSE or the ASPP module is not used as the bottleneck.
-#' @param useDS TRUE or FALSE. Whether or not to use deep supervision. If TRUE, four predictions are
-#' made, one at each decoder block resolution, and the predictions are returned as a list object
-#' containing the 4 predictions. If FALSE, only the final prediction at the original resolution is
+#' double convolution operation when using UNet or UNet3+. Default is FALSE or the ASPP module is not used as the bottleneck.
+#' @param useDS TRUE or FALSE. Whether or not to use deep supervision when using UNet, Net with a MobileNet-V2 backbone, or
+#' UNet3+. If TRUE, four predictions are made, one at each decoder block resolution, and the predictions are returned
+#' as a list object containing the 4 predictions. If FALSE, only the final prediction at the original resolution is
 #' returned. Default is FALSE or deep supervision is not implemented.
 #' @param enChn Vector of 4 integers defining the number of output
-#' feature maps for each of the four encoder blocks. Default is 16, 32, 64, and 128.
-#' @param dcChn Vector of 4 integers defining the number of output feature
-#' maps for each of the 4 decoder blocks. Default is 128, 64, 32, and 16.
+#' feature maps for each of the four encoder blocks for UNet or UNet3+. Default is 16, 32, 64, and 128.
+#' @param dcChn Vector of 4 or 5 integers defining the number of output feature
+#' maps for each of the 4 decoder blocks for UNet or UNet  with a MobileNet-V2 encoder. Default is 128,
+#' 64, 32, and 16. Will need to change if using the MobileNet-V2 backbone.
+#' @param outChn Number of output channels for each decoder block for UNet3+. Default is 64.
 #' @param btnChn Number of output feature maps from the bottleneck block. Default
 #' is 256.
 #' @param dilRates Vector of 3 values specifying the dilation rates used in the ASPP module.
@@ -374,20 +376,14 @@ lspModule <- torch::nn_module(
 #' rate within the ASPP module. Default is 256 for each dilation rate.
 #' @param negative_slope If actFunc = "lrelu", specifies the negative slope term
 #' to use. Default is 0.01.
-#' @param seRatio Ratio to use in squeeze and excitation module. The default is 8.
+#' @param seRatio Ratio to use in squeeze and excitation module when using UNet. The default is 8.
 #' @param pretrainedEncoder TRUE or FALSE. Whether or not to initialized using pre-trained ImageNet
-#' weights for the
-#' MobileNet-v2 encoder. Default is TRUE.
-#' @param freezeEncoder TRUE or FALSE. Whether or not to freeze the encoder during training.
+#' weights for the MobileNet-v2 encoder. Default is TRUE.
+#' @param freezeEncoder TRUE or FALSE. Whether or not to freeze the encoder during training when using the MobileNet-V2 encoder.
 #' The default is TRUE. If TRUE, only the decoder component is trained.
 #' @param avgImNetWeights TRUE or FALSE. If three predictor variables are provided and
 #' ImageNet weights are used, whether or not to use the original weights or average them.
-#' Default is FALSE.
-#' @param l1FMs Number of feature maps to produce throughout the Level 1 layers. Default is 32.
-#' @param l2FMs Number of feature maps to produce throughout the Level 2 layers. Default is 64.
-#' @param l3FMs Number of feature maps to produce throughout the Level 3 layers. Default is 128.
-#' @param l4FMs Number of feature maps to produce throughout the Level 4 layers. Default is 256.
-#' @param dcFMs Number of feature maps to produce throughout the decoder blocks. Default is 256.
+#' This only applies when using MobileNet-V2 encoder. Default is FALSE.
 #' @return terrainSeg model consisting of LSP generation of UNet3+ model.
 #' @export
 defineTerrainSeg <- torch::nn_module(
@@ -395,13 +391,13 @@ defineTerrainSeg <- torch::nn_module(
 
   # Define the constructor
   initialize = function(segModel = "UNet",
-                        nCls = 3,
+                        nCls = 2,
                         cellSize = 1,
-                        spatDim=512,
-                        tCrop = 256,
+                        spatDim=640,
+                        tCrop = 64,
                         doGP = FALSE,
                         innerRadius = 2,
-                        outerRadius  =10,
+                        outerRadius = 10,
                         hsRadius = 50,
                         smoothRadius = 11,
                         actFunc="lrelu",
@@ -415,14 +411,10 @@ defineTerrainSeg <- torch::nn_module(
                         avgImNetWeights = FALSE,
                         enChn = c(16,32,64,128),
                         dcChn = c(128,64,32,16),
+                        outChn = 64,
                         btnChn = 256,
-                        dilChn = c(256,256,256),
+                        dilChn = c(256,256,256,256),
                         dilRates = c(6, 12, 18),
-                        l1FMs = 32,
-                        l2FMs = 64,
-                        l3FMs = 128,
-                        l4FMs = 256,
-                        dcFMs = 256,
                         negative_slope = 0.01,
                         seRatio=8){
 
@@ -447,14 +439,10 @@ defineTerrainSeg <- torch::nn_module(
     self$avgImNetWeights = avgImNetWeights
     self$enChn = enChn
     self$dcChn = dcChn
+    self$outChn = outChn
     self$btnChn = btnChn
     self$dilChn = dilChn
     self$dilRates = dilRates
-    self$l1FMs = l1FMs
-    self$l2FMs = l2FMs
-    self$l3FMs = l3FMs
-    self$l4FMs = l4FMs
-    self$dcFMs = dcFMs
     self$negative_slope = negative_slope
     self$seRatio = seRatio
 
@@ -480,15 +468,15 @@ defineTerrainSeg <- torch::nn_module(
                             smoothRadius=self$smoothRadius,
                             doTPIHS = FALSE)
 
-    if(segModel == "UNet3p"){
+    if(self$segModel == "UNet3p"){
       self$segMod <- defineUNet3p(inChn=self$inChn,
                               nCls=self$nCls,
                               useDS = self$useDS,
                               enChn = self$enChn,
-                              dcChn = self$dcChn,
+                              outChn = self$outChn,
                               btnChn = self$btnChn,
                               negative_slope=self$negative_slope)
-    }else if(segModel == "MobileUNet"){
+    }else if(self$segModel == "MobileUNet"){
       self$segMod <- defineMobileUNet(inChn = self$inChn,
                               nCls = self$nCls,
                               pretrainedEncoder = self$pretrainedEncoder,
@@ -499,35 +487,22 @@ defineTerrainSeg <- torch::nn_module(
                               useDS = self$useDS,
                               dcChn = self$dcChn,
                               negative_slope = self$negative_slope)
-    }else if(segModel == "HRNet"){
-      self$segMod <- defineHRNet(inChn=self$inChn,
-                               nCls = self$nCls,
-                               l1FMs = self$l1FMs,
-                               l2FMs = self$l2FMs,
-                               l3FMs = self$l3FMs,
-                               l4FMs = self$l4FMs,
-                               dcFMs = self$dcFMs,
-                               dilChn = self$dilChn,
-                               dilRates = self$dilRates,
-                               actFunc = self$actFunc,
-                               negative_slope = self$negative_slope)
-
-    }else if(segModel == "UNet"){
+    }else if(self$segModel == "UNet"){
       self$segMod <- defineUNet(inChn = self$inChn,
                                nCls = self$nCls,
                                actFunc = self$actFunc,
-                               useAttn = self$actFunc,
-                               useSE = self$actFunc,
-                               useRes = self$actFunc,
-                               useASPP = self$actFunc,
-                               useDS = self$actFunc0,
-                               enChn = self$actFunc,
-                               dcChn = self$actFunc,
-                               btnChn = self$actFunc,
-                               dilRates= self$actFunc,
-                               dilChn= self$actFunc,
-                               negative_slope= self$actFunc,
-                               seRatio=8)
+                               useAttn = self$useAttn,
+                               useSE = self$useSE,
+                               useRes = self$useRes,
+                               useASPP = self$useASPP,
+                               useDS = self$useDS,
+                               enChn = self$enChn,
+                               dcChn = self$dcChn,
+                               btnChn = self$btnChn,
+                               dilRates= self$dilRates,
+                               dilChn= self$dilChn,
+                               negative_slope= self$negative_slope,
+                               seRatio=self$seRatio)
 
     }else{
       message("Invalid Segmentation Model.")

@@ -1280,27 +1280,28 @@ dws <- torch::nn_module(
 #' @param negative_slope If actFunc = "lrelu", specifies the negative slope term
 #' to use. Default is 0.01.
 #' @param seRatio Ratio to use in squeeze and excitation module. The default is 8.
-#' @return Unet model instance as torch nnn_module
+#' @return Unet model instance as torch nn_module
 #' @examples
 #' \donttest{
 #' require(torch)
-#' model <- defineUNet(inChn = 4,
-#'                     nCls = 3,
-#'                     actFunc = "lrelu",
-#'                     useAttn = TRUE,
-#'                     useSE = TRUE,
-#'                     useRes = TRUE,
-#'                     useASPP = TRUE,
-#'                     useDS = TRUE,
-#'                     enChn = c(16,32,64,128),
-#'                     dcChn = c(128,64,32,16),
-#'                     btnChn = 256,
-#'                     dilRates=c(6,12,18),
-#'                     dilChn=c(256,256,256,256),
-#'                     negative_slope = 0.01,
-#'                     seRatio=8)
-#'  t1 <- torch::torch_rand(c(12,4,128,128))
-#'  p1 <- model(t1)
+#'model <- defineUNet(inChn = 4,
+#'                    nCls = 3,
+#'                    actFunc = "lrelu",
+#'                    useAttn = TRUE,
+#'                    useSE = TRUE,
+#'                    useRes = TRUE,
+#'                    useASPP = TRUE,
+#'                    useDS = TRUE,
+#'                    enChn = c(16,32,64,128),
+#'                    dcChn = c(128,64,32,16),
+#'                    btnChn = 256,
+#'                    dilRates=c(6,12,18),
+#'                    dilChn=c(256,256,256,256),
+#'                    negative_slope = 0.01,
+#'                    seRatio=8)
+#'
+#'t1 <- torch::torch_rand(2,4,256,256)
+#'tp <- model(t1)
 #'  }
 #' @export
 defineUNet <- torch::nn_module(
@@ -1594,7 +1595,7 @@ defineUNet <- torch::nn_module(
 #' averaged. If three channels or predictor variables are provided, the user can specify to user the ImageNet weights or
 #' average them.
 #'
-#' #' @param inChn Number of input channels or predictor variables. Default is 3.
+#' @param inChn Number of input channels or predictor variables. Default is 3.
 #' @param nCls Number of classes being differentiated. For a binary classification,
 #' this can be either 1 or 2. If 2, the problem is treated as a multiclass problem,
 #' and a multiclass loss metric should be used. Default is 3.
@@ -1663,26 +1664,21 @@ defineMobileUNet <- torch::nn_module(
     self$dcChn             <- dcChn
     self$negative_slope    <- negative_slope
 
-    # 1) Load pretrained MobileNetV2
     self$base_model <- torchvision::model_mobilenet_v2(
       pretrained = self$pretrainedEncoder
     )
 
-    # 2) Extract the list of feature‐blocks
     n_feats    <- length(self$base_model$features)
     orig_feats <- vector("list", n_feats)
     for (i in seq_len(n_feats)) {
       orig_feats[[i]] <- self$base_model$features[[i]]
     }
 
-    # 3) Pull out the very first block (Conv→BN→ReLU6)
     first_block <- orig_feats[[1]]
     old_conv    <- first_block[[1]]
-    orig_in     <- old_conv$in_channels  # e.g. 3
+    orig_in     <- old_conv$in_channels
 
-    # 4) If we need to rebuild for a different # of input channels...
     if (self$avgImNetWeights || self$inChn != orig_in) {
-      # compute averaged weight
       old_w      <- old_conv$weight
       mean_w     <- old_w$mean(dim = 2, keepdim = TRUE)
       out_ch     <- old_w$size(1)
@@ -1691,7 +1687,6 @@ defineMobileUNet <- torch::nn_module(
       new_in     <- self$inChn
       new_w      <- mean_w$expand(c(out_ch, new_in, k_h, k_w))
 
-      # build new Conv2d
       new_conv <- torch::nn_conv2d(
         in_channels  = new_in,
         out_channels = out_ch,
@@ -1702,16 +1697,14 @@ defineMobileUNet <- torch::nn_module(
       )
       new_conv$weight <- torch::nn_parameter(new_w$clone())
 
-      # keep the old BN & ReLU6
       orig_bn    <- first_block[[2]]
       orig_relu6 <- first_block[[3]]
 
-      # rebuild the full features Sequential
       first_block_new <- torch::nn_sequential(new_conv, orig_bn, orig_relu6)
       all_blocks      <- c(list(first_block_new), orig_feats[-1])
       self$base_model$features <- do.call(torch::nn_sequential, all_blocks)
 
-      cat("→ First conv rebuilt: weight size is now ",
+      cat("First conv rebuilt: weight size is now ",
           self$base_model$features[[1]][[1]]$weight$size(), "\n")
     }
 
@@ -1722,7 +1715,6 @@ defineMobileUNet <- torch::nn_module(
       }
     }
 
-    # 6) Split into stages for U-Net skip connections
     self$stages <- torch::nn_module_list(list(
       torch::nn_identity(),
       self$base_model$features[1:2],
@@ -1738,14 +1730,12 @@ defineMobileUNet <- torch::nn_module(
     self$e5  <- torch::nn_sequential(self$stages[[5]])
     self$btn <- torch::nn_sequential(self$stages[[6]])
 
-    # 7) Decoder upsampling + double conv blocks
     self$dUp1 <- geodl:::upConvBlk(inChn = 320,       outChn = 320)
     self$dUp2 <- geodl:::upConvBlk(inChn = dcChn[1],   outChn = dcChn[1])
     self$dUp3 <- geodl:::upConvBlk(inChn = dcChn[2],   outChn = dcChn[2])
     self$dUp4 <- geodl:::upConvBlk(inChn = dcChn[3],   outChn = dcChn[3])
     self$dUp5 <- geodl:::upConvBlk(inChn = dcChn[4],   outChn = dcChn[4])
 
-    # note: final skip uses self$inChn instead of hard-coded “3”
     skip1_ch <- self$inChn
 
     self$d1 <- geodl:::doubleConvBlk(320 + 96,  dcChn[1], actFunc, negative_slope)
@@ -1754,7 +1744,6 @@ defineMobileUNet <- torch::nn_module(
     self$d4 <- geodl:::doubleConvBlk(dcChn[3] + 16, dcChn[4], actFunc, negative_slope)
     self$d5 <- geodl:::doubleConvBlk(dcChn[4] + skip1_ch, dcChn[5], actFunc, negative_slope)
 
-    # 8) Optional attention gates
     if (useAttn) {
       self$ag1 <- geodl:::attnBlk(skip1_ch,    dcChn[4])
       self$ag2 <- geodl:::attnBlk(16,           dcChn[3])
@@ -1763,7 +1752,6 @@ defineMobileUNet <- torch::nn_module(
       self$ag5 <- geodl:::attnBlk(96,          320)
     }
 
-    # 9) Classifier + deep supervision
     self$c4 <- geodl:::classifierBlk(dcChn[5], nCls)
     if (useDS) {
       self$upSamp2 <- torch::nn_upsample(scale_factor=2, mode="bilinear", align_corners=TRUE)
@@ -1819,10 +1807,11 @@ defineMobileUNet <- torch::nn_module(
 #'
 #' Define a UNet3+ architecture for use in luz training loop.
 #'
-#' Define a UNet3+ architecture for use in luz training loop. User can specify the
+#' Define a UNet3+-like architecture for use in luz training loop. User can specify the
 #' number of output feature maps from each encoder and decoder block and the bottleneck
-#' block. Deep supervision can also be implemented. A variable number of input predictor
-#' variables and output classes can be defined.
+#' block. Deep supervision can also be implemented. The default bottleneck block can be replaced
+#' with a atrous spatial pyramid pooling module. Leaky ReLU is used throughout.
+#' A variable number of input predictor variables and output classes can be defined.
 #'
 #' The architecture was inspired by:
 #'
@@ -1836,23 +1825,40 @@ defineMobileUNet <- torch::nn_module(
 #' this can be either 1 or 2. If 2, the problem is treated as a multiclass problem,
 #' and a multiclass loss metric should be used. Default is 3.
 #' double convolution operation. Default is FALSE or the ASPP module is not used as the bottleneck.
+#' @param enChn Vector of 4 integers defining the number of output
+#' feature maps for each of the four encoder blocks. Default is 16, 32, 64, and 128.
+#' maps for each of the 4 decoder blocks. Default is 128, 64, 32, and 16.
+#' @param outChn Number of output channels for each decoder block. Default is 64.
+#' @param btnChn Number of output feature maps from the bottleneck block. Default is 256.
+#' @param useASPP TRUE or FALSE. Whether to use an ASPP module as the bottleneck as opposed to a
+#' double convolution operation. Default is FALSE or the ASPP module is not used as the bottleneck.
+#' @param dilRates Vector of 3 values specifying the dilation rates used in the ASPP module.
+#' Default is 6, 12, and 18.
+#' @param dilChn Vector of 4 values specifying the number of channels to produce at each dilation
+#' rate within the ASPP module. Default is 256 for each dilation rate.
+#' @param negative_slope Specifies the negative slope term for leaky ReLU activation. Default is 0.01.
 #' @param useDS TRUE or FALSE. Whether or not to use deep supervision. If TRUE, four predictions are
 #' made, one at each decoder block resolution, and the predictions are returned as a list object
 #' containing the 4 predictions. If FALSE, only the final prediction at the original resolution is
 #' returned. Default is FALSE or deep supervision is not implemented.
-#' @param enChn Vector of 4 integers defining the number of output
-#' feature maps for each of the four encoder blocks. Default is 16, 32, 64, and 128.
-#' @param dcChn Vector of 4 integers defining the number of output feature
-#' maps for each of the 4 decoder blocks. Default is 128, 64, 32, and 16.
-#' @param btnChn Number of output feature maps from the bottleneck block. Default
-#' @param negative_slope Specifies the negative slope term for leaky ReLU activation. Default is 0.01.
 #' @return UNet3+ model using nn_module().
 #' @examples
 #' \donttest{
 #' library(torch)
-#' u3pMod <- defineUNet3p(inChn=4,nCls=2,useDS=FALSE,enChn=c(16,32,64,128),dcCh=c(128,64,32,16),btnChn=256,negative_slope=0.01)$to(device="cuda")
-#' t1 <- torch_rand(12,4,256,256)$to(device="cuda")
-#' p1 <- u3pMod(t1)
+#' model <- defineUNet3p(inChn=4,
+#'nCls=2,
+#'enChn = c(16,32,64,128),
+#'outChn = 64,
+#'btnChn = 256,
+#'useASPP = TRUE,
+#'dilRates=c(6,12,18),
+#'dilChn=c(256,256,256,256),
+#'negative_slope=0.01,
+#'useDS = FALSE)$to(device="cuda")
+
+#'t1 <- torch::torch_rand(2,4,512,512)$to(device="cuda")
+
+#'tp <- model(t1)
 #' }
 #' @export
 defineUNet3p <- torch::nn_module(
@@ -1861,164 +1867,241 @@ defineUNet3p <- torch::nn_module(
   # Define the constructor
   initialize = function(inChn=3,
                         nCls=2,
-                        useDS = FALSE,
                         enChn = c(16,32,64,128),
-                        dcChn = c(128,64,32,16),
+                        outChn = 64,
                         btnChn = 256,
-                        negative_slope=0.01){
+                        useASPP = TRUE,
+                        dilRates=c(6,12,18),
+                        dilChn=c(256,256,256,256),
+                        negative_slope=0.01,
+                        useDS = FALSE){
 
     self$inChn <- inChn
     self$nCls <- nCls
     self$enChn<- enChn
-    self$dcChn <- dcChn
+    self$outChn <- outChn
     self$btnChn <- btnChn
     self$negative_slope <- negative_slope
     self$useDS <- useDS
+    self$useASPP <- useASPP
+    self$dilRates <- dilRates
+    self$dilChn <- dilChn
 
     self$maxP2 <- torch::nn_max_pool2d(kernel_size = 2, stride = 2)
     self$maxP4 <- torch::nn_max_pool2d(kernel_size = 4, stride = 4)
     self$maxP8 <- torch::nn_max_pool2d(kernel_size = 8, stride = 8)
 
-    self$up2 <- interpUp(sFactor=2)
-    self$up4 <- interpUp(sFactor=4)
-    self$up8 <- interpUp(sFactor=8)
+    self$up2 <- torch::nn_upsample(scale_factor=2,
+                                   mode="bilinear",
+                                   align_corners=TRUE)
+    self$up4 <- torch::nn_upsample(scale_factor=4,
+                                   mode="bilinear",
+                                   align_corners=TRUE)
+    self$up8 <- torch::nn_upsample(scale_factor=8,
+                                   mode="bilinear",
+                                   align_corners=TRUE)
 
     self$encoder1 <- doubleConvBlk(inChn,
                                    enChn[1],
                                    actFunc="lrelu",
                                    negative_slope=negative_slope)
+    self$e1d4 <- simpleConvBlk(enChn[1],
+                               outChn,
+                               actFunc="lrelu",
+                               negative_slope=negative_slope)
+
+    self$e1d3 <- torch::nn_sequential(torch::nn_max_pool2d(kernel_size = 2, stride = 2),
+                               simpleConvBlk(enChn[1],
+                                             outChn,
+                                             actFunc="lrelu",
+                                             negative_slope=negative_slope))
+    self$e1d2 <- torch::nn_sequential(torch::nn_max_pool2d(kernel_size = 4, stride = 4),
+                               simpleConvBlk(enChn[1],
+                                             outChn,
+                                             actFunc="lrelu",
+                                             negative_slope=negative_slope))
+    self$e1d1 <- torch::nn_sequential(torch::nn_max_pool2d(kernel_size = 8, stride = 8),
+                               simpleConvBlk(enChn[1],
+                                             outChn,
+                                             actFunc="lrelu",
+                                             negative_slope=negative_slope))
+
 
     self$encoder2 <- doubleConvBlk(enChn[1],
                                    enChn[2],
                                    actFunc="lrelu",
                                    negative_slope=negative_slope)
+    self$e2d3 <- simpleConvBlk(enChn[2],
+                               outChn,
+                               actFunc="lrelu",
+                               negative_slope=negative_slope)
+    self$e2d2 <- torch::nn_sequential(torch::nn_max_pool2d(kernel_size = 2, stride = 2),
+                               simpleConvBlk(enChn[2],
+                                             outChn,
+                                             actFunc="lrelu",
+                                             negative_slope=negative_slope))
+    self$e2d1 <- torch::nn_sequential(torch::nn_max_pool2d(kernel_size = 4, stride = 4),
+                               simpleConvBlk(enChn[2],
+                                             outChn,
+                                             actFunc="lrelu",
+                                             negative_slope=negative_slope))
+
+
+
 
     self$encoder3 <- doubleConvBlk(enChn[2],
                                    enChn[3],
                                    actFunc="lrelu",
                                    negative_slope=negative_slope)
+    self$e3d2 <- simpleConvBlk(enChn[3],
+                               outChn,
+                               actFunc="lrelu",
+                               negative_slope=negative_slope)
+    self$e3d1 <- torch::nn_sequential(torch::nn_max_pool2d(kernel_size = 2, stride = 2),
+                               simpleConvBlk(enChn[3],
+                                             outChn,
+                                             actFunc="lrelu",
+                                             negative_slope=negative_slope))
 
 
     self$encoder4 <- doubleConvBlk(enChn[3],
                                    enChn[4],
                                    actFunc="lrelu",
                                    negative_slope=negative_slope)
+    self$e4d1 <- simpleConvBlk(enChn[4],
+                               outChn,
+                               actFunc="lrelu",
+                               negative_slope=negative_slope)
 
-    self$bottleneck <- doubleConvBlk(enChn[4],
-                                     btnChn,
-                                     actFunc="lrelu",
-                                     negative_slope=negative_slope)
-
-    self$decoder1up <- upConvBlk(btnChn,
-                                 btnChn)
-
-    self$decoder1 <- doubleConvBlk(enChn[4] + enChn[3] + enChn[2] + enChn[1] + btnChn,
-                                   dcChn[1],
+    if(useASPP == FALSE){
+      self$btn <- doubleConvBlk(enChn[4],
+                                       btnChn,
+                                       actFunc="lrelu",
+                                       negative_slope=negative_slope)
+    }else{
+      self$btn <- geodl:::asppBlkR(inChn=enChn[4],
+                                   outChn=btnChn,
+                                   dilChn=dilChn,
+                                   dilRates=dilRates,
                                    actFunc="lrelu",
                                    negative_slope=negative_slope)
+    }
 
-    self$decoder2up <- upConvBlk(dcChn[1],
-                                 dcChn[1])
 
-    self$decoder2 <- doubleConvBlk(enChn[3] + enChn[2] + enChn[1] + dcChn[1] + btnChn,
-                                   dcChn[2],
-                                   actFunc="lrelu",
-                                   negative_slope=negative_slope)
+    self$bd1 <- upConvBlk(btnChn,outChn)
+    self$bd2 <- torch::nn_sequential(interpUp(sFactor=4),
+                                     simpleConvBlk(btnChn,
+                                                   outChn,
+                                                   actFunc="lrelu",
+                                                   negative_slope=negative_slope))
+    self$bd3 <- torch::nn_sequential(interpUp(sFactor=8),
+                                     simpleConvBlk(btnChn,
+                                                   outChn,
+                                                   actFunc="lrelu",
+                                                   negative_slope=negative_slope))
+    self$bd4 <- torch::nn_sequential(interpUp(sFactor=16),
+                                    simpleConvBlk(btnChn,
+                                                  outChn,
+                                                  actFunc="lrelu",
+                                                  negative_slope=negative_slope))
 
-    self$decoder3up <- upConvBlk(dcChn[2],
-                                 dcChn[2])
+    self$d1d2 <- upConvBlk(5*outChn,outChn)
+    self$d1d3 <- torch::nn_sequential(interpUp(sFactor=4),
+                                      simpleConvBlk(5*outChn,
+                                                    outChn,
+                                                    actFunc="lrelu",
+                                                    negative_slope=negative_slope))
 
-    self$decoder3 <- doubleConvBlk(enChn[2] + enChn[1] + dcChn[2] + dcChn[1] + btnChn,
-                                   dcChn[3],
-                                   actFunc="lrelu",
-                                   negative_slope=negative_slope)
+    self$d1d4 <- torch::nn_sequential(interpUp(sFactor=8),
+                                      simpleConvBlk(5*outChn,
+                                                    outChn,
+                                                    actFunc="lrelu",
+                                                    negative_slope=negative_slope))
 
-    self$decoder4up <- upConvBlk(dcChn[3],
-                                 dcChn[3])
+    self$d2d3 <- upConvBlk(5*outChn,outChn)
+    self$d2d4 <- torch::nn_sequential(interpUp(sFactor=4),
+                                      simpleConvBlk(5*outChn,
+                                                    outChn,
+                                                    actFunc="lrelu",
+                                                    negative_slope=negative_slope))
 
-    self$decoder4 <- doubleConvBlk(enChn[1] + dcChn[3] + dcChn[2],
-                                   dcChn[4],
-                                   actFunc="lrelu",
-                                   negative_slope=negative_slope)
+    self$d3d4 <- upConvBlk(5*outChn,outChn)
 
-    self$ch4 <- classifierBlk(dcChn[4],
+
+    self$decoder <- simpleConvBlk(5*outChn,
+                                  5*outChn,
+                                  actFunc="lrelu",
+                                  negative_slope=negative_slope)
+
+
+    self$ch <- classifierBlk(5*outChn,
                               nCls=nCls)
 
-    self$ch3 <- classifierBlk(dcChn[3],
-                              nCls=nCls)
-
-    self$ch2 <- classifierBlk(dcChn[2],
-                              nCls=nCls)
-
-    self$ch1 <- classifierBlk(dcChn[1],
-                              nCls=nCls)
   },
 
   # Define the forward pass
   forward = function(x) {
 
     # Encoder main path
-    e1 <- self$encoder1(x)
-    e1p2 <- self$maxP2(e1)
-    e1p4 <- self$maxP4(e1)
-    e1p8 <- self$maxP8(e1)
+    x <- self$encoder1(x)
+    xe1d4 <- self$e1d4(x)
+    xe1d3 <- self$e1d3(x)
+    xe1d2 <- self$e1d2(x)
+    xe1d1 <- self$e1d1(x)
+    x <- self$maxP2(x)
 
-    e2 <- self$encoder2(e1p2)
-    e2p2 <- self$maxP2(e2)
-    e2p4 <- self$maxP4(e2)
+    x <- self$encoder2(x)
+    xe2d3 <- self$e2d3(x)
+    xe2d2 <- self$e2d2(x)
+    xe2d1 <- self$e2d1(x)
+    x <- self$maxP2(x)
 
-    e3 <- self$encoder3(e2p2)
-    e3p2 <- self$maxP2(e3)
+    x <- self$encoder3(x)
+    xe3d2 <- self$e3d2(x)
+    xe3d1 <- self$e3d1(x)
+    x <- self$maxP2(x)
 
-    e4 <- self$encoder4(e3p2)
-    e4p2 <- self$maxP2(e4)
+    x <- self$encoder4(x)
+    xe4d1 <- self$e4d1(x)
+    x <- self$maxP2(x)
 
     # Bottleneck
-    bOut <- self$bottleneck(e4p2)
-    bUp4 <- torch::nnf_interpolate(bOut,
-                                   scale_factor = 4,
-                                   mode = "bilinear",
-                                   align_corners = TRUE)
-    bUp8 <- torch::nnf_interpolate(bOut,
-                                   scale_factor = 8,
-                                   mode = "bilinear",
-                                   align_corners = TRUE)
+    x <- self$btn(x)
+
+    xbd2 <- self$bd2(x)
+    xbd3 <- self$bd3(x)
+    xbd4 <- self$bd4(x)
+    x <- self$bd1(x)
 
     # Decoder
-    d1upOut <- self$decoder1up(bOut)
-    d1In <- torch::torch_cat(list(d1upOut, e4, e3p2, e2p4, e1p8), dim = 2)
-    d1Out <- self$decoder1(d1In)
-    d1Up4 <- torch::nnf_interpolate(d1Out,
-                                    scale_factor = 4,
-                                    mode = "bilinear",
-                                    align_corners = TRUE)
+    d1In <- torch::torch_cat(list(x, xe1d1, xe2d1, xe3d1, xe4d1), dim = 2)
+    d1Out <- self$decoder(d1In)
+    xd1d3 <- self$d1d3(d1Out)
+    xd1d4 <- self$d1d4(d1Out)
+    xd1d2 <- self$d1d2(d1Out)
 
-    d2upOut <- self$decoder2up(d1Out)
-    d2In <- torch::torch_cat(list(d2upOut, bUp4, e3, e2p2, e1p4), dim = 2)
-    d2Out <- self$decoder2(d2In)
-    d2Up4 <- torch::nnf_interpolate(d2Out,
-                                    scale_factor = 4,
-                                    mode = "bilinear",
-                                    align_corners = TRUE)
+    d2In <- torch::torch_cat(list(xd1d2, xe1d2, xe2d2, xe3d2, xbd2), dim = 2)
+    d2Out <- self$decoder(d2In)
+    xd2d4 <- self$d1d3(d2Out)
+    xd2d3 <- self$d2d3(d2Out)
 
-    d3upOut <- self$decoder3up(d2Out)
-    d3In <- torch::torch_cat(list(d3upOut, bUp8, d1Up4, e2, e1p2), dim = 2)
-    d3Out <- self$decoder3(d3In)
+    d3In <- torch::torch_cat(list(xd2d3, xe1d3, xe2d3, xd1d3, xbd3), dim = 2)
+    d3Out <- self$decoder(d3In)
+    xd3d4 <- self$d3d4(d3Out)
 
-    d4upOut <- self$decoder4up(d3Out)
-    d4In <- torch::torch_cat(list(d4upOut, e1, d2Up4), dim = 2)
-    d4Out <- self$decoder4(d4In)
+    d4In <- torch::torch_cat(list(xd3d4, xe1d4, xd2d4, xd1d4, xbd4), dim = 2)
+    xd4Out <- self$decoder(d4In)
 
     # Classifier head
-    c4x <- self$ch4(d4Out)
+    c4x <- self$ch(xd4Out)
 
     if(self$useDS == TRUE){
-      d3xUp <- self$up2(d3Out)
-      d2xUp <- self$up4(d2Out)
-      d1xUp <- self$up8(d1Out)
-      c3x <- self$ch3(d3xUp)
-      c2x <- self$ch2(d2xUp)
-      c1x <- self$ch1(d1xUp)
+      xd3xUp <- self$up2(d3Out)
+      xd2xUp <- self$up4(d2Out)
+      xd1xUp <- self$up8(d1Out)
+      c3x <- self$ch(xd3xUp)
+      c2x <- self$ch(xd2xUp)
+      c1x <- self$ch(xd1xUp)
       return(list(pred1 = c4x,
                   pred2 = c3x,
                   pred4 = c2x,
@@ -2028,201 +2111,3 @@ defineUNet3p <- torch::nn_module(
     }
   }
 )
-
-
-
-#' defineHRNet
-#'
-#' Define a modified HRNet architecture inspired by:
-#'
-#' Wang, J., Sun, K., Cheng, T., Jiang, B., Deng, C., Zhao, Y., Liu, D., Mu, Y.,
-#' Tan, M., Wang, X. and Liu, W., 2020. Deep high-resolution representation learning
-#' for visual recognition. IEEE transactions on pattern analysis and machine intelligence,
-#' 43(10), pp.3349-3364.
-#'
-#' User can specify the number of input predictor variables or channels and the number of
-#' output classes. The number of feature maps to generate throughout Levels 1 through 4
-#' of the encoder and the decoder block. Residual connections can  be added around convolutional
-#' layers within the blocks. The user can also choose between ReLU, leak ReLU, and swish.
-#'
-#' @param inChn Number of input predictor variables or channels. Default is 3.
-#' @param nCls Number of output classes. Default is 2
-#' @param l1FMs Number of feature maps to produce throughout the Level 1 layers. Default is 32.
-#' @param l2FMs Number of feature maps to produce throughout the Level 2 layers. Default is 64.
-#' @param l3FMs Number of feature maps to produce throughout the Level 3 layers. Default is 128.
-#' @param l4FMs Number of feature maps to produce throughout the Level 4 layers. Default is 256.
-#' @param dcFMs Number of feature maps to produce throughout the decoder blocks. Default is 256.
-#' @param dilRates Vector of 3 values specifying the dilation rates used in the ASPP module.
-#' Default is 6, 12, and 18.
-#' @param dilChn Vector of 4 values specifying the number of channels to produce at each dilation
-#' rate within the ASPP module. Default is 256 for each dilation rate.
-#' @param doRes TRUE or FALSE. Whether or not to include residual connections in convolution
-#' blocks of the encoder. Default is TRUE.
-#' @param actFunc Defines activation function to use throughout the network. "relu" = rectified
-#' linear unit (ReLU); "lrelu" = leaky ReLU; "swish" = swish. Default is "relu".
-#' @param negative_slope If actFunc = "lrelu", specifies the negative slope term
-#' to use. Default is 0.01.
-#' @return HRNet model instance as torch nn_module
-#' @examples
-#' \donttest{
-#' library(torch)
-#' hrMod <- defineHRNet(inChn=8,
-#'                      nCls=2,
-#'                      l1FMs=64,
-#'                      l2FMs=128,
-#'                      l3FMs=128,
-#'                      l4FMs=128,
-#'                      dcChn=256,
-#'                      dilRates=c(6,12,18),
-#'                      dilChn=c(128,128,128),
-#'                      actFunc = "relu",
-#'                      negative_slope = 0.01)$to(device="cuda")
-#'
-#' t1 <- torch_rand(12,8,256,256)$to(device="cuda")
-#' p1 <- hrMod(t1)
-#' }
-#' @export
-defineHRNet <- torch::nn_module(
-  "MobileUNet",
-  initialize  = function(inChn=3,
-                         nCls = 2,
-                         l1FMs = 32,
-                         l2FMs = 64,
-                         l3FMs = 128,
-                         l4FMs = 256,
-                         dcFMs = 256,
-                         dilChn = c(256,256,256, 256),
-                         dilRates = c(6, 12, 18),
-                         doRes = TRUE,
-                         actFunc = "lrelu",
-                         negative_slope = 0.01){
-
-    self$inChn = inChn
-    self$nCls = nCls
-    self$l1FMs = l1FMs
-    self$l2FMs = l2FMs
-    self$l3FMs = l3FMs
-    self$l4FMs = l4FMs
-    self$dilChn = dilChn
-    self$dilRates = dilRates
-    self$doRes = doRes
-    self$actFunc = actFunc
-    self$negative_slope = negative_slope
-
-    self$s1l1a <- doubleConvBlkR(inChn=inChn,outChn=l1FMs,actFunc=actFunc,negative_slope=negative_slope)
-    self$s1l1aDown2 <- dwnSampConv(inChn=l1FMs,l1FMs,strd=2,actFunc=actFunc,negative_slope=negative_slope)
-
-    self$s1l1b <- simpleConvBlk(inChn=l1FMs,outChn=l1FMs,actFunc=actFunc,negative_slope=negative_slope)
-    self$s1l2b <- simpleConvBlk(inChn=l1FMs,outChn=l2FMs,actFunc=actFunc,negative_slope=negative_slope)
-
-    self$s2l1a <- doubleConvBlkR(inChn=l1FMs,outChn=l1FMs,actFunc=actFunc,negative_slope=negative_slope)
-    self$s2l1aDown2 <- dwnSampConv(inChn=l1FMs,l1FMs,strd=2,actFunc=actFunc,negative_slope=negative_slope)
-    self$s2l1aDown4 <- dwnSampConv(inChn=l1FMs,l1FMs,strd=4,actFunc=actFunc,negative_slope=negative_slope)
-    self$s2l2a <- doubleConvBlkR(inChn=l2FMs,outChn=l2FMs,actFunc=actFunc,negative_slope=negative_slope)
-    self$s2l2aUp2 <- upSampConv(inChn=l2FMs,outChn=l2FMs,scale_factor=2,mode = "bilinear",align_corners = FALSE,actFunc=actFunc, negative_slope=negative_slope)
-    self$s2l2aDown2 <- dwnSampConv(inChn=l2FMs,l2FMs,strd=2,actFunc=actFunc,negative_slope=negative_slope)
-
-    self$s2l1b  <- simpleConvBlk(inChn=l1FMs+l2FMs,outChn=l1FMs,actFunc=actFunc,negative_slope=negative_slope)
-    self$s2l2b <- simpleConvBlk(inChn=l1FMs+l2FMs,outChn=l2FMs,actFunc=actFunc,negative_slope=negative_slope)
-    self$s2l3b <- simpleConvBlk(inChn=l1FMs+l2FMs,outChn=l3FMs,actFunc=actFunc,negative_slope=negative_slope)
-
-    self$s3l1a <- doubleConvBlkR(inChn=l1FMs,outChn=l1FMs,actFunc=actFunc,negative_slope=negative_slope)
-    self$s3l1aDown2 <- dwnSampConv(inChn=l1FMs,l1FMs,strd=2,actFunc=actFunc,negative_slope=negative_slope)
-    self$s3l1aDown4 <- dwnSampConv(inChn=l1FMs,l1FMs,strd=4,actFunc=actFunc,negative_slope=negative_slope)
-    self$s3l1aDown8 <- dwnSampConv(inChn=l1FMs,l1FMs,strd=8,actFunc=actFunc,negative_slope=negative_slope)
-    self$s3l2a <- doubleConvBlkR(inChn=l2FMs,outChn=l2FMs,actFunc=actFunc,negative_slope=negative_slope)
-    self$s3l2aUp2 <- upSampConv(inChn=l2FMs,outChn=l2FMs,scale_factor=2,mode = "bilinear",align_corners = FALSE,actFunc=actFunc, negative_slope=negative_slope)
-    self$s3l2aDown2 <- dwnSampConv(inChn=l2FMs,l2FMs,strd=2,actFunc=actFunc,negative_slope=negative_slope)
-    self$s3l2aDown4 <- dwnSampConv(inChn=l2FMs,l2FMs,strd=4,actFunc=actFunc,negative_slope=negative_slope)
-    self$s3l3a <- doubleConvBlkR(inChn=l3FMs,outChn=l3FMs,actFunc=actFunc,negative_slope=negative_slope)
-    self$s3l3aUp4 <- upSampConv(inChn=l3FMs,outChn=l3FMs,scale_factor=4,mode = "bilinear",align_corners = FALSE,actFunc=actFunc, negative_slope=negative_slope)
-    self$s3l3aUp2 <- upSampConv(inChn=l3FMs,outChn=l3FMs,scale_factor=2,mode = "bilinear",align_corners = FALSE,actFunc=actFunc, negative_slope=negative_slope)
-    self$s3l3aDown2 <- dwnSampConv(inChn=l3FMs,l3FMs,strd=2,actFunc=actFunc,negative_slope=negative_slope)
-
-    self$s3l1b <- simpleConvBlk(inChn=l1FMs+l2FMs+l3FMs,outChn=l1FMs,actFunc=actFunc,negative_slope=negative_slope)
-    self$s3l2b <- simpleConvBlk(inChn=l1FMs+l2FMs+l3FMs,outChn=l2FMs,actFunc=actFunc,negative_slope=negative_slope)
-    self$s3l3b <- simpleConvBlk(inChn=l1FMs+l2FMs+l3FMs,outChn=l3FMs,actFunc=actFunc,negative_slope=negative_slope)
-    self$s3l4b <- simpleConvBlk(inChn=l1FMs+l2FMs+l3FMs,outChn=l4FMs,actFunc=actFunc,negative_slope=negative_slope)
-
-    self$s4l1a <- doubleConvBlkR(inChn=l1FMs,outChn=l1FMs,actFunc=actFunc,negative_slope=negative_slope)
-    self$s4l2a<- doubleConvBlkR(inChn=l2FMs,outChn=l2FMs,actFunc=actFunc,negative_slope=negative_slope)
-    self$s4l3a <- doubleConvBlkR(inChn=l3FMs,outChn=l3FMs,actFunc=actFunc,negative_slope=negative_slope)
-    self$s4l4a <- asppBlk(inChn=l4FMs,outChn=l4FMs,dilRates=dilRates, dilChn=dilChn,actFunc=actFunc,negative_slope=negative_slope)
-
-    self$s4l2aUp2 <- upSampConv(inChn=l2FMs,outChn=l2FMs,scale_factor=2,mode = "bilinear",align_corners = FALSE,actFunc=actFunc, negative_slope=negative_slope)
-    self$s4l3aUp4 <- upSampConv(inChn=l3FMs,outChn=l3FMs,scale_factor=4,mode = "bilinear",align_corners = FALSE,actFunc=actFunc, negative_slope=negative_slope)
-    self$s4l4aUp8 <- upSampConv(inChn=l4FMs,outChn=l4FMs,scale_factor=8,mode = "bilinear",align_corners = FALSE,actFunc=actFunc, negative_slope=negative_slope)
-
-    self$dcBlk <- doubleConvBlkR(inChn=l1FMs+l2FMs+l3FMs+l4FMs,outChn=dcFMs,actFunc=actFunc,negative_slope=negative_slope)
-
-    self$ch <- classifierBlk(dcFMs, nCls)
-
-  },
-
-  forward = function(x){
-
-    x <- self$s1l1a(x)
-    xS1L1D2 <- self$s1l1aDown2(x)
-
-    x <- self$s1l1b(x)
-    x2 <- self$s1l2b(xS1L1D2)
-
-    x <- self$s2l1a(x)
-
-    xS2L1D2 <- self$s2l1aDown2(x)
-    xS2L1D4 <- self$s2l1aDown4(x)
-    x2 <- self$s2l2a(x2)
-    x2S2L2U2 <- self$s2l2aUp2(x2)
-    x2S2L2D2 <- self$s2l2aDown2(x2)
-
-    x <- torch::torch_cat(list(x, x2S2L2U2), dim=2)
-    x2 <-torch::torch_cat(list(x2, xS2L1D2), dim=2)
-    x3 <- torch::torch_cat(list(x2S2L2D2, xS2L1D4), dim=2)
-
-    x <- self$s2l1b(x)
-    x2 <- self$s2l2b(x2)
-    x3 <- self$s2l3b(x3)
-
-    x <- self$s3l1a(x)
-    xS3L1D2 <- self$s3l1aDown2(x)
-    xS3L1D4 <- self$s3l1aDown4(x)
-    xS3L1D8 <- self$s3l1aDown8(x)
-    x2 <- self$s3l2a(x2)
-    x2S3L2U2 <- self$s3l2aUp2(x2)
-    x2S3L2D2 <- self$s3l2aDown2(x2)
-    x2S3L2D4 <- self$s3l2aDown4(x2)
-    x3 <- self$s3l3a(x3)
-    x3S3L3U4 <- self$s3l3aUp4(x3)
-    x3S3L3U2 <- self$s3l3aUp2(x3)
-    x3S3L3D2 <- self$s3l3aDown2(x3)
-
-    x <- torch::torch_cat(list(x, x2S3L2U2, x3S3L3U4), dim=2)
-    x2 <-torch::torch_cat(list(x2, xS3L1D2, x3S3L3U2), dim=2)
-    x3 <- torch::torch_cat(list(x3, xS3L1D4, x2S3L2D2), dim=2)
-    x4 <- torch::torch_cat(list(xS3L1D8, x2S3L2D4, x3S3L3D2), dim=2)
-
-    x <- self$s3l1b(x)
-    x2 <- self$s3l2b(x2)
-    x3 <- self$s3l3b(x3)
-    x4 <- self$s3l4b(x4)
-
-    x <- self$s4l1a(x)
-    x2 <- self$s4l2a(x2)
-    x3 <- self$s4l3a(x3)
-    x4 <- self$s4l4a(x4)
-
-    x2 <- self$s4l2aUp2(x2)
-    x3 <- self$s4l3aUp4(x3)
-    x4 <- self$s4l4aUp8(x4)
-
-    x <- torch::torch_cat(list(x, x2, x3, x4), dim=2)
-
-    x <- self$dcBlk(x)
-
-    x <- self$ch(x)
-
-    return(x)
-  })
-
-
-

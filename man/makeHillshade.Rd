@@ -47,6 +47,12 @@ hillshades with different sun positions ((north X 2Xnorthwest X west X southeast
 \dontrun{
 pth <- "OUTPUT PATH"
 dtm <- rast(paste0(pth, "dtm.tif"))
-hsR <- makeHillshade(dtm,cellSize=1,sunAzimuth=315,sunAltitude=45,doMD = FALSE, writeRaster=TRUE,outName=paste0(pth, "hs.tif"), device="cuda")
+hsR <- makeHillshade(dtm,
+cellSize=1,
+sunAzimuth=315,
+sunAltitude=45,
+doMD = FALSE,
+writeRaster=TRUE,
+outName=paste0(pth, "hs.tif"), device="cuda")
 }
 }

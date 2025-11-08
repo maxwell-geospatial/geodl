@@ -15,6 +15,8 @@ checkDynamicChips(
 )
 }
 \arguments{
+\item{chipsSF}{sf object created by makeDynamicChipsSF().}
+
 \item{chipSize}{Size of desired image chips. Default is 512 (512x512 cells)}
 
 \item{cellSize}{Cells size of input data. Default is 1 m.}
@@ -27,8 +29,6 @@ both the x and y directions. Default is 15 (15 meters).}
 \item{useSeed}{Whether or not to use a random seed for added jitter noise. Default is FALSE.}
 
 \item{seed}{Random seed value.}
-
-\item{chipsDF}{sf object created by makeDynamicChipsSF().}
 }
 \value{
 Dataframe of summary information about image chips.

@@ -71,7 +71,7 @@ to use. Default is 0.01.}
 \item{seRatio}{Ratio to use in squeeze and excitation module. The default is 8.}
 }
 \value{
-Unet model instance as torch nnn_module
+Unet model instance as torch nn_module
 }
 \description{
 Define a UNet architecture for geospatial semantic segmentation.
@@ -91,21 +91,22 @@ implement deep supervision using predictions generated at each stage in the deco
 \donttest{
 require(torch)
 model <- defineUNet(inChn = 4,
-                    nCls = 3,
-                    actFunc = "lrelu",
-                    useAttn = TRUE,
-                    useSE = TRUE,
-                    useRes = TRUE,
-                    useASPP = TRUE,
-                    useDS = TRUE,
-                    enChn = c(16,32,64,128),
-                    dcChn = c(128,64,32,16),
-                    btnChn = 256,
-                    dilRates=c(6,12,18),
-                    dilChn=c(256,256,256,256),
-                    negative_slope = 0.01,
-                    seRatio=8)
- t1 <- torch::torch_rand(c(12,4,128,128))
- p1 <- model(t1)
+                   nCls = 3,
+                   actFunc = "lrelu",
+                   useAttn = TRUE,
+                   useSE = TRUE,
+                   useRes = TRUE,
+                   useASPP = TRUE,
+                   useDS = TRUE,
+                   enChn = c(16,32,64,128),
+                   dcChn = c(128,64,32,16),
+                   btnChn = 256,
+                   dilRates=c(6,12,18),
+                   dilChn=c(256,256,256,256),
+                   negative_slope = 0.01,
+                   seRatio=8)
+
+t1 <- torch::torch_rand(2,4,256,256)
+tp <- model(t1)
  }
 }

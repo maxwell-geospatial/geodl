@@ -31,6 +31,9 @@ Default is 2.}
 \item{writeRaster}{TRUE or FALSE. Save output to disk. Default is TRUE.}
 
 \item{outName}{Name of output raster with full file path and extension.}
+
+\item{device}{Device on which to perform calculations. "cpu" or "cuda". Default is "cpu".
+Recommend "cuda". Recommend "cuda" to speed up calculations.}
 }
 \value{
 Three-band raster grid written to disk in TIFF format and spatRaster object.
@@ -63,6 +66,13 @@ feature extraction from digital terrain data, Earth and Space Science,
 \dontrun{
 pth <- "OUTPUT PATH"
 dtm <- rast(paste0(pth, "dtm.tif"))
-tVis <- makeTerrainVisTorch(dtm, cellSize=1,innerRadius=2,outerRadius=5,hsRadius=50, writeRaster=TRUE,outName=paste0(pth, "tVisTorch.tif"),device="cuda")
+tVis <- makeTerrainVisTorch(dtm,
+cellSize=1,
+innerRadius=2,
+outerRadius=5,
+hsRadius=50,
+writeRaster=TRUE,
+outName=paste0(pth, "tVisTorch.tif"),
+device="cuda")
 }
 }

@@ -40,6 +40,11 @@ Output can be noisy. Radii are specified using cell counts as opposed to map dis
 \dontrun{
 pth <- "OUTPUT PATH"
 dtm <- rast(paste0(pth, "dtm.tif"))
-tri11 <- makeTRI(dtm, cellSize=1,roughRadius=11,writeRaster=TRUE,outName=paste0(pth, "tri11f.tif"),device="cuda")
+tri11 <- makeTRI(dtm,
+cellSize=1,
+roughRadius=11,
+writeRaster=TRUE,
+outName=paste0(pth, "tri11f.tif"),
+device="cuda")
 }
 }

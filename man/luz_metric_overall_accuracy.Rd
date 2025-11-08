@@ -11,7 +11,8 @@ luz_metric_overall_accuracy(
   smooth = 1,
   mode = "multiclass",
   biThresh = 0.5,
-  zeroStart = TRUE
+  zeroStart = TRUE,
+  usedDS = FALSE
 )
 }
 \arguments{

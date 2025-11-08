@@ -46,6 +46,12 @@ curvatures to minimize the impact of local noise/variability.
 \dontrun{
 pth <- "OUTPUT PATH"
 dtm <- rast(paste0(pth, "dtm.tif"))
-crvPro7 <- makeCrv(dtm, cellSize=1,mode="profile",smoothRadius=7,writeRaster=TRUE,outName=paste0(pth, "crvPro7.tif"),device="cuda")
+crvPro7 <- makeCrv(dtm,
+cellSize=1,
+mode="profile",
+smoothRadius=7,
+writeRaster=TRUE,
+outName=paste0(pth, "crvPro7.tif"),
+device="cuda")
 }
 }

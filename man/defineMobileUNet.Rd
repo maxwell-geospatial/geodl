@@ -18,6 +18,8 @@ defineMobileUNet(
 )
 }
 \arguments{
+\item{inChn}{Number of input channels or predictor variables. Default is 3.}
+
 \item{nCls}{Number of classes being differentiated. For a binary classification,
 this can be either 1 or 2. If 2, the problem is treated as a multiclass problem,
 and a multiclass loss metric should be used. Default is 3.}
@@ -66,8 +68,6 @@ deep supervision (useDS = TRUE) and attention gates along the skip connections (
 are used and more then three predictor variables are provided, ImageNet weights in the layer of the encoder block are
 averaged. If three channels or predictor variables are provided, the user can specify to user the ImageNet weights or
 average them.
-
-#' @param inChn Number of input channels or predictor variables. Default is 3.
 }
 \examples{
 \donttest{

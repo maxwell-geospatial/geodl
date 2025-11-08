@@ -46,6 +46,11 @@ index.
 \dontrun{
 pth <- "OUTPUT PATH"
 dtm <- rast(paste0(pth, "dtm.tif"))
-aspR <- makeAspect(dtm, cellSize=1, flatThreshold=1, mode= "aspect", writeRaster=TRUE, outName=paste0(pth, "asp.tif"),device="cuda")
+aspR <- makeAspect(dtm, cellSize=1,
+flatThreshold=1,
+mode= "aspect",
+writeRaster=TRUE,
+outName=paste0(pth, "asp.tif"),
+device="cuda")
 }
 }

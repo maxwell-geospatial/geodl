@@ -13,7 +13,7 @@ output: github_document
 
 Note: This release has yet to be submitted to CRAN. 
 
-1. Support for four model architectures: UNet, UNet with MobileNetv2 encoder, UNet3+, and HRNet 
+1. Support for three model architectures: UNet, UNet with MobileNetv2 encoder, and UNet3+
 2. UNet with MobileNetv2 encoder is no longer limited to three input predictor variables
 3. Assessment and prediction functions now expect a nn_module object as opposed to a luz fitted object
 4. Dynamically generate chips during training process as opposed to saving them to disk beforehand (still experimental)
@@ -61,4 +61,4 @@ devtools::install_github("maxwell-geospatial/geodl")
 ```
 ## Example
 
-Please see the associated article and articles/vignettes for details and example workflows and explanations. 
+[Chapter 15](https://wvview.org/gslr/C15geodl_P1.html) and [Chapter 16](https://wvview.org/gslr/c16geodl_P2.html) in the free and openly available online text [*Geospatial Supervised Learning using R*](https://wvview.org/gslr/index.html) serve as the documentation for this package. 

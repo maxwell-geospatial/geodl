@@ -13,7 +13,7 @@
 #' For gray scale or single-band images, assign the same index to all three bands.
 #' @param b Index of channel to assign to blue channel. Default is 3 or the third channel.
 #' For gray scale or single-band images, assign the same index to all three bands.
-#'  @param cCodes class indices as a vector of integer values equal in length to the number of
+#' @param cCodes class indices as a vector of integer values equal in length to the number of
 #' classes.
 #' @param cNames Vector of class names. Must be the same length as number of classes.
 #' @param cColors Vector of color values to use to display the masks. Colors are applied based on the
