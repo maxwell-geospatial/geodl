@@ -5,6 +5,8 @@
 #' Calculates recall based on luz_metric() for use within training and validation
 #' loops.
 #'
+#' @importFrom luz luz_metric
+#'
 #' @param nCls Number of classes being differentiated.
 #' @param cropFactorMsk Number of rows and columns of cells to not include for mask in assessment to
 #' minimize edge effects. Default is 0 or no cropping.
@@ -24,7 +26,6 @@
 #' the defineSegDataSetDS() function, this should be set to TRUE. Only the original resolution is used
 #' to calculate assessment metrics. Default is FALSE.
 #' @return Calculated metric returned as a base-R vector as opposed to tensor.
-#' @importFrom luz luz_metric
 #' @examples
 #' \donttest{
 #' library(terra)
@@ -163,6 +164,8 @@ luz_metric_recall <- luz::luz_metric(
 #' Calculates precision based on luz_metric() for use within training and validation
 #' loops.
 #'
+#' @importFrom luz luz_metric
+#'
 #' @param nCls Number of classes being differentiated.
 #' @param cropFactorMsk Number of rows and columns of cells to not include for mask in assessment to
 #' minimize edge effects. Default is 0 or no cropping.
@@ -182,7 +185,6 @@ luz_metric_recall <- luz::luz_metric(
 #' the defineSegDataSetDS() function, this should be set to TRUE. Only the original resolution is used
 #' to calculate assessment metrics. Default is FALSE.
 #' @return Calculated metric returned as a base-R vector as opposed to tensor.
-#' @importFrom luz luz_metric
 #' @examples
 #' \donttest{
 #' library(terra)
@@ -346,6 +348,8 @@ luz_metric_precision <- luz::luz_metric(
 #' Calculates F1-score based on luz_metric() for use within training and validation
 #' loops.
 #'
+#' @importFrom luz luz_metric
+#'
 #' @param nCls Number of classes being differentiated.
 #' @param cropFactorMsk Number of rows and columns of cells to not include for mask in assessment to
 #' minimize edge effects. Default is 0 or no cropping.
@@ -365,7 +369,6 @@ luz_metric_precision <- luz::luz_metric(
 #' the defineSegDataSetDS() function, this should be set to TRUE. Only the original resolution is used
 #' to calculate assessment metrics. Default is FALSE.
 #' @return Calculated metric returned as a base-R vector as opposed to tensor.
-#' @importFrom luz luz_metric
 #' @examples
 #' \donttest{
 #' library(terra)
@@ -511,6 +514,8 @@ luz_metric_f1score <- luz::luz_metric(
 #'
 #' luz_metric function to calculate overall accuracy ((correct/total)*100)
 #'
+#' @importFrom luz luz_metric
+#'
 #' @param nCls Number of classes being differentiated.
 #' @param cropFactorMsk Number of rows and columns of cells to not include for mask in assessment to
 #' minimize edge effects. Default is 0 or no cropping.
@@ -529,7 +534,6 @@ luz_metric_f1score <- luz::luz_metric(
 #' the defineSegDataSetDS() function, this should be set to TRUE. Only the original resolution is used
 #' to calculate assessment metrics. Default is FALSE.
 #' @return Calculated metric returned as a base-R vector as opposed to tensor.
-#' @importFrom luz luz_metric
 #' @examples
 #' \donttest{
 #' require(terra)

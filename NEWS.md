@@ -1,4 +1,4 @@
-# geodl 0.2.0
+# geodl 0.3.0
 
 * Support for three model architectures: UNet, UNet with MobileNetv2 encoder, and UNet3+
 * UNet with MobileNetv2 encoder is no longer limited to three input predictor variables

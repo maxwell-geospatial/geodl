@@ -101,7 +101,7 @@ callback_save_model_state_dict <- luz::luz_callback(
       self$save_dir,
       sprintf("%s_%03d.pt", self$prefix, epoch)
     )
-    torch_save(model_state, file_path)
+    torch::torch_save(model_state, file_path)
     cat(sprintf("Saved model state dict to: %s\n", file_path))
   }
 )
