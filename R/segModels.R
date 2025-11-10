@@ -22,7 +22,7 @@ seModule <- torch::nn_module(
   }
 )
 
-
+#Conv block
 simpleConvBlk <- torch::nn_module(
   initialize = function(inChn,
                         outChn,
@@ -234,6 +234,7 @@ doubleConvBlkR <- torch::nn_module(
 )
 
 
+#Upsample with blinear interpolation
 upSamp <- torch::nn_module(
   initialize = function(scale_factor,
                         mode = "bilinear",
@@ -410,7 +411,7 @@ asppComp <- torch::nn_module(
   }
 )
 
-
+#Global average pooling
 global_avg_pool2d <- torch::nn_module(
   classname = "GlobalAvgPool2d",
   initialize = function() {
@@ -575,7 +576,7 @@ asppBlkR <- torch::nn_module(
   }
 )
 
-
+# Block with 4 convolutions
 quadConvBlkR <- torch::nn_module(
   initialize = function(inChn,
                         outChn,

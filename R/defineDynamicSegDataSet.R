@@ -6,7 +6,7 @@ makeDynamicChip <- function(chipIn,
                             useSeed,
                             seed){
 
-  chipIn2 <- chipIn |> sf::st_drop_geometry()
+  chipIn2 <- sf::st_drop_geometry(chipIn)
 
   inFeat <- sf::st_read(paste0(chipIn2[1, "featPth"], chipIn2[1, "featName"]), quiet=TRUE)
   inRaster <- terra::rast(paste0(chipIn2[1, "imgPth"], chipIn2[1, "imgName"]))

@@ -80,6 +80,8 @@ countParams <- function(model, test_data) {
 #' Save the model state dictionary to disk at the end of each epoch as a .pt file.
 #' For use within luz training loop.
 #'
+#' @importFrom luz luz_callback
+#'
 #' @param save_dir path and directory to save state dictionary files
 #' @param prefix prefix for file name. Default is "model_epoch". The suffix
 #' is the epoch number.
