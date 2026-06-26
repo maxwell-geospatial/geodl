@@ -57,255 +57,75 @@ describeChips <- function(folder,
                           numChipsBack = 200,
                           subSamplePix = TRUE,
                           sampsPerChip = 100){
-  chipDF <- data.frame()
+
+  chipDF   <- data.frame()
   mskStats <- data.frame()
-  if(subSample == FALSE){
-    if(subSamplePix == FALSE){
-      if(mode == "All" | mode == "Positive"){
-        lstChips <- list.files(paste0(folder, "images/"), pattern=paste0("\\", extension, "$"))
-        lstMsk <- list.files(paste0(folder, "masks/"), pattern=paste0("\\", extension, "$"))
-        for(chip in lstChips){
-          chipIn <- terra::rast(paste0(folder, "images/", chip))
-          chipInDF <- data.frame(chipIn)
-          nCols <- ncol(chipInDF)
-          colNames <- paste0("B", seq(1,nCols))
-          names(chipInDF) <- colNames
-          chipDF <- dplyr::bind_rows(chipDF, chipInDF)
-        }
-        imgStats <- psych::describe(chipDF)
-        for(msk in lstMsk){
-          mskIn <- terra::rast(paste0(folder, "masks/", msk))
-          mskInDF <- terra::freq(mskIn)
-          mskStats <- dplyr::bind_rows(mskStats, mskInDF)
-        }
-        mskStats2 <- mskStats |> dplyr::group_by(value) |> dplyr::summarize(cnt = sum(count))
 
-      }else{
-        lstChipsB <- list.files(paste0(folder, "images/background/"), pattern=paste0("\\", extension, "$"))
-        lstChipsP <- list.files(paste0(folder, "images/positive/"), pattern=paste0("\\", extension, "$"))
-        lstMskB <- list.files(paste0(folder, "masks/background/"), pattern=paste0("\\", extension, "$"))
-        lstMskP <- list.files(paste0(folder, "masks/positive/"), pattern=paste0("\\", extension, "$"))
-        for(chip in lstChipsB){
-          chipIn <- terra::rast(paste0(folder, "images/background/", chip))
-          chipInDF <- data.frame(chipIn)
-          nCols <- ncol(chipInDF)
-          colNames <- paste0("B", seq(1,nCols))
-          names(chipInDF) <- colNames
-          chipDF <- dplyr::bind_rows(chipDF, chipInDF)
-        }
-        for(chip in lstChipsP){
-          chipIn <- terra::rast(paste0(folder, "images/positive/", chip))
-          chipInDF <- data.frame(chipIn)
-          nCols <- ncol(chipInDF)
-          colNames <- paste0("B", seq(1,nCols))
-          names(chipInDF) <- colNames
-          chipDF <- dplyr::bind_rows(chipDF, chipInDF)
-        }
+  # Read one chip's pixel values into a band-named dataframe
+  readChipPixels <- function(path) {
+    chipIn <- terra::rast(path)
+    df     <- data.frame(chipIn)
+    if(subSamplePix) df <- df |> dplyr::sample_n(min(sampsPerChip, nrow(df)))
+    names(df) <- paste0("B", seq_len(ncol(df)))
+    df
+  }
 
-        imgStats <- psych::describe(chipDF)
-        for(msk in lstMskB){
-          mskIn <- terra::rast(paste0(folder, "masks/background/", msk))
-          mskInDF <- terra::freq(mskIn)
-          mskStats <- dplyr::bind_rows(mskStats, mskInDF)
-        }
-        for(msk in lstMskP){
-          mskIn <- terra::rast(paste0(folder, "masks/positive/", msk))
-          mskInDF <- terra::freq(mskIn)
-          mskStats <- dplyr::bind_rows(mskStats, mskInDF)
-        }
-        mskStats2 <- mskStats |> dplyr::group_by(value) |> dplyr::summarize(cnt = sum(count))
-      }
-    }else{
-      if(mode == "All" | mode == "Positive"){
-        lstChips <- list.files(paste0(folder, "images/"), pattern=paste0("\\", extension, "$"))
-        lstMsk <- list.files(paste0(folder, "masks/"), pattern=paste0("\\", extension, "$"))
-        for(chip in lstChips){
-          chipIn <- terra::rast(paste0(folder, "images/", chip))
-          chipInDF <- data.frame(chipIn)
-          chipInDF <- chipInDF |> dplyr::sample_n(sampsPerChip)
-          nCols <- ncol(chipInDF)
-          colNames <- paste0("B", seq(1,nCols))
-          names(chipInDF) <- colNames
-          chipDF <- dplyr::bind_rows(chipDF, chipInDF)
-        }
-        imgStats <- psych::describe(chipDF)
-        for(msk in lstMsk){
-          mskIn <- terra::rast(paste0(folder, "masks/", msk))
-          mskInDF <- terra::freq(mskIn)
-          mskStats <- dplyr::bind_rows(mskStats, mskInDF)
-        }
-        mskStats2 <- mskStats |> dplyr::group_by(value) |> dplyr::summarize(cnt = sum(count))}
-      else{
-        lstChipsB <- list.files(paste0(folder, "images/background/"), pattern=paste0("\\", extension, "$"))
-        lstChipsP <- list.files(paste0(folder, "images/positive/"), pattern=paste0("\\", extension, "$"))
-        lstMskB <- list.files(paste0(folder, "masks/background/"), pattern=paste0("\\", extension, "$"))
-        lstMskP <- list.files(paste0(folder, "masks/positive/"), pattern=paste0("\\", extension, "$"))
-        for(chip in lstChipsB){
-          chipIn <- terra::rast(paste0(folder, "images/background/", chip))
-          chipInDF <- data.frame(chipIn)
-          chipInDF <- chipInDF |> dplyr::sample_n(sampsPerChip)
-          nCols <- ncol(chipInDF)
-          colNames <- paste0("B", seq(1,nCols))
-          names(chipInDF) <- colNames
-          chipDF <- dplyr::bind_rows(chipDF, chipInDF)
-        }
-        for(chip in lstChipsP){
-          chipIn <- terra::rast(paste0(folder, "images/positive/", chip))
-          chipInDF <- data.frame(chipIn)
-          chipInDF <- chipInDF |> dplyr::sample_n(sampsPerChip)
-          nCols <- ncol(chipInDF)
-          colNames <- paste0("B", seq(1,nCols))
-          names(chipInDF) <- colNames
-          chipDF <- dplyr::bind_rows(chipDF, chipInDF)
-        }
+  # Subsample a file list, keeping mask list aligned
+  subsamplePair <- function(chips, msks, n) {
+    idx  <- sample(seq_len(length(chips)), min(n, length(chips)))
+    list(chips=chips[idx], msks=msks[idx])
+  }
 
-        imgStats <- psych::describe(chipDF)
-        for(msk in lstMskB){
-          mskIn <- terra::rast(paste0(folder, "masks/background/", msk))
-          mskInDF <- terra::freq(mskIn)
-          mskStats <- dplyr::bind_rows(mskStats, mskInDF)
-        }
-        for(msk in lstMskP){
-          mskIn <- terra::rast(paste0(folder, "masks/positive/", msk))
-          mskInDF <- terra::freq(mskIn)
-          mskStats <- dplyr::bind_rows(mskStats, mskInDF)
-        }
-        mskStats2 <- mskStats |> dplyr::group_by(value) |> dplyr::summarize(cnt = sum(count))
-      }
-    }
-  }else{
-    if(subSamplePix == FALSE){
-      if(mode == "All" | mode == "Positive"){
-        lstChips <- list.files(paste0(folder, "images/"), pattern=paste0("\\", extension, "$"))
-        lstMsk <- list.files(paste0(folder, "masks/"), pattern=paste0("\\", extension, "$"))
-        samps <- sample(seq(1, length(lstChips), 1), numChips)
-        lstChips <- lstChips[c(samps)]
-        lstMsk <- lstMsk[c(samps)]
-        for(chip in lstChips){
-          chipIn <- terra::rast(paste0(folder, "images/", chip))
-          chipInDF <- data.frame(chipIn)
-          nCols <- ncol(chipInDF)
-          colNames <- paste0("B", seq(1,nCols))
-          names(chipInDF) <- colNames
-          chipDF <- dplyr::bind_rows(chipDF, chipInDF)
-        }
-        imgStats <- psych::describe(chipDF)
-        for(msk in lstMsk){
-          mskIn <- terra::rast(paste0(folder, "masks/", msk))
-          mskInDF <- terra::freq(mskIn)
-          mskStats <- dplyr::bind_rows(mskStats, mskInDF)
-        }
-        mskStats2 <- mskStats |> dplyr::group_by(value) |> dplyr::summarize(cnt = sum(count))
-      }else{
-        lstChipsB <- list.files(paste0(folder, "images/background/"), pattern=paste0("\\", extension, "$"))
-        lstChipsP <- list.files(paste0(folder, "images/positive/"), pattern=paste0("\\", extension, "$"))
-        lstMskB <- list.files(paste0(folder, "masks/background/"), pattern=paste0("\\", extension, "$"))
-        lstMskP <- list.files(paste0(folder, "masks/positive/"), pattern=paste0("\\", extension, "$"))
-        sampsB <- sample(seq(1, length(lstChipsB), 1), numChipsBack)
-        sampsP <- sample(seq(1, length(lstChipsP), 1), numChips)
-        lstChipsB <- lstChipsB[c(sampsB)]
-        lstMskB <- lstMskB[c(sampsB)]
-        lstChipsP <- lstChipsP[c(sampsP)]
-        lstMskP <- lstMskP[c(sampsP)]
-        for(chip in lstChipsB){
-          chipIn <- terra::rast(paste0(folder, "images/background/", chip))
-          chipInDF <- data.frame(chipIn)
-          nCols <- ncol(chipInDF)
-          colNames <- paste0("B", seq(1,nCols))
-          names(chipInDF) <- colNames
-          chipDF <- dplyr::bind_rows(chipDF, chipInDF)
-        }
-        for(chip in lstChipsP){
-          chipIn <- terra::rast(paste0(folder, "images/positive/", chip))
-          chipInDF <- data.frame(chipIn)
-          nCols <- ncol(chipInDF)
-          colNames <- paste0("B", seq(1,nCols))
-          names(chipInDF) <- colNames
-          chipDF <- dplyr::bind_rows(chipDF, chipInDF)
-        }
-
-        imgStats <- psych::describe(chipDF)
-        for(msk in lstMskB){
-          mskIn <- terra::rast(paste0(folder, "masks/background/", msk))
-          mskInDF <- terra::freq(mskIn)
-          mskStats <- dplyr::bind_rows(mskStats, mskInDF)
-        }
-        for(msk in lstMskP){
-          mskIn <- terra::rast(paste0(folder, "masks/positive/", msk))
-          mskInDF <- terra::freq(mskIn)
-          mskStats <- dplyr::bind_rows(mskStats, mskInDF)
-        }
-        mskStats2 <- mskStats |> dplyr::group_by(value) |> dplyr::summarize(cnt = sum(count))
-      }
-    }else{
-      if(mode == "All" | mode == "Positive"){
-        lstChips <- list.files(paste0(folder, "images/"), pattern=paste0("\\", extension, "$"))
-        lstMsk <- list.files(paste0(folder, "masks/"), pattern=paste0("\\", extension, "$"))
-        samps <- sample(seq(1, length(lstChips), 1), numChips)
-        lstChips <- lstChips[c(samps)]
-        lstMsk <- lstMsk[c(samps)]
-        for(chip in lstChips){
-          chipIn <- terra::rast(paste0(folder, "images/", chip))
-          chipInDF <- data.frame(chipIn)
-          chipInDF <- chipInDF |> dplyr::sample_n(sampsPerChip)
-          nCols <- ncol(chipInDF)
-          colNames <- paste0("B", seq(1,nCols))
-          names(chipInDF) <- colNames
-          chipDF <- dplyr::bind_rows(chipDF, chipInDF)
-        }
-        imgStats <- psych::describe(chipDF)
-        for(msk in lstMsk){
-          mskIn <- terra::rast(paste0(folder, "masks/", msk))
-          mskInDF <- terra::freq(mskIn)
-          mskStats <- dplyr::bind_rows(mskStats, mskInDF)
-        }
-        mskStats2 <- mskStats |> dplyr::group_by(value) |> dplyr::summarize(cnt = sum(count))
-      }else{
-        lstChipsB <- list.files(paste0(folder, "images/background/"), pattern=paste0("\\", extension, "$"))
-        lstChipsP <- list.files(paste0(folder, "images/positive/"), pattern=paste0("\\", extension, "$"))
-        lstMskB <- list.files(paste0(folder, "masks/background/"), pattern=paste0("\\", extension, "$"))
-        lstMskP <- list.files(paste0(folder, "masks/positive/"), pattern=paste0("\\", extension, "$"))
-        sampsB <- sample(seq(1, length(lstChipsB), 1), numChipsBack)
-        sampsP <- sample(seq(1, length(lstChipsP), 1), numChips)
-        lstChipsB <- lstChipsB[c(sampsB)]
-        lstMskB <- lstMskB[c(sampsB)]
-        lstChipsP <- lstChipsP[c(sampsP)]
-        lstMskP <- lstMskP[c(sampsP)]
-        for(chip in lstChipsB){
-          chipIn <- terra::rast(paste0(folder, "images/background/", chip))
-          chipInDF <- data.frame(chipIn)
-          chipInDF <- chipInDF |> dplyr::sample_n(sampsPerChip)
-          nCols <- ncol(chipInDF)
-          colNames <- paste0("B", seq(1,nCols))
-          names(chipInDF) <- colNames
-          chipDF <- dplyr::bind_rows(chipDF, chipInDF)
-        }
-        for(chip in lstChipsP){
-          chipIn <- terra::rast(paste0(folder, "images/positive/", chip))
-          chipInDF <- data.frame(chipIn)
-          chipInDF <- chipInDF |> dplyr::sample_n(sampsPerChip)
-          nCols <- ncol(chipInDF)
-          colNames <- paste0("B", seq(1,nCols))
-          names(chipInDF) <- colNames
-          chipDF <- dplyr::bind_rows(chipDF, chipInDF)
-        }
-
-        imgStats <- psych::describe(chipDF)
-        for(msk in lstMskB){
-          mskIn <- terra::rast(paste0(folder, "masks/background/", msk))
-          mskInDF <- terra::freq(mskIn)
-          mskStats <- dplyr::bind_rows(mskStats, mskInDF)
-        }
-        for(msk in lstMskP){
-          mskIn <- terra::rast(paste0(folder, "masks/positive/", msk))
-          mskInDF <- terra::freq(mskIn)
-          mskStats <- dplyr::bind_rows(mskStats, mskInDF)
-        }
-        mskStats2 <- mskStats |> dplyr::group_by(value) |> dplyr::summarize(cnt = sum(count))
-      }
+  # Accumulate pixel stats from a list of chip paths
+  addChipStats <- function(chipPaths) {
+    for(chip in chipPaths){
+      chipDF <<- dplyr::bind_rows(chipDF, readChipPixels(chip))
     }
   }
-  outStats <- list(ImageStats = imgStats,
-                   mskStats = mskStats2)
-  return(outStats)
+
+  # Accumulate frequency counts from a list of mask paths
+  addMskStats <- function(mskPaths) {
+    for(msk in mskPaths){
+      mskStats <<- dplyr::bind_rows(mskStats, terra::freq(terra::rast(msk)))
+    }
+  }
+
+  if(mode == "All" | mode == "Positive"){
+
+    lstChips <- list.files(paste0(folder, "images/"), pattern=paste0("\\", extension, "$"), full.names=TRUE)
+    lstMsk   <- list.files(paste0(folder, "masks/"),  pattern=paste0("\\", extension, "$"), full.names=TRUE)
+
+    if(subSample){
+      pair     <- subsamplePair(lstChips, lstMsk, numChips)
+      lstChips <- pair$chips
+      lstMsk   <- pair$msks
+    }
+
+    addChipStats(lstChips)
+    addMskStats(lstMsk)
+
+  }else{
+
+    lstChipsB <- list.files(paste0(folder, "images/background/"), pattern=paste0("\\", extension, "$"), full.names=TRUE)
+    lstChipsP <- list.files(paste0(folder, "images/positive/"),   pattern=paste0("\\", extension, "$"), full.names=TRUE)
+    lstMskB   <- list.files(paste0(folder, "masks/background/"),  pattern=paste0("\\", extension, "$"), full.names=TRUE)
+    lstMskP   <- list.files(paste0(folder, "masks/positive/"),    pattern=paste0("\\", extension, "$"), full.names=TRUE)
+
+    if(subSample){
+      pairB     <- subsamplePair(lstChipsB, lstMskB, numChipsBack)
+      pairP     <- subsamplePair(lstChipsP, lstMskP, numChips)
+      lstChipsB <- pairB$chips; lstMskB <- pairB$msks
+      lstChipsP <- pairP$chips; lstMskP <- pairP$msks
+    }
+
+    addChipStats(lstChipsB)
+    addChipStats(lstChipsP)
+    addMskStats(lstMskB)
+    addMskStats(lstMskP)
+  }
+
+  imgStats  <- psych::describe(chipDF)
+  mskStats2 <- mskStats |> dplyr::group_by(value) |> dplyr::summarize(cnt=sum(count))
+
+  return(list(ImageStats=imgStats, mskStats=mskStats2))
 }

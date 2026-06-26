@@ -63,51 +63,8 @@
 #' loss. Default is FALSE.
 #' @param device Define device being used for computation. Define using torch_device().
 #' @return Loss metric for use in training process.
-#' @examples
-#' \donttest{
-#' library(terra)
-#' library(torch)
-#' #Generate example data as SpatRasters
-#' ref <- terra::rast(matrix(sample(c(1, 2, 3), 625, replace=TRUE), nrow=25, ncol=25))
-#' pred1 <- terra::rast(matrix(sample(c(1:150), 625, replace=TRUE), nrow=25, ncol=25))
-#' pred2 <- terra::rast(matrix(sample(c(1:150), 625, replace=TRUE), nrow=25, ncol=25))
-#' pred3 <- terra::rast(matrix(sample(c(1:150), 625, replace=TRUE), nrow=25, ncol=25))
-#' pred <- c(pred2, pred2, pred3)
-#'
-#' #Convert SpatRaster to array
-#' ref <- terra::as.array(ref)
-#' pred <- terra::as.array(pred)
-#'
-#' #Convert arrays to tensors and reshape
-#' ref <- torch::torch_tensor(ref, dtype=torch::torch_long())
-#' pred <- torch::torch_tensor(pred, dtype=torch::torch_float32())
-#' ref <- ref$permute(c(3,1,2))
-#' pred <- pred$permute(c(3,1,2))
-#'
-#' #Add mini-batch dimension
-#' ref <- ref$unsqueeze(1)
-#' pred <- pred$unsqueeze(1)
-#'
-#' #Duplicate tensors to have a batch of two
-#' ref <- torch::torch_cat(list(ref, ref), dim=1)
-#' pred <- torch::torch_cat(list(pred, pred), dim=1)
-#'
-#' #Instantiate loss metric
-#' myDiceLoss <- defineUnifiedFocalLoss(nCls=3,
-#'                                     lambda=0, #Only use region-based loss
-#'                                     gamma= 1,
-#'                                     delta= 0.5, #Equal weights for FP and FN
-#'                                     smooth = 1e-8,
-#'                                     zeroStart=FALSE,
-#'                                     clsWghtsDist=1,
-#'                                     clsWghtsReg=1,
-#'                                     useLogCosH =FALSE,
-#'                                     device='cpu')
-#' #Calculate loss
-#' myDiceLoss(pred, ref)
-#' }
 #' @export
-defineUnifiedFocalLoss <- torch::nn_module(#This is simply a class-based version of function defined above/implements function internally
+defineUnifiedFocalLoss <- torch::nn_module(
   initialize = function(nCls=3,
                         cropFactorMsk=0,
                         cropFactorPred=0,
@@ -118,159 +75,107 @@ defineUnifiedFocalLoss <- torch::nn_module(#This is simply a class-based version
                         zeroStart=TRUE,
                         clsWghtsDist=1,
                         clsWghtsReg=1,
-                        useLogCosH =FALSE,
+                        useLogCosH=FALSE,
                         device="cuda"){
 
-    self$nCls = nCls
-    self$cropFactorMsk = cropFactorMsk
-    self$cropFactorPred = cropFactorPred
-    self$lambda = lambda
-    self$gamma = gamma
-    self$delta= delta
-    self$smooth = smooth
-    self$zeroStart = zeroStart
-    self$clsWghtsDist = clsWghtsDist
-    self$clsWghtsReg = clsWghtsReg
-    self$useLogCosH =useLogCosH
-    self$device=device
+    self$nCls          <- nCls
+    self$cropFactorMsk <- cropFactorMsk
+    self$cropFactorPred <- cropFactorPred
+    self$lambda        <- lambda
+    self$gamma         <- gamma
+    self$delta         <- delta
+    self$smooth        <- smooth
+    self$zeroStart     <- zeroStart
+    self$useLogCosH    <- useLogCosH
+    self$device        <- device
 
+    # Expand scalar delta and class weights to per-class vectors once
+    delta2        <- if(length(delta) == 1)       rep(delta,       nCls) else delta
+    clsWghtsDist2 <- if(length(clsWghtsDist) == 1) rep(clsWghtsDist, nCls) else clsWghtsDist
+    clsWghtsReg2  <- if(length(clsWghtsReg) == 1)  rep(clsWghtsReg,  nCls) else clsWghtsReg
+
+    # Pre-build all constant tensors so they are not recreated on every forward call
+    self$smoothT      <- torch::torch_tensor(smooth,
+                                             dtype=torch::torch_float32(),
+                                             device=device)
+    self$lambdaT      <- torch::torch_tensor(lambda,
+                                             dtype=torch::torch_float32(),
+                                             device=device)
+    self$gammaT       <- torch::torch_tensor(gamma,
+                                             dtype=torch::torch_float32(),
+                                             device=device)
+    self$gammaRepT    <- torch::torch_tensor(rep(gamma, nCls),
+                                             dtype=torch::torch_float32(),
+                                             device=device)
+    self$deltaT       <- torch::torch_tensor(delta2,
+                                             dtype=torch::torch_float32(),
+                                             device=device)
+    self$wghtT        <- torch::torch_tensor(clsWghtsDist2,
+                                             dtype=torch::torch_float32(),
+                                             device=device)
+    self$clsWghtsRegT <- torch::torch_tensor(clsWghtsReg2,
+                                             dtype=torch::torch_float32(),
+                                             device=device)
+
+    # (1, C, 1, 1) weight tensor for broadcasting against (N, C, H, W) one-hot maps
+    self$clsWghtsDistMapT <- torch::torch_tensor(clsWghtsDist2,
+                                                 dtype=torch::torch_float32(),
+                                                 device=device)$view(c(1L, nCls, 1L, 1L))
   },
 
   forward = function(pred, target){
 
-    pred <- cropTensor(pred, crpFactor=self$cropFactorPred)
+    pred   <- cropTensor(pred,   crpFactor=self$cropFactorPred)
     target <- cropTensor(target, crpFactor=self$cropFactorMsk)
 
-    # Preparation ------------------------------------------------------------
+    # Convert target to long and shift indices if classes start at 0
+    target1 <- target$to(dtype=torch::torch_long(), device=self$device)
+    if(self$zeroStart) target1 <- target1 + 1L
 
-    #Replicate gamma to vector with same length as class count
-    gammaRep = rep(self$gamma, self$nCls)
+    # Softmax probabilities for region-based loss
+    pred_soft <- torch::nnf_softmax(pred, dim=2L)
 
-    #If only one delta value is provided, replicated to a vector with same length as the class count
-    if(length(self$delta)==1){
-      delta2 = rep(self$delta, self$nCls)
-    }else{
-      delta2 = self$delta
-    }
+    # One-hot encode: (N,1,H,W) -> nnf_one_hot -> (N,1,H,W,C) -> squeeze dim2 -> (N,H,W,C) -> permute -> (N,C,H,W)
+    target_one_hot <- torch::nnf_one_hot(target1, num_classes=self$nCls)
+    target_one_hot <- target_one_hot$squeeze(2L)
+    target_one_hot <- target_one_hot$permute(c(1L, 4L, 2L, 3L))
 
-    #If only one class weight is provided, replicate to a vector with the same length as the class count
-
-    #For distribution-based loss
-    if(length(self$clsWghtsDist)==1){
-      clsWghtsDist2 = rep(self$clsWghtsDist, self$nCls)
-    }else{
-      clsWghtsDist2 = self$clsWghtsDist
-    }
-
-    #For region-based loss
-    if(length(self$clsWghtsReg)==1){
-      clsWghtsReg2 = rep(self$clsWghtsReg, self$nCls)
-    }else{
-      clsWghtsReg2 = self$clsWghtsReg
-    }
-
-    #Convert smooth, lambda, delta, gamma, and class weight vectors/parameters to torch tensors and move to device
-    smoothT <- torch::torch_tensor(self$smooth,
-                                   dtype=torch::torch_float32(),
-                                   device=self$device)
-    lambdaT <- torch::torch_tensor(self$lambda,
-                                   dtype=torch::torch_float32(),
-                                   device=self$device)
-    deltaT <- torch::torch_tensor(delta2,
-                                  dtype=torch::torch_float32(),
-                                  device=self$device)
-    gammaT <- torch::torch_tensor(self$gamma,
-                                  dtype=torch::torch_float32(),
-                                  device=self$device)
-    gammaRepT <- torch::torch_tensor(gammaRep,
-                                     dtype=torch::torch_float32(),
-                                     device=self$device)
-    wghtT <- torch::torch_tensor(clsWghtsDist2,
-                                 dtype=torch::torch_float32(),
-                                 device=self$device)
-    clsWghtsRegT <- torch::torch_tensor(clsWghtsReg2,
-                                        dtype=torch::torch_float32(),
-                                        device=self$device)
-
-    #Convert target to long type
-    target1 <- torch::torch_tensor(target,
-                                   dtype=torch::torch_long(),
-                                   device=self$device)
-
-    #Add 1 if class codes start at 0 for one-hot encoding
-    if(self$zeroStart == TRUE){
-      target1 <- torch::torch_tensor(target1+1,
-                                     dtype=torch::torch_long(),
-                                     device=self$device)
-    }
-
-    #Apply softmax to logits along class dimension (all predictions at pixel will sum to 1)
-    pred_soft <- pred |>
-      torch::nnf_softmax(dim = 2)
-
-    #One hot encode masks and reshape as needed
-    target_one_hot <- torch::nnf_one_hot(target1,
-                                         num_classes = self$nCls)
-    target_one_hot <- target_one_hot$squeeze()
-    target_one_hot <- target_one_hot$permute(c(1,4,2,3))
-
-    # Distribution-based loss -------------------------------------------------
-
-    #Calculate focal CE loss with gamma and class weights
-    #https://github.com/pytorch/vision/issues/3250
-
+    # Distribution-based loss ------------------------------------------------
     if(self$lambda > 0){
-      #Remove class dimension (required for CE loss as implemented with torch)
-      targetCE <- target1$squeeze()
+      # Remove channel dim for CE; squeeze(2) targets dim of size 1 only
+      targetCE <- target1$squeeze(2L)
 
-      #Calculate CE loss with no reduction (use predicted logits with no softmax applied)
-      ceL = torch::nnf_cross_entropy(pred,
-                                     targetCE,
-                                     weight=wghtT,
-                                     reduction="none")
+      # Unweighted per-pixel CE for the focal probability estimate
+      ceL <- torch::nnf_cross_entropy(pred, targetCE, reduction="none")
 
-      #Calculate modified focal CE loss
-      pt = torch::torch_exp(-ceL)
-      mFL <- ((1.0-pt)**(1.0-gammaT))*ceL
+      # True class probability: p_t = exp(-CE_unweighted)
+      pt <- torch::torch_exp(-ceL)
 
-      #sum of all weights
-      wghtMet <- pred
-      wghtMet[] = 0.0
-      for(i in 1:length(clsWghtsDist2)){
-        wghtMet[,i,,] = clsWghtsDist2[i]
-      }
+      # Focal modifier * class-weighted CE
+      # Weight applied per-pixel via one-hot broadcast: avoids passing weight to CE
+      # (which would distort pt) while still weighting the loss contribution
+      wghtsPerPixel <- torch::torch_sum(target_one_hot * self$clsWghtsDistMapT, dim=2L)
+      mFL <- ((1.0 - pt)**(1.0 - self$gammaT)) * ceL * wghtsPerPixel
 
-      wghtMetT <- torch::torch_tensor(wghtMet,
-                                      dtype=torch::torch_float32(),
-                                      device=self$device)
-      wghtSumT <- torch::torch_sum(target_one_hot*wghtMetT)
-
-      #Get mean distribution-based loss for all pixels
-      distMetric <- torch::torch_sum(mFL)/wghtSumT
+      # Normalise by total weight mass across the batch
+      wghtSumT    <- torch::torch_sum(target_one_hot * self$clsWghtsDistMapT)
+      distMetric  <- torch::torch_sum(mFL) / wghtSumT
     }
 
     # Region-based loss -------------------------------------------------------
-
     if(self$lambda < 1){
-      #Get tps, fps, and fns
-      tps <- torch::torch_sum(pred_soft * target_one_hot, dim=c(1,3,4))
-      fps <- torch::torch_sum(pred_soft * (1.0 - target_one_hot), dim=c(1,3,4))
-      fns <- torch::torch_sum((1.0 - pred_soft) * target_one_hot, dim=c(1,3,4))
+      tps <- torch::torch_sum(pred_soft * target_one_hot,          dim=c(1L, 3L, 4L))
+      fps <- torch::torch_sum(pred_soft * (1.0 - target_one_hot),  dim=c(1L, 3L, 4L))
+      fns <- torch::torch_sum((1.0 - pred_soft) * target_one_hot,  dim=c(1L, 3L, 4L))
 
-      #Calculated modified Tversky Index using tps, fps, fns, and delta parameter
-      mTI <- (tps + smoothT)/(tps + ((1.0-deltaT) * fps) + (deltaT * fns) + smoothT)
+      mTI <- (tps + self$smoothT) /
+             (tps + ((1.0 - self$deltaT) * fps) + (self$deltaT * fns) + self$smoothT)
 
-      #Apply class-level focal correction using gamma
-      regMetric <- (1.0-mTI)**gammaRepT
+      regMetric <- (1.0 - mTI)**self$gammaRepT
+      regMetric <- regMetric * self$clsWghtsRegT
+      regMetric <- torch::torch_sum(regMetric) / torch::torch_sum(self$clsWghtsRegT)
 
-      #Apply class-level weights
-      regMetric <- regMetric*clsWghtsRegT
-
-      #Get macro-averaged focal tversky loss
-      regMetric <- torch::torch_sum(regMetric)/torch::torch_sum(clsWghtsRegT)
-
-      #Apply log-cosh correction if desired
-      if(self$useLogCosH == TRUE){
+      if(self$useLogCosH){
         regMetric <- torch::torch_log(torch::torch_cosh(regMetric))
       }
     }
@@ -280,8 +185,7 @@ defineUnifiedFocalLoss <- torch::nn_module(#This is simply a class-based version
     }else if(self$lambda == 0){
       comboMetric <- regMetric
     }else{
-      #Calculate combined metrics using relative weightings specified by lambda
-      comboMetric <- (lambdaT*distMetric)+((1.0-lambdaT)*regMetric)
+      comboMetric <- (self$lambdaT * distMetric) + ((1.0 - self$lambdaT) * regMetric)
     }
 
     return(comboMetric)
@@ -325,11 +229,17 @@ defineUnifiedFocalLoss <- torch::nn_module(#This is simply a class-based version
 #' Dice loss, focal Dice loss, Tversky loss, and focal Tversky loss.
 #'
 #' @param nCls Number of classes being differentiated.
-#' @param cropFactor Number of rows and columns of cells to not include in assessment to
+#' @param cropFactorMsk Number of rows and columns of cells to not include for mask in assessment to
 #' minimize edge effects. Default is 0 or no cropping.
-#' @param dsWghts Vector of 4 weights. Weights to apply to the losses calculated at each spatial
-#' resolution when using deep supervision. The default is c(.6, .2, .1, .1) where larger weights are
+#' @param cropFactorPred Number of rows and columns of cells to not include for prediction in assessment to
+#' minimize edge effects. Default is 0 or no cropping.
+#' @param dsWghts Vector of 4 weights applied to the losses at each spatial resolution. Used only
+#' when \code{weight_env} is \code{NULL}. The default is c(.6, .2, .1, .1) where larger weights are
 #' placed on the results at a higher spatial resolution.
+#' @param weight_env Optional environment created by \code{make_ds_weights()}. When supplied, the
+#' loss reads \code{weight_env$values} on every forward pass so that
+#' \code{callback_ds_weight_decay()} can decay the auxiliary weights during training without
+#' rebuilding the loss. Takes precedence over \code{dsWghts}. Default is \code{NULL}.
 #' @param lambda Term used to control the relative weighting of the distribution- and region-based
 #' losses. Default is 0.5, or equal weighting between the losses. If lambda = 1, only the distribution-
 #' based loss is considered. If lambda = 0, only the region-based loss is considered. Values between 0.5
@@ -355,95 +265,64 @@ defineUnifiedFocalLoss <- torch::nn_module(#This is simply a class-based version
 #' @param device Define device being used for computation. Define using torch_device().
 #' @return Loss metric for use in training process.
 #' @export
-defineUnifiedFocalLossDS <- torch::nn_module(#This is simply a class-based version of function defined above/implements function internally
+defineUnifiedFocalLossDS <- torch::nn_module(
   initialize = function(nCls=3,
-                        cropFactor = 0,
-                        dsWghts = c(.6,.2,.1,.1),
+                        cropFactorMsk=0,
+                        cropFactorPred=0,
+                        dsWghts=c(.6, .2, .1, .1),
+                        weight_env=NULL,
                         lambda=.5,
                         gamma=.5,
                         delta=0.6,
-                        smooth = 1e-8,
+                        smooth=1e-8,
                         zeroStart=TRUE,
                         clsWghtsDist=1,
                         clsWghtsReg=1,
-                        useLogCosH =FALSE,
+                        useLogCosH=FALSE,
                         device="cuda"){
 
-    self$nCls = nCls
-    self$cropFactor = cropFactor
-    self$dsWghts = dsWghts
-    self$lambda = lambda
-    self$gamma = gamma
-    self$delta= delta
-    self$smooth = smooth
-    self$zeroStart = zeroStart
-    self$clsWghtsDist = clsWghtsDist
-    self$clsWghtsReg = clsWghtsReg
-    self$useLogCosH =useLogCosH
-    self$device=device
+    self$device     <- device
+    self$weight_env <- weight_env
 
-    self$wght1 <- torch::torch_tensor(dsWghts[1], dtype=torch::torch_float32(), device=device)
-    self$wght2 <- torch::torch_tensor(dsWghts[2], dtype=torch::torch_float32(), device=device)
-    self$wght4 <- torch::torch_tensor(dsWghts[3], dtype=torch::torch_float32(), device=device)
-    self$wght8 <- torch::torch_tensor(dsWghts[4], dtype=torch::torch_float32(), device=device)
+    # Static weight tensors — used only when weight_env is NULL
+    self$wght1   <- torch::torch_tensor(dsWghts[1], dtype=torch::torch_float32(), device=device)
+    self$wght2   <- torch::torch_tensor(dsWghts[2], dtype=torch::torch_float32(), device=device)
+    self$wght4   <- torch::torch_tensor(dsWghts[3], dtype=torch::torch_float32(), device=device)
+    self$wght8   <- torch::torch_tensor(dsWghts[4], dtype=torch::torch_float32(), device=device)
+    self$wghtSum <- torch::torch_tensor(sum(dsWghts), dtype=torch::torch_float32(), device=device)
 
-    self$loss1 <- defineUnifiedFocalLoss(self$nCls,
-                                  self$cropFactor,
-                                  self$lambda,
-                                  self$gamma,
-                                  self$delta,
-                                  self$smooth,
-                                  self$zeroStart,
-                                  self$clsWghtsDist,
-                                  self$clsWghtsReg,
-                                  self$useLogCosH,
-                                  self$device)
-
-    self$loss2 <- defineUnifiedFocalLoss(self$nCls,
-                                  self$cropFactor,
-                                  self$lambda,
-                                  self$gamma,
-                                  self$delta,
-                                  self$smooth,
-                                  self$zeroStart,
-                                  self$clsWghtsDist,
-                                  self$clsWghtsReg,
-                                  self$useLogCosH,
-                                  self$device)
-
-    self$loss4 <- defineUnifiedFocalLoss(self$nCls,
-                                  self$cropFactor,
-                                  self$lambda,
-                                  self$gamma,
-                                  self$delta,
-                                  self$smooth,
-                                  self$zeroStart,
-                                  self$clsWghtsDist,
-                                  self$clsWghtsReg,
-                                  self$useLogCosH,
-                                  self$device)
-
-    self$loss8 <- defineUnifiedFocalLoss(self$nCls,
-                                  self$cropFactor,
-                                  self$lambda,
-                                  self$gamma,
-                                  self$delta,
-                                  self$smooth,
-                                  self$zeroStart,
-                                  self$clsWghtsDist,
-                                  self$clsWghtsReg,
-                                  self$useLogCosH,
-                                  self$device)
+    # Single loss instance shared across all four decoder outputs
+    self$loss <- defineUnifiedFocalLoss(nCls=nCls,
+                                        cropFactorMsk=cropFactorMsk,
+                                        cropFactorPred=cropFactorPred,
+                                        lambda=lambda,
+                                        gamma=gamma,
+                                        delta=delta,
+                                        smooth=smooth,
+                                        zeroStart=zeroStart,
+                                        clsWghtsDist=clsWghtsDist,
+                                        clsWghtsReg=clsWghtsReg,
+                                        useLogCosH=useLogCosH,
+                                        device=device)
   },
 
   forward = function(pred, target){
-    l1 <- self$loss1(pred[[1]], target)
-    l2 <- self$loss2(pred[[2]], target)
-    l4 <- self$loss4(pred[[3]], target)
-    l8 <- self$loss8(pred[[4]], target)
-
-    lossOut <- ((self$wght1*l1)+(self$wght2*l2)+(self$wght4*l4)+(self$wght8*l8))/(self$wght1+self$wght2+self$wght4+self$wght8)
-
+    if (!is.null(self$weight_env)) {
+      w    <- self$weight_env$values
+      wSum <- sum(w)
+      lossOut <- w[1] * self$loss(pred[[1]], target)
+      if (w[2] != 0) lossOut <- lossOut + w[2] * self$loss(pred[[2]], target)
+      if (w[3] != 0) lossOut <- lossOut + w[3] * self$loss(pred[[3]], target)
+      if (w[4] != 0) lossOut <- lossOut + w[4] * self$loss(pred[[4]], target)
+      lossOut <- lossOut / wSum
+    } else {
+      l1 <- self$loss(pred[[1]], target)
+      l2 <- self$loss(pred[[2]], target)
+      l4 <- self$loss(pred[[3]], target)
+      l8 <- self$loss(pred[[4]], target)
+      lossOut <- ((self$wght1 * l1) + (self$wght2 * l2) +
+                  (self$wght4 * l4) + (self$wght8 * l8)) / self$wghtSum
+    }
     return(lossOut)
   }
 )

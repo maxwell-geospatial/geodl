@@ -44,14 +44,13 @@ viewBatch <- function(dataLoader,
 
   batch1 <- dataLoader$.iter()$.next()
 
-
-  masks <- batch1$mask
+  masks  <- batch1$mask
   images <- batch1$image
 
   masks <- torch::torch_tensor(masks, dtype=torch::torch_float32())
 
-  theImgGrid <- torchvision::vision_make_grid(images, num_rows=nCols, padding=padding,)$permute(c(2,3,1))
-  theMskGrid <- torchvision::vision_make_grid(masks, num_rows=nCols, padding=padding, pad_value=-1, scale=FALSE)$permute(c(2,3,1))
+  theImgGrid <- torchvision::vision_make_grid(images, num_rows=nCols, padding=padding)$permute(c(2,3,1))
+  theMskGrid <- torchvision::vision_make_grid(masks,  num_rows=nCols, padding=padding, pad_value=-1, scale=FALSE)$permute(c(2,3,1))
 
   img1 <- terra::rast(as.array(theImgGrid)*255)
   msk1 <- terra::rast(as.array(theMskGrid))
@@ -62,14 +61,13 @@ viewBatch <- function(dataLoader,
                         cNames=cNames,
                         cColors=cColors)
 
-  used <- usedCodes <- terra::unique(msk1) |> as.vector() |> unlist()
-
+  used    <- terra::unique(msk1) |> as.vector() |> unlist()
   catData <- catData |> dplyr::filter(cCodes %in% used)
 
-  layout(matrix(1:2, nrow = 2), heights = c(1, 1))
-  par(mar = c(1, 1, 1, 1))
+  layout(matrix(1:2, nrow=2), heights=c(1, 1))
+  par(mar=c(1, 1, 1, 1))
 
-  terra::plotRGB(img1, r=r, g=g, b=b, scale=1, axes=FALSE, stretch="lin")
+  terra::plotRGB(img1, r=r, g=g, b=b, scale=255, axes=FALSE, stretch="lin")
   terra::plot(msk1, type="classes", axes=FALSE, levels=catData$cNames, col=catData$cColors)
 
   layout(1)

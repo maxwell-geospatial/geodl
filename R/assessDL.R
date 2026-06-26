@@ -75,7 +75,6 @@ assessDL <- function(dl,
                      useCUDA=FALSE,
                      decimals=4){
 
-  model2 <- model
   model$eval()
 
   cm <- data.frame(Prediction=as.character(),
@@ -105,25 +104,24 @@ assessDL <- function(dl,
         }
 
 
-        preds <- model2(images)
+        preds <- model(images)
 
 
         if(usedDS==TRUE){
           preds <- preds[[1]]
         }
 
-        coro::loop(for(i in 1:batchSize){
-          predi <- preds[i,1:size,1:size]$squeeze(dim=1)
+        coro::loop(for(i in 1:b$image$shape[1]){
+          predi <- preds[i, , , ]
           predi <- torch::torch_argmax(predi, dim=1)
-          predi <- predi$unsqueeze(1)$permute(c(2,3,1))$cpu()$to(device="cpu")
+          predi <- predi$unsqueeze(1)$permute(c(2,3,1))$to(device="cpu")
           predOut <- terra::rast(as.array(predi))
 
           predOut <- terra::as.factor(predOut)
           levels(predOut) <- clsTbl
           names(predOut) <- "Prediction"
 
-          refi <- masks[i,1:size,1:size]$squeeze(dim=1)
-          refi<- refi$unsqueeze(1)$permute(c(2,3,1))$cpu()$to(device="cpu")
+          refi <- masks[i, , , ]$permute(c(2,3,1))$to(device="cpu")
           refOut <- terra::rast(as.array(refi))
 
           refOut <- terra::as.factor(refOut)
@@ -167,7 +165,7 @@ assessDL <- function(dl,
                     referenceCounts = col1,
                     predictionCounts = row1,
                     confusionMatrix = t1,
-                    aggMetrics = data.frame(OA = round(oa, digits=4),
+                    aggMetrics = data.frame(OA = round(oa, digits=decimals),
                                             macroF1 = round(aF1, digits=decimals),
                                             macroPA = round(aPA, digits=decimals),
                                             macroUA = round(aUA, digits=decimals)),
@@ -200,7 +198,7 @@ assessDL <- function(dl,
     results <- list(Classes = cNames,
                     referenceCounts = col1,
                     predictionCounts = row1,
-                    ConfusionMatrix = t1,
+                    confusionMatrix = t1,
                     Mets = data.frame(OA = round(oa, digits=decimals),
                                       Recall = round(pa[2], digits=decimals),
                                       Precision = round(ua[2], digits=decimals),
@@ -210,6 +208,8 @@ assessDL <- function(dl,
                     )
     )
   }
+
+  return(results)
 
 }
 

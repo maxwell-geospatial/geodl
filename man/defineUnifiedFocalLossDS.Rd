@@ -6,8 +6,10 @@
 \usage{
 defineUnifiedFocalLossDS(
   nCls = 3,
-  cropFactor = 0,
+  cropFactorMsk = 0,
+  cropFactorPred = 0,
   dsWghts = c(0.6, 0.2, 0.1, 0.1),
+  weight_env = NULL,
   lambda = 0.5,
   gamma = 0.5,
   delta = 0.6,
@@ -22,12 +24,20 @@ defineUnifiedFocalLossDS(
 \arguments{
 \item{nCls}{Number of classes being differentiated.}
 
-\item{cropFactor}{Number of rows and columns of cells to not include in assessment to
+\item{cropFactorMsk}{Number of rows and columns of cells to not include for mask in assessment to
 minimize edge effects. Default is 0 or no cropping.}
 
-\item{dsWghts}{Vector of 4 weights. Weights to apply to the losses calculated at each spatial
-resolution when using deep supervision. The default is c(.6, .2, .1, .1) where larger weights are
+\item{cropFactorPred}{Number of rows and columns of cells to not include for prediction in assessment to
+minimize edge effects. Default is 0 or no cropping.}
+
+\item{dsWghts}{Vector of 4 weights applied to the losses at each spatial resolution. Used only
+when \code{weight_env} is \code{NULL}. The default is c(.6, .2, .1, .1) where larger weights are
 placed on the results at a higher spatial resolution.}
+
+\item{weight_env}{Optional environment created by \code{make_ds_weights()}. When supplied, the
+loss reads \code{weight_env$values} on every forward pass so that
+\code{callback_ds_weight_decay()} can decay the auxiliary weights during training without
+rebuilding the loss. Takes precedence over \code{dsWghts}. Default is \code{NULL}.}
 
 \item{lambda}{Term used to control the relative weighting of the distribution- and region-based
 losses. Default is 0.5, or equal weighting between the losses. If lambda = 1, only the distribution-

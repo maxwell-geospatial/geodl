@@ -319,224 +319,98 @@ lspModule <- torch::nn_module(
 
 #' defineTerrainSeg
 #'
-#' CNN-based semantic segmentation architecture of landform extraction or
-#' classification from a DTM.
+#' CNN-based semantic segmentation wrapper that generates LSPs from a DTM and
+#' passes them to a user-supplied trainable segmentation model.
 #'
 #' Define a CNN-based semantic segmentation model for landform extraction or
-#' classification that includes a module that generates land surface parameters
-#' (LSPs) from the input DTM that are then passed to a semantic segmentation model.
-#' A UNet, UNet with a MobileNetv2 encoder, UNet3+, or HRNet architecture can be used.
-#' Gaussian pyramids can be calculated from the DTM to calculate LSPs at different
-#' scales. If Gaussian pyramids are not use, 6 LSPs are passed to the segmentation
-#' model. If Gaussian pyramids are used, 31 LSPs are passed to UNet3+. Model assumes
-#' a single band DTM of elevation measurements as input.
+#' classification. The module generates land surface parameters (LSPs) from the
+#' input DTM, crops the LSP tensor to remove edge artefacts, and then passes the
+#' result to an externally instantiated trainable segmentation model. The model
+#' assumes a single-band DTM of elevation measurements as input.
 #'
-#' @param segModel Segmentation architecture to use. Either UNet ("UNet"), UNet3+
-#' ("UNet3p"), or UNet with a MobileNetv2 encoder.
-#' @param cellSize Input resolution of DTM data. Default in 1 m.
-#' @param nCls Number of classes being differentiated. For a binary classification,
-#' this can be either 1 or 2. If 2, the problem is treated as a multiclass problem,
-#' and a multiclass loss metric should be used. Default is 2.
-#' @param spatDim Input chip size. Default is 640 (640x640 cells)
-#' @param tCrop Number of rows and columns to crop from each side prior to passing LSPs to trainable model. Default is 64.
-#' @param doGP Whether or not to include Gaussian Pyramids of DTM and calulate LSPs at
-#' different scales. Default is FALSE. If FALSE, 6 LSPs are passed to model. If TRUE,
-#' 31 LSPs are passed to model.
-#' @param negative_slope Negative slope term for leaky ReLU. Default is 0.01.
-#' @param innerRadius Inner radius for annulus window for local TPI calculation. Default is 2 cells.
-#' @param outerRadius Outer radius for annulus window for local TPI calculation. Default is 10 cells.
-#' @param hsRadius Radius for circular moving window for hillslope TPI calculation. Defaults is 50 cells.
-#' @param smoothRadius Radius of circular moving window to smooth DTM prior to curvature calculations.
-#' Default is 11 cells.
-#' @param actFunc Defines activation function to use throughout the network when using UNet. "relu" =
-#' rectified linear unit (ReLU); "lrelu" = leaky ReLU; "swish" = swish. Default is "relu".
-#' @param useAttn TRUE or FALSE. Whether to add attention gates along the skip connections when using UNet, UNet with a MobileNet-V2 backbone, or UNet3+.
-#' Default is FALSE or no attention gates are added.
-#' @param useSE TRUE or FALSE. Whether or not to include squeeze and excitation modules in
-#' the encoder when using UNet. Default is FALSE or no squeeze and excitation modules are used.
-#' @param useRes TRUE or FALSE. Whether to include residual connections in the encoder, decoder,
-#' and bottleneck/ASPP module blocks when using UNet. Default is FALSE or no residual connections are included.
-#' @param useASPP TRUE or FALSE. Whether to use an ASPP module as the bottleneck as opposed to a
-#' double convolution operation when using UNet or UNet3+. Default is FALSE or the ASPP module is not used as the bottleneck.
-#' @param useDS TRUE or FALSE. Whether or not to use deep supervision when using UNet, Net with a MobileNet-V2 backbone, or
-#' UNet3+. If TRUE, four predictions are made, one at each decoder block resolution, and the predictions are returned
-#' as a list object containing the 4 predictions. If FALSE, only the final prediction at the original resolution is
-#' returned. Default is FALSE or deep supervision is not implemented.
-#' @param enChn Vector of 4 integers defining the number of output
-#' feature maps for each of the four encoder blocks for UNet or UNet3+. Default is 16, 32, 64, and 128.
-#' @param dcChn Vector of 4 or 5 integers defining the number of output feature
-#' maps for each of the 4 decoder blocks for UNet or UNet  with a MobileNet-V2 encoder. Default is 128,
-#' 64, 32, and 16. Will need to change if using the MobileNet-V2 backbone.
-#' @param outChn Number of output channels for each decoder block for UNet3+. Default is 64.
-#' @param btnChn Number of output feature maps from the bottleneck block. Default
-#' is 256.
-#' @param dilRates Vector of 3 values specifying the dilation rates used in the ASPP module.
-#' Default is 6, 12, and 18.
-#' @param dilChn Vector of 4 values specifying the number of channels to produce at each dilation
-#' rate within the ASPP module. Default is 256 for each dilation rate.
-#' @param negative_slope If actFunc = "lrelu", specifies the negative slope term
-#' to use. Default is 0.01.
-#' @param seRatio Ratio to use in squeeze and excitation module when using UNet. The default is 8.
-#' @param pretrainedEncoder TRUE or FALSE. Whether or not to initialized using pre-trained ImageNet
-#' weights for the MobileNet-v2 encoder. Default is TRUE.
-#' @param freezeEncoder TRUE or FALSE. Whether or not to freeze the encoder during training when using the MobileNet-V2 encoder.
-#' The default is TRUE. If TRUE, only the decoder component is trained.
-#' @param avgImNetWeights TRUE or FALSE. If three predictor variables are provided and
-#' ImageNet weights are used, whether or not to use the original weights or average them.
-#' This only applies when using MobileNet-V2 encoder. Default is FALSE.
-#' @return terrainSeg model consisting of LSP generation of UNet3+ model.
+#' When \code{doGP = FALSE} the LSP module produces 6 channels; when
+#' \code{doGP = TRUE} it produces 31 channels. The segmentation model supplied
+#' via \code{segMod} must be instantiated with a matching \code{inChn} value and
+#' with an \code{inChn} that accounts for the spatial reduction caused by
+#' \code{tCrop} (input chip size minus 2 * tCrop).
+#'
+#' @param segMod An already-instantiated trainable segmentation model
+#' (torch \code{nn_module}). Must accept the number of input channels produced
+#' by the LSP module: 6 when \code{doGP = FALSE}, 31 when \code{doGP = TRUE}.
+#' @param cellSize Input resolution of DTM data in map units. Default is 1.
+#' @param spatDim Spatial dimension (height = width) of the input chip in cells.
+#' Default is 640.
+#' @param tCrop Number of rows and columns to crop from each side of the LSP
+#' output before passing to the segmentation model. This removes edge artefacts
+#' introduced by the convolution-based LSP calculations. Default is 64.
+#' @param doGP Whether to compute Gaussian Pyramids of the DTM and derive LSPs
+#' at multiple scales. Default is FALSE. If FALSE, 6 LSPs are passed to the
+#' model. If TRUE, 31 LSPs are passed.
+#' @param innerRadius Inner radius (cells) of the annulus window used for local
+#' TPI calculation. Default is 2.
+#' @param outerRadius Outer radius (cells) of the annulus window used for local
+#' TPI calculation. Default is 10.
+#' @param hsRadius Radius (cells) of the circular moving window for hillslope
+#' TPI calculation. Default is 50.
+#' @param smoothRadius Radius (cells) of the circular moving window used to
+#' smooth the DTM before curvature calculations. Default is 11.
+#' @return A \code{terrainSeg} \code{nn_module} wrapping the LSP pipeline and
+#' the supplied segmentation model.
 #' @export
 defineTerrainSeg <- torch::nn_module(
   classname = "terrainSeg",
 
-  # Define the constructor
-  initialize = function(segModel = "UNet",
-                        nCls = 2,
-                        cellSize = 1,
-                        spatDim=640,
-                        tCrop = 64,
-                        doGP = FALSE,
-                        innerRadius = 2,
-                        outerRadius = 10,
-                        hsRadius = 50,
-                        smoothRadius = 11,
-                        actFunc="lrelu",
-                        useAttn = FALSE,
-                        useSE = FALSE,
-                        useRes = TRUE,
-                        useASPP = TRUE,
-                        useDS = FALSE,
-                        pretrainedEncoder = TRUE,
-                        freezeEncoder = TRUE,
-                        avgImNetWeights = FALSE,
-                        enChn = c(16,32,64,128),
-                        dcChn = c(128,64,32,16),
-                        outChn = 64,
-                        btnChn = 256,
-                        dilChn = c(256,256,256,256),
-                        dilRates = c(6, 12, 18),
-                        negative_slope = 0.01,
-                        seRatio=8){
+  initialize = function(segMod,
+                        cellSize     = 1,
+                        spatDim      = 640,
+                        tCrop        = 64,
+                        doGP         = FALSE,
+                        innerRadius  = 2,
+                        outerRadius  = 10,
+                        hsRadius     = 50,
+                        smoothRadius = 11) {
 
-    self$segModel = segModel
-    self$nCls = nCls
-    self$cellSize = cellSize
-    self$spatDim=spatDim
-    self$tCrop = tCrop
-    self$doGP = doGP
-    self$innerRadius = innerRadius
-    self$outerRadius  = outerRadius
-    self$hsRadius = hsRadius
-    self$smoothRadius = smoothRadius
-    self$actFunc= actFunc
-    self$useAttn = useAttn
-    self$useSE = useSE
-    self$useRes = useRes
-    self$useASPP = useASPP
-    self$useDS = useDS
-    self$pretrainedEncoder = pretrainedEncoder
-    self$freezeEncoder = freezeEncoder
-    self$avgImNetWeights = avgImNetWeights
-    self$enChn = enChn
-    self$dcChn = dcChn
-    self$outChn = outChn
-    self$btnChn = btnChn
-    self$dilChn = dilChn
-    self$dilRates = dilRates
-    self$negative_slope = negative_slope
-    self$seRatio = seRatio
+    self$tCrop   <- tCrop
+    self$doGP    <- doGP
+    self$spatDim <- spatDim
 
-    if(self$doGP == TRUE){
-      self$inChn <- 31
-    }else{
-      self$inChn <- 6
-    }
+    self$segMod <- segMod
 
-    self$gaussPyramid <- gaussPyramids(1, self$spatDim)
+    self$gaussPyramid <- gaussPyramids(1, spatDim)
 
-    self$lspOrig <- lspModule(cellSize=self$cellSize,
-                              innerRadius=self$innerRadius,
-                              outerRadius=self$outerRadius,
-                              hsRadius=self$hsRadius,
-                              smoothRadius=self$smoothRadius,
-                              doTPIHS = TRUE)
+    self$lspOrig <- lspModule(cellSize     = cellSize,
+                              innerRadius  = innerRadius,
+                              outerRadius  = outerRadius,
+                              hsRadius     = hsRadius,
+                              smoothRadius = smoothRadius,
+                              doTPIHS      = TRUE)
 
-    self$lspGP <- lspModule(cellSize= self$cellSize,
-                            innerRadius=self$innerRadius,
-                            outerRadius=self$outerRadius,
-                            hsRadius=self$hsRadius,
-                            smoothRadius=self$smoothRadius,
-                            doTPIHS = FALSE)
-
-    if(self$segModel == "UNet3p"){
-      self$segMod <- defineUNet3p(inChn=self$inChn,
-                              nCls=self$nCls,
-                              useDS = self$useDS,
-                              enChn = self$enChn,
-                              outChn = self$outChn,
-                              btnChn = self$btnChn,
-                              negative_slope=self$negative_slope)
-    }else if(self$segModel == "MobileUNet"){
-      self$segMod <- defineMobileUNet(inChn = self$inChn,
-                              nCls = self$nCls,
-                              pretrainedEncoder = self$pretrainedEncoder,
-                              freezeEncoder = self$freezeEncoder,
-                              avgImNetWeights = self$avgImNetWeights,
-                              actFunc = self$actFunc,
-                              useAttn = self$useAttn,
-                              useDS = self$useDS,
-                              dcChn = self$dcChn,
-                              negative_slope = self$negative_slope)
-    }else if(self$segModel == "UNet"){
-      self$segMod <- defineUNet(inChn = self$inChn,
-                               nCls = self$nCls,
-                               actFunc = self$actFunc,
-                               useAttn = self$useAttn,
-                               useSE = self$useSE,
-                               useRes = self$useRes,
-                               useASPP = self$useASPP,
-                               useDS = self$useDS,
-                               enChn = self$enChn,
-                               dcChn = self$dcChn,
-                               btnChn = self$btnChn,
-                               dilRates= self$dilRates,
-                               dilChn= self$dilChn,
-                               negative_slope= self$negative_slope,
-                               seRatio=self$seRatio)
-
-    }else{
-      message("Invalid Segmentation Model.")
-    }
+    self$lspGP <- lspModule(cellSize     = cellSize,
+                            innerRadius  = innerRadius,
+                            outerRadius  = outerRadius,
+                            hsRadius     = hsRadius,
+                            smoothRadius = smoothRadius,
+                            doTPIHS      = FALSE)
   },
 
-  # Define the forward pass
   forward = function(x) {
 
-    if(self$doGP == TRUE){
+    if (self$doGP) {
       xGP <- self$gaussPyramid(x)
 
-      #LSPs
+      xLSP    <- self$lspOrig(x)
+      xGPLSP1 <- self$lspGP(xGP[, 1, , ]$unsqueeze(dim = 2))
+      xGPLSP2 <- self$lspGP(xGP[, 2, , ]$unsqueeze(dim = 2))
+      xGPLSP3 <- self$lspGP(xGP[, 3, , ]$unsqueeze(dim = 2))
+      xGPLSP4 <- self$lspGP(xGP[, 4, , ]$unsqueeze(dim = 2))
+      xGPLSP5 <- self$lspGP(xGP[, 5, , ]$unsqueeze(dim = 2))
 
-      xLSP <- self$lspOrig(x)
-      xGP1 <- xGP[,1,,]$unsqueeze(dim=2)
-      xGP2 <- xGP[,2,,]$unsqueeze(dim=2)
-      xGP3 <- xGP[,3,,]$unsqueeze(dim=2)
-      xGP4 <- xGP[,4,,]$unsqueeze(dim=2)
-      xGP5 <- xGP[,5,,]$unsqueeze(dim=2)
-
-      xGPLSP1 <- self$lspGP(xGP1)
-      xGPLSP2 <- self$lspGP(xGP2)
-      xGPLSP3 <- self$lspGP(xGP3)
-      xGPLSP4 <- self$lspGP(xGP4)
-      xGPLSP5 <- self$lspGP(xGP5)
-
-      tIn <- torch::torch_cat(list(xLSP, xGPLSP1, xGPLSP2,xGPLSP3,xGPLSP4,xGPLSP5), dim = 2)
-    }else{
+      tIn <- torch::torch_cat(list(xLSP, xGPLSP1, xGPLSP2, xGPLSP3, xGPLSP4, xGPLSP5), dim = 2)
+    } else {
       tIn <- self$lspOrig(x)
     }
 
-    tIn <- cropTensor(tIn, self$tCrop)
-
+    tIn    <- cropTensor(tIn, self$tCrop)
     modOut <- self$segMod(tIn)
 
     return(modOut)

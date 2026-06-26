@@ -249,7 +249,7 @@ makeAspect <- function(dtm, cellSize=1, flatThreshold = 1, mode="aspect", writeR
   terra::crs(aspR) <- terra::crs(dtm)
 
   if(writeRaster ==TRUE){
-    writeRaster(aspR, outName, overwrite=TRUE)
+    terra::writeRaster(aspR, outName, overwrite=TRUE)
   }
 
   return(aspR)
@@ -389,12 +389,12 @@ makeHillshade <- function(dtm,
   dtmT <- torch::torch_tensor(dtmA)$permute(c(3,1,2))$to(device=device)
 
   if(doMD == TRUE){
-    doHS <- makeHillshadeModule(cellSize = 1,
+    doHS <- makeHillshadeModule(cellSize = cellSize,
                                 sunAzimuth = sunAzimuth,
                                 sunAltitude = sunAltitude,
                                 doMD=TRUE)$to(device=device)
   }else{
-    doHS <- makeHillshadeModule(cellSize = 1,
+    doHS <- makeHillshadeModule(cellSize = cellSize,
                                 sunAzimuth = sunAzimuth,
                                 sunAltitude = sunAltitude,
                                 doMD=FALSE)$to(device=device)
@@ -520,7 +520,7 @@ makeTPI <- function(dtm,
   dtmA <- terra::as.array(dtm)
   dtmT <- torch::torch_tensor(dtmA)$permute(c(3,1,2))$to(device=device)
 
-  doTPI <- makeTPIModule(cellSize=1,
+  doTPI <- makeTPIModule(cellSize=cellSize,
                          mode=mode,
                          innerRadius=innerRadius,
                          outerRadius=outerRadius)$to(device=device)
@@ -846,7 +846,7 @@ makeCrv <- function(dtm,
   dtmA <- terra::as.array(dtm)
   dtmT <- torch::torch_tensor(dtmA)$permute(c(3,1,2))$to(device=device)
 
-  doCrv <- makeCrvModule(cellSize=1,
+  doCrv <- makeCrvModule(cellSize=cellSize,
                          mode=mode,
                          smoothRadius=smoothRadius)$to(device=device)
 
@@ -1051,7 +1051,7 @@ makeTerrainVisTorch <- function(dtm,
   dtmA <- terra::as.array(dtm)
   dtmT <- torch::torch_tensor(dtmA)$permute(c(3,1,2))$to(device=device)
 
-  doTV <- makeTerrVisModule(cellSize=1,
+  doTV <- makeTerrVisModule(cellSize=cellSize,
                              innerRadius=innerRadius,
                              outerRadius=outerRadius,
                              hsRadius=hsRadius)$to(device=device)
@@ -1121,11 +1121,11 @@ makeTerrainVisTorch <- function(dtm,
 #' }
 #' @export
 makeTerrainVisTerra <- function(dtm,
-                                cellSize,
-                                innerRadius=2,
-                                outerRadius=10,
-                                hsRadius=50,
-                                writeRaster=FALSE,
+                                cellSize = 1,
+                                innerRadius = 2,
+                                outerRadius = 10,
+                                hsRadius = 50,
+                                writeRaster = FALSE,
                                 outName){
   slp <- terra::terrain(dtm, v = "slope", neighbors = 8, unit = "degrees")
   slp1 <- sqrt(slp)
@@ -1147,10 +1147,9 @@ makeTerrainVisTerra <- function(dtm,
   names(stackOut) <- c("tpi1", "sqrtslp", "tpi2")
 
   if(writeRaster==TRUE){
-    terra::writeRaster(stackOut, filename, overwrite = TRUE)
+    terra::writeRaster(stackOut, outName, overwrite = TRUE)
+    message("Results stacked and written to disk.")
   }
 
   return(stackOut)
-
-  message("Results stacked and written to disk.")
 }

@@ -55,7 +55,7 @@ For gray scale or single-band images, assign the same index to all three bands.}
 \item{g}{Band number to map to the green channel. Default is 2 or the second channel.
 For gray scale or single-band images, assign the same index to all three bands.}
 
-\item{b}{Band number to map to the red channel. Default is 3 or the third channel.
+\item{b}{Band number to map to the blue channel. Default is 3 or the third channel.
 For gray scale or single-band images, assign the same index to all three bands.}
 
 \item{rescale}{TRUE or FALSE. Whether or not to rescale image data. Default is FALSE or no rescaling.}

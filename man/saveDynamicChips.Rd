@@ -10,38 +10,25 @@ saveDynamicChips(
   cellSize = 1,
   outDir,
   mode = "All",
-  useExistingDir = FALSE,
-  doJitter = FALSE,
-  jitterSD = 15,
-  useSeed = TRUE,
-  seed = 42
+  useExistingDir = FALSE
 )
 }
 \arguments{
-\item{chipsSF}{output from defineDynmaicChips().}
+\item{chipsSF}{output from makeDynamicChipsSF().}
 
-\item{chipSize}{size of chips to generate. Default is 512 (512-by512 cells).}
+\item{chipSize}{size of chips to generate. Default is 512 (512-by-512 cells).}
 
 \item{cellSize}{cell size of input and output data. Default is 1 m.}
 
 \item{outDir}{full or relative path to output directory. Must include final forward slash in path.}
 
 \item{mode}{either "All", "Positive", or "Divided". If "All", all chips and masks are saved.
-If "Positive", only chips and masks containing positive cells are maintained. if "Divided",
+If "Positive", only chips and masks containing positive cells are maintained. If "Divided",
 background-only and positive-containing chips are saved but written to separate directories.
 For multiclass, use "All". Default is "All".}
 
-\item{useExistingDir}{TRUE or FALSE. Whether or not to use a directory that that already
+\item{useExistingDir}{TRUE or FALSE. Whether or not to use a directory that already
 contains chips. Default is FALSE.}
-
-\item{doJitter}{whether or not to add random jitter to center coordinate of chips. Default is FALSE.}
-
-\item{jitterSD}{standard deviation to use when applying jitter. Default is 15.}
-
-\item{useSeed}{whether or not to use a random seed when incorporating jitter. Default is TRUE but only
-applies if using jitter.}
-
-\item{seed}{random seed value. Default is 42.}
 }
 \value{
 chips and masks written to disk. No R object is returned.
@@ -50,6 +37,6 @@ chips and masks written to disk. No R object is returned.
 Save chips meant to be generated dynamically to disk.
 }
 \details{
-Save chips defined by defineDynamicChips() to disk. It is not required to save
+Save chips defined by makeDynamicChipsSF() to disk. It is not required to save
 dynamically generated chips to disk. This is primarily a utility function.
 }

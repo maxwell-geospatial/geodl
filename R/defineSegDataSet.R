@@ -205,7 +205,7 @@ defineSegDataSet <- torch::dataset(
        probSaturationX <- runif(1) < self$probSaturation
        probRotateX <- runif(1) < self$probRotation
 
-       augIndex <- sample(c(1:7), self$maxAugs, replace=FALSE)
+       augIndex <- sample(c(1:8), self$maxAugs, replace=FALSE)
 
 
        if(probVFlipX == TRUE & 1 %in% augIndex){

@@ -1,31 +1,11 @@
 makeDynamicChip <- function(chipIn,
                             chipSize,
-                            cellSize,
-                            doJitter,
-                            jitterSD,
-                            useSeed,
-                            seed){
+                            cellSize){
 
   chipIn2 <- sf::st_drop_geometry(chipIn)
 
   inFeat <- sf::st_read(paste0(chipIn2[1, "featPth"], chipIn2[1, "featName"]), quiet=TRUE)
   inRaster <- terra::rast(paste0(chipIn2[1, "imgPth"], chipIn2[1, "imgName"]))
-
-  if(doJitter == TRUE){
-    noise_sd <- jitterSD
-    if(useSeed==TRUE){
-      set.seed(seed)
-      noise <- matrix(rnorm(n = 2, mean = 0, sd = noise_sd), ncol = 2)
-    }else{
-      noise <- matrix(rnorm(n = 2, mean = 0, sd = noise_sd), ncol = 2)
-    }
-
-    origCoords <- sf::st_coordinates(chipIn)
-    newCoords <- origCoords+noise
-    newCoords <- lapply(1:nrow(newCoords), function(i) sf::st_point(newCoords[i, ]))
-    newCoords <- sf::st_sfc(newCoords, crs = sf::st_crs(chipIn))
-    chipIn <- sf::st_set_geometry(chipIn, newCoords)
-  }
 
   vB <- sf::st_buffer(chipIn, ((chipSize*cellSize)/2))
   vBB <- sf::st_make_grid(vB, n=1)
@@ -34,14 +14,11 @@ makeDynamicChip <- function(chipIn,
 
   r1 <- terra::crop(inRaster, vBB)
   m1 <- terra::rasterize(f1V, r1, field="code")
-  m1<- terra::ifel(is.na(m1), 0, m1)
+  m1 <- terra::ifel(is.na(m1), 0, m1)
 
   return(list(image=r1, mask=m1))
 
 }
-
-
-
 
 
 #' defineDynamicSegDataSet
@@ -49,7 +26,7 @@ makeDynamicChip <- function(chipIn,
 #' Instantiate a subclass of torch::dataset() for geospatial semantic segmentation using dynamically generated chips
 #'
 #' This function instantiates a subclass of torch::dataset() that dynmaically generates chips
-#' using tghe output from makeDynamicChips.R Can also define random augmentations to combat
+#' using the output from makeDynamicChipsSF(). Can also define random augmentations to combat
 #' overfitting. Note that horizontal and vertical flips will affect the alignment of the
 #' image and associated mask chips. As a result, the same augmentation will be applied
 #' to both the image and the mask. Changes in brightness, contrast, gamma, hue, and
@@ -61,11 +38,6 @@ makeDynamicChip <- function(chipIn,
 #' @param chipsSF sf object created by makeDynamicChipsSF().
 #' @param chipSize Size of desired image chips. Default is 512 (512x512 cells)
 #' @param cellSize Cells size of input data. Default is 1 m.
-#' @param doJitter Whether or not to add random noise to chip center coordinates. Default is FALSE.
-#' @param jitterSD If doJitter is TRUE, standard deviation of random positional noise to add in
-#' both the x and y directions. Default is 15 (15 meters).
-#' @param useSeed Whether or not to use a random seed for added jitter noise. Default is FALSE.
-#' @param seed Random seed value.
 #' @param normalize TRUE or FALSE. Whether to apply normalization. If FALSE,
 #' bMns and bSDs are ignored. Default is FALSE. If TRUE, you must provide bMns
 #' and bSDs.
@@ -144,10 +116,6 @@ defineDynmamicSegDataSet <- torch::dataset(
   initialize = function(chipsSF,
                         chipSize=512,
                         cellSize=2,
-                        doJitter=TRUE,
-                        jitterSD=15,
-                        useSeed=TRUE,
-                        seed=42,
                         normalize = FALSE,
                         rescaleFactor = 1,
                         mskRescale=1,
@@ -173,10 +141,6 @@ defineDynmamicSegDataSet <- torch::dataset(
     self$chipsSF <- chipsSF
     self$chipSize <- chipSize
     self$cellSize <- cellSize
-    self$doJitter <- doJitter
-    self$jitterSD <- jitterSD
-    self$useSeed <- useSeed
-    self$seed <- seed
     self$normalize <- normalize
     self$rescaleFactor <- rescaleFactor
     self$mskRescale <- mskRescale
@@ -205,11 +169,7 @@ defineDynmamicSegDataSet <- torch::dataset(
 
     chipData <- makeDynamicChip(chipIn = self$chipsSF[i,],
                                 chipSize = self$chipSize,
-                                cellSize = self$cellSize,
-                                doJitter = self$doJitter,
-                                jitterSD = self$jitterSD,
-                                useSeed = self$useSeed,
-                                seed = self$seed)
+                                cellSize = self$cellSize)
 
     image <- chipData$image
     mask <- chipData$mask
@@ -244,9 +204,7 @@ defineDynmamicSegDataSet <- torch::dataset(
       probHueX <- runif(1) < self$probHue
       probSaturationX <- runif(1) < self$probSaturation
 
-
       augIndex <- sample(c(1:8), self$maxAugs, replace=FALSE)
-
 
       if(probVFlipX == TRUE & 1 %in% augIndex){
         image <- torchvision::transform_vflip(image)

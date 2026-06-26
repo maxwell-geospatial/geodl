@@ -47,7 +47,7 @@ makeChipsDF <- function(folder,
                         mode="All",
                         shuffle=FALSE,
                         saveCSV=FALSE){
-  if(mode == "All" | mode == "Positive"){
+  if(mode == "All" || mode == "Positive") {
     lstChps <- list.files(paste0(folder, "images/"), pattern=paste0("\\", extension, "$"))
     lstChpsPth <- paste0("images/", lstChps)
     lstMsksPth <- paste0("masks/", lstChps)
@@ -69,7 +69,7 @@ makeChipsDF <- function(folder,
     chpDF <- chpDF |> dplyr::sample_n(nrow(chpDF), replace=FALSE)
   }
   if(saveCSV == TRUE){
-    readr::write_csv(chpDF, outCSV, append=FALSE)
+    readr::write_csv(chpDF, outCSV)
   }
   return(chpDF)
 }

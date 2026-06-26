@@ -75,6 +75,7 @@ makeMasks <- function(image,
     featData <- terra::project(featData, imgData)
   }
   if(crop==TRUE){
+    if(missing(extent)) stop("extent is required when crop = TRUE")
     extData <- terra::vect(extent)
     if(terra::crs(imgData) != terra::crs(extData)){
       extData <- terra::project(extData, imgData)
@@ -90,4 +91,5 @@ makeMasks <- function(image,
   } else{
     message("Invalid Mode.")
   }
+  invisible(NULL)
 }

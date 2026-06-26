@@ -114,10 +114,13 @@ predictSpatial <- function(imgIn,
 
   model2 <- model
   model2$eval()
+  if (useCUDA) model2$cuda()
 
-  image <- terra::rast(imgIn)
-
-  p_arr <- image
+  # Accept either a file path or an existing SpatRaster
+  if (!inherits(imgIn, "SpatRaster")) {
+    imgIn <- terra::rast(imgIn)
+  }
+  image <- imgIn
 
   if(mode == "multiclass" & predType %in% c("logit", "prob")){
     p_arr <- terra::subset(image, 1)
@@ -146,6 +149,8 @@ predictSpatial <- function(imgIn,
     outBands <- 1
   }
 
+  # Load the full raster into memory for tile-based processing.
+  # For very large scenes, consider tiling the raster on disk first.
   image <- terra::as.array(image)
   image <- torch::torch_tensor(image)
 
@@ -162,76 +167,59 @@ predictSpatial <- function(imgIn,
                                               inplace = FALSE)
   }
 
-  image <- image/rescaleFactor
-  image <- torch::torch_tensor(image, dtype=torch::torch_float32())
+  image <- (image / rescaleFactor)$to(dtype = torch::torch_float32())
 
-  size = chpSize
-  stride_x = stride_x
-  stride_y = stride_y
-  crop = crop
-  n_channels = nChn
+  size       <- chpSize
+  n_channels <- nChn
 
-  cropStart <- crop+1
+  if (size > image$shape[3] || size > image$shape[2]) {
+    stop("chpSize (", size, ") is larger than one or both image dimensions (",
+         image$shape[2], " rows x ", image$shape[3], " cols).")
+  }
 
-  across_cnt = image$shape[3]
-  down_cnt = image$shape[2]
-  tile_size_across = size
-  tile_size_down = size
-  overlap_across = stride_x
-  overlap_down = stride_y
-  across = ceiling(across_cnt/overlap_across)
-  down = ceiling(down_cnt/overlap_down)
-  across_seq = seq(1, across, 1)
-  down_seq = seq(1, down, 1)
-  across_seq2 = (across_seq*overlap_across)+1
-  across_seq2 <- c(1, across_seq2[1:(length(across_seq2)-1)])
-  down_seq2 = (down_seq*overlap_down)+1
-  down_seq2 <- c(1, down_seq2[1:(length(down_seq2)-1)])
+  cropStart  <- crop + 1
+  across_cnt <- image$shape[3]
+  down_cnt   <- image$shape[2]
+
+  across_seq2 <- seq(1, across_cnt, by = stride_x)
+  down_seq2   <- seq(1, down_cnt,   by = stride_y)
 
   columnCount <- length(across_seq2)
-  rowCount <- length(down_seq2)
+  rowCount    <- length(down_seq2)
   message(paste0("Processing ",
                as.character(columnCount),
                " columns by ",
                as.character(rowCount),
                " rows."))
 
-  #Loop through row/column combinations to make predictions for entire image
   for(c in across_seq2){
     for(r in down_seq2){
       c1 <- c
       r1 <- r
-      c2 <- c + (size-1)
-      r2 <- r + (size-1)
-      #Default
+      c2 <- c + (size - 1)
+      r2 <- r + (size - 1)
+
       if(c2 <= across_cnt & r2 <= down_cnt){
-        r1b <- r1
-        r2b <- r2
-        c1b <- c1
-        c2b <- c2
-      }else if(c2 > across_cnt & r2 <= down_cnt){#Last column
-        r1b <- r1
-        r2b <- r2
-        c1b <- across_cnt - size + 1
-        c2b <- across_cnt
-      }else if(c2 <= across_cnt & r2 > down_cnt){#Last row
-        r1b <- down_cnt - size + 1
-        r2b <- down_cnt
-        c1b <- c1
-        c2b <- c2
-      }else{ #Last row, last column
-        c1b <- across_cnt - size + 1
-        c2b <- across_cnt
-        r1b <- down_cnt - size + 1
-        r2b <- down_cnt
+        r1b <- r1; r2b <- r2; c1b <- c1; c2b <- c2
+      }else if(c2 > across_cnt & r2 <= down_cnt){
+        r1b <- r1; r2b <- r2
+        c1b <- across_cnt - size + 1; c2b <- across_cnt
+      }else if(c2 <= across_cnt & r2 > down_cnt){
+        r1b <- down_cnt - size + 1; r2b <- down_cnt
+        c1b <- c1; c2b <- c2
+      }else{
+        c1b <- across_cnt - size + 1; c2b <- across_cnt
+        r1b <- down_cnt - size + 1;   r2b <- down_cnt
       }
 
-      ten1 = image[1:n_channels, r1b:r2b, c1b:c2b]
+      ten1 <- image[1:n_channels, r1b:r2b, c1b:c2b]
       ten1 <- torch::torch_unsqueeze(ten1, 1)
 
-      preds <- model2(ten1)
+      torch::with_no_grad({
+        preds <- model2(ten1)
+      })
 
-      if(usedDS==TRUE){
+      if(usedDS == TRUE){
         preds <- preds[[1]]
       }
 
@@ -241,7 +229,7 @@ predictSpatial <- function(imgIn,
         }else if(predType == "logit"){
           preds <- preds
         }else{
-          preds = torch::torch_argmax(preds, dim=2)
+          preds <- torch::torch_argmax(preds, dim=2)
         }
       }else{
         if(predType == "prob"){
@@ -254,7 +242,7 @@ predictSpatial <- function(imgIn,
         }
       }
 
-      if(length(dim(preds))==4){
+      if(length(dim(preds)) == 4){
         preds <- torch::torch_squeeze(preds, dim=1)
       }
 
@@ -262,82 +250,30 @@ predictSpatial <- function(imgIn,
         preds <- torch::nnf_pad(preds, pad = c(predPad, predPad, predPad, predPad), mode = "constant", value = 0)
       }
 
-      if(r1b == 1 & c1b == 1){ #Write first row, first column
-
-        #print("Worked for first row, first column")
-
+      if(r1b == 1 & c1b == 1){
         p_arr[1:outBands, r1b:(r2b-crop), c1b:(c2b-crop)] <- preds[1:outBands, 1:(size-crop), 1:(size-crop)]
-
-      }else if(r1b == 1 & c2b == across_cnt){ #Write first row, last column
-
-        #print("Worked for first row, last column")
-
-        p_arr[1:outBands,r1b:(r2b-crop), (c1b+crop):c2b] = preds[1:outBands,1:(size-crop), cropStart:(size)]
-
-
-
-      }else if(r2b == down_cnt & c1b == 1){#Write last row, first column
-
-        #print("Worked for last row, first column")
-
-        p_arr[1:outBands,(r1b+crop):r2b, c1b:(c2b-crop)] = preds[1:outBands, cropStart:size, 1:(size-crop)]
-
-
-
-      }else if(r2b == down_cnt & c2b == across_cnt){#Write last row, last column
-
-        #print("Worked for last row, last column")
-
-        p_arr[1:outBands,(r1b+crop):r2b, (c1b+crop):c2b] = preds[1:outBands, cropStart:size, cropStart:size]
-
-
-
-      }else if((r1b == 1 & c1b != 1) | (r1b == 1 & c2b != across_cnt)){#Write first row
-
-        #print("Worked for first row")
-
-        p_arr[1:outBands,r1b:(r2b-crop), (c1b+crop):(c2b-crop)] = preds[1:outBands,1:(size-crop), cropStart:(size-crop)]
-
-
-
-      }else if((r2b == down_cnt & c1b != 1) | (r2b == down_cnt & c2b != across_cnt)){# Write last row
-
-        #print("Worked for last row, last column")
-
-        p_arr[1:outBands,(r1b+crop):r2b, (c1b+crop):(c2b-crop)] = preds[1:outBands, cropStart:size, cropStart:(size-crop)]
-
-
-
-      }else if((c1b == 1 & r1b !=1) | (c1b == 1 & r2b != down_cnt)){#Write first column
-
-        #print("Worked for first column")
-
-        p_arr[1:outBands,(r1b+crop):(r2b-crop), c1b:(c2b-crop)] = preds[1:outBands, cropStart:(size-crop), 1:(size-crop)]
-
-
-
-      }else if((c2b == across_cnt & r1b != 1) | (c2b == across_cnt & r2b != down_cnt)){# write last column
-
-        #print("Worked for last column")
-
-        p_arr[1:outBands,(r1b+crop):(r2b-crop), (c1b+crop):c2b] = preds[1:outBands, cropStart:(size-crop), cropStart:(size)]
-
-
-
-      }else{#Write middle chips
-
-        #print("Worked for middle")
-
-        p_arr[1:outBands,(r1b+crop):(r2b-crop), (c1b+crop):(c2b-crop)] = preds[1:outBands, cropStart:(size-crop), cropStart:(size-crop)]
-
+      }else if(r1b == 1 & c2b == across_cnt){
+        p_arr[1:outBands, r1b:(r2b-crop), (c1b+crop):c2b] <- preds[1:outBands, 1:(size-crop), cropStart:size]
+      }else if(r2b == down_cnt & c1b == 1){
+        p_arr[1:outBands, (r1b+crop):r2b, c1b:(c2b-crop)] <- preds[1:outBands, cropStart:size, 1:(size-crop)]
+      }else if(r2b == down_cnt & c2b == across_cnt){
+        p_arr[1:outBands, (r1b+crop):r2b, (c1b+crop):c2b] <- preds[1:outBands, cropStart:size, cropStart:size]
+      }else if((r1b == 1 & c1b != 1) | (r1b == 1 & c2b != across_cnt)){
+        p_arr[1:outBands, r1b:(r2b-crop), (c1b+crop):(c2b-crop)] <- preds[1:outBands, 1:(size-crop), cropStart:(size-crop)]
+      }else if((r2b == down_cnt & c1b != 1) | (r2b == down_cnt & c2b != across_cnt)){
+        p_arr[1:outBands, (r1b+crop):r2b, (c1b+crop):(c2b-crop)] <- preds[1:outBands, cropStart:size, cropStart:(size-crop)]
+      }else if((c1b == 1 & r1b != 1) | (c1b == 1 & r2b != down_cnt)){
+        p_arr[1:outBands, (r1b+crop):(r2b-crop), c1b:(c2b-crop)] <- preds[1:outBands, cropStart:(size-crop), 1:(size-crop)]
+      }else if((c2b == across_cnt & r1b != 1) | (c2b == across_cnt & r2b != down_cnt)){
+        p_arr[1:outBands, (r1b+crop):(r2b-crop), (c1b+crop):c2b] <- preds[1:outBands, cropStart:(size-crop), cropStart:size]
+      }else{
+        p_arr[1:outBands, (r1b+crop):(r2b-crop), (c1b+crop):(c2b-crop)] <- preds[1:outBands, cropStart:(size-crop), cropStart:(size-crop)]
       }
     }
-
   }
 
   p_arr2 <- p_arr$permute(c(2,3,1))$to(device="cpu")
-
-  p_arrA <- torch::as_array(p_arr2)
+  p_arrA  <- torch::as_array(p_arr2)
   outGrd[] <- p_arrA
   terra::writeRaster(outGrd, predOut, overwrite=TRUE)
 

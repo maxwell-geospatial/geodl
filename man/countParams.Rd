@@ -20,25 +20,3 @@ Count the number of trainable parameters in a model.
 \details{
 Count the number of trainable parameters in an instantiated model subclassed from nn_module().
 }
-\examples{
-\donttest{
-require(torch)
-model <- defineUNet(inChn = 4,
-                    nCls = 3,
-                    actFunc = "lrelu",
-                    useAttn = TRUE,
-                    useSE = TRUE,
-                    useRes = TRUE,
-                    useASPP = TRUE,
-                    useDS = FALSE,
-                    enChn = c(16,32,64,128),
-                    dcChn = c(128,64,32,16),
-                    btnChn = 256,
-                    dilRates=c(6,12,18),
-                    dilChn=c(256,256,256,256),
-                    negative_slope = 0.01,
-                    seRatio=8)
- t1 <- torch::torch_rand(c(12,4,128,128))
- params <- countParams(model, t1)
- }
-}

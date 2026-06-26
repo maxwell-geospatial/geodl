@@ -19,7 +19,8 @@ defineUNet(
   dilRates = c(6, 12, 18),
   dilChn = c(256, 256, 256, 256),
   negative_slope = 0.01,
-  seRatio = 8
+  seRatio = 8,
+  stageLRs = NULL
 )
 }
 \arguments{
@@ -31,7 +32,8 @@ this can be either 1 or 2. If 2, the problem is treated as a multiclass problem,
 and a multiclass loss metric should be used. Default is 3.}
 
 \item{actFunc}{Defines activation function to use throughout the network. "relu" =
-rectified linear unit (ReLU); "lrelu" = leaky ReLU; "swish" = swish. Default is "relu".}
+rectified linear unit (ReLU); "lrelu" = leaky ReLU; "swish" = swish; "gelu" = GELU.
+Default is "relu".}
 
 \item{useAttn}{TRUE or FALSE. Whether to add attention gates along the skip connections.
 Default is FALSE or no attention gates are added.}
@@ -69,6 +71,12 @@ rate within the ASPP module. Default is 256 for each dilation rate.}
 to use. Default is 0.01.}
 
 \item{seRatio}{Ratio to use in squeeze and excitation module. The default is 8.}
+
+\item{stageLRs}{Optional numeric vector of length 9 specifying a base learning
+rate for each stage of the network: encoder stages e1, e2, e3, e4, the
+bottleneck, and decoder stages d1, d2, d3, d4 (in that order). When provided,
+call \code{model$get_param_groups()} to obtain a list of optimizer parameter
+groups with per-stage learning rates. Default is NULL (single learning rate).}
 }
 \value{
 Unet model instance as torch nn_module
@@ -86,27 +94,4 @@ gates along the skip connections, (3) implement squeeze and excitation modules w
 the encoder blocks, (4) add residual connections within all blocks, (5) replace the
 bottleneck with a modified atrous spatial pyramid pooling (ASPP) module, and/or (6)
 implement deep supervision using predictions generated at each stage in the decoder.
-}
-\examples{
-\donttest{
-require(torch)
-model <- defineUNet(inChn = 4,
-                   nCls = 3,
-                   actFunc = "lrelu",
-                   useAttn = TRUE,
-                   useSE = TRUE,
-                   useRes = TRUE,
-                   useASPP = TRUE,
-                   useDS = TRUE,
-                   enChn = c(16,32,64,128),
-                   dcChn = c(128,64,32,16),
-                   btnChn = 256,
-                   dilRates=c(6,12,18),
-                   dilChn=c(256,256,256,256),
-                   negative_slope = 0.01,
-                   seRatio=8)
-
-t1 <- torch::torch_rand(2,4,256,256)
-tp <- model(t1)
- }
 }

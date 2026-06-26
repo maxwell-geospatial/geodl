@@ -6,7 +6,7 @@
 \usage{
 makeTerrainVisTerra(
   dtm,
-  cellSize,
+  cellSize = 1,
   innerRadius = 2,
   outerRadius = 10,
   hsRadius = 50,

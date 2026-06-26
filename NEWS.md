@@ -1,3 +1,15 @@
+# geodl (development)
+
+* Added `defineCBAMUNet()`: a UNet variant with Convolutional Block Attention Modules (CBAM)
+  on skip connections, support for ReLU/leaky ReLU/Swish/GELU activation functions, optional
+  residual connections, optional ASPP bottleneck, and optional deep supervision.
+
+# geodl 0.3.3
+
+* Updated torch-dependent examples so they are skipped when the torch runtime
+  dependencies, including Lantern, are unavailable.
+* Fixed example typo in `defineUnifiedFocalLoss()` where `pred2` was used twice.
+
 # geodl 0.3.0
 
 * Support for three model architectures: UNet, UNet with MobileNetv2 encoder, and UNet3+
@@ -12,6 +24,6 @@
 * Fixed issue with chip generation pipeline that caused some chips with NA cells to be written
 * Updated atrous spatial pyramid pooling (ASPP) module to align with the version used within DeepLabv3+
 
-# geodl 0.1.0
+# geodl 0.2.0
 
 * Initial CRAN submission.

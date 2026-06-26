@@ -87,6 +87,7 @@ luz_metric_recall <- luz::luz_metric(
     self$biThresh <- biThresh
     self$zeroStart <- zeroStart
     self$clsWghts <- clsWghts
+    self$usedDS <- usedDS
 
     if(self$mode == "multiclass"){
       self$tps <- rep(0.0, nCls)
@@ -101,22 +102,23 @@ luz_metric_recall <- luz::luz_metric(
 
   update = function(preds, target){
 
+    if(self$usedDS) preds <- preds[[1]]
     preds <- cropTensor(preds, crpFactor=self$cropFactorPred)
     target <- cropTensor(target, crpFactor=self$cropFactorMsk)
 
     if(self$mode == "multiclass"){
       predsMax <- torch::torch_argmax(preds, dim = 2)
-      target1 <- torch::torch_tensor(target, dtype=torch::torch_long())
+      target1 <- target$to(dtype=torch::torch_long())
 
       if(self$zeroStart == TRUE){
-        target1 <- torch::torch_tensor(target1+1, dtype=torch::torch_long())
+        target1 <- target1 + 1L
       }
 
       preds_one_hot <- torch::nnf_one_hot(predsMax, num_classes = self$nCls)
       preds_one_hot <- preds_one_hot$permute(c(1,4,2,3))
 
       target_one_hot <- torch::nnf_one_hot(target1, num_classes = self$nCls)
-      target_one_hot <- target_one_hot$squeeze()
+      target_one_hot <- target_one_hot$squeeze(2L)
       target_one_hot <- target_one_hot$permute(c(1,4,2,3))
 
       dims <- c(1, 3, 4)
@@ -133,18 +135,17 @@ luz_metric_recall <- luz::luz_metric(
 
     }else{
       preds <- torch::nnf_sigmoid(preds)
-      preds <- preds > self$biThresh
-      preds <- torch::torch_tensor(preds, dtype=torch::torch_float32())
+      preds <- (preds > self$biThresh)$to(dtype=torch::torch_float32())
       preds <- preds$flatten()
-      target <- target$flatten()
+      target <- target$to(dtype=torch::torch_float32())$flatten()
 
-      self$tps <- self$tps + sum(preds * target)$cpu() |>
+      self$tps <- self$tps + torch::torch_sum(preds * target)$cpu() |>
         torch::as_array() |>
         as.vector()
-      self$fps <- self$fps + sum((1.0 - target) * preds)$cpu() |>
+      self$fps <- self$fps + torch::torch_sum((1.0 - target) * preds)$cpu() |>
         torch::as_array() |>
         as.vector()
-      self$fns <- self$fns + sum(target * (1.0 - preds))$cpu() |>
+      self$fns <- self$fns + torch::torch_sum(target * (1.0 - preds))$cpu() |>
         torch::as_array() |>
         as.vector()
     }
@@ -246,6 +247,7 @@ luz_metric_precision <- luz::luz_metric(
     self$biThresh <- biThresh
     self$zeroStart <- zeroStart
     self$clsWghts <- clsWghts
+    self$usedDS <- usedDS
 
     #initialize R vectors to store true positive, false negative, and false positive counts
     #For a binary and micro-averaged multiclass metric, will obtain a vector with a length of one.
@@ -263,6 +265,7 @@ luz_metric_precision <- luz::luz_metric(
 
   update = function(preds, target){
 
+    if(self$usedDS) preds <- preds[[1]]
     preds <- cropTensor(preds, crpFactor=self$cropFactorPred)
     target <- cropTensor(target, crpFactor=self$cropFactorMsk)
 
@@ -271,11 +274,11 @@ luz_metric_precision <- luz::luz_metric(
       #Get index of class with largest logit.
       predsMax <- torch::torch_argmax(preds, dim = 2)
       #Make sure target is in type torch_long()
-      target1 <- torch::torch_tensor(target, dtype=torch::torch_long())
+      target1 <- target$to(dtype=torch::torch_long())
 
       if(self$zeroStart == TRUE){
         #If class indices start at zero, add 1.
-        target1 <- torch::torch_tensor(target+1, dtype=torch::torch_long())
+        target1 <- target1 + 1L
       }
 
       #One-hot encode the prediction results that have been passed through argmax()
@@ -285,8 +288,8 @@ luz_metric_precision <- luz::luz_metric(
 
       #one-hot encode the targets.
       target_one_hot <- torch::nnf_one_hot(target1, num_classes = self$nCls)
-      #Remove channel dimension.
-      target_one_hot <- target_one_hot$squeeze()
+      #Remove channel dimension (dim 2); squeeze(2L) avoids dropping the batch dim when N=1.
+      target_one_hot <- target_one_hot$squeeze(2L)
       #permute the results so that the order is [batch, encoding, height, width]
       target_one_hot <- target_one_hot$permute(c(1,4,2,3))
 
@@ -311,23 +314,22 @@ luz_metric_precision <- luz::luz_metric(
     }else{
       #Convert logits to probs using sigmoid function
       preds <- torch::nnf_sigmoid(preds)
-      #Round to convert probs to 0 and 1.
-      preds <- preds > self$biThresh
-      preds <- torch::torch_tensor(preds, dtype=torch::torch_float32())
+      #Threshold to get binary predictions
+      preds <- (preds > self$biThresh)$to(dtype=torch::torch_float32())
       #Flatten arrays (this generalizes the problem so that the shape of the input tensors does not matter)
       preds <- preds$flatten()
-      target <- target$flatten()
+      target <- target$to(dtype=torch::torch_float32())$flatten()
 
       #Calculate true positives and add to running true positives count.
-      self$tps <- self$tps + sum(preds * target)$cpu() |>
+      self$tps <- self$tps + torch::torch_sum(preds * target)$cpu() |>
         torch::as_array() |>
         as.vector()
       #Calculate false positives and add to running true positives count.
-      self$fps <- self$fps + sum((1.0 - target) * preds)$cpu() |>
+      self$fps <- self$fps + torch::torch_sum((1.0 - target) * preds)$cpu() |>
         torch::as_array() |>
         as.vector()
       #Calculate false negatives and add to running false negative count.
-      self$fns <- self$fns + sum(target * (1.0 - preds))$cpu() |>
+      self$fns <- self$fns + torch::torch_sum(target * (1.0 - preds))$cpu() |>
         torch::as_array() |>
         as.vector()
     }
@@ -431,6 +433,7 @@ luz_metric_f1score <- luz::luz_metric(
     self$biThresh <- biThresh
     self$clsWghts <- clsWghts
     self$zeroStart <- zeroStart
+    self$usedDS <- usedDS
 
     if(self$mode == "multiclass"){
       self$tps <- rep(0.0, nCls)
@@ -445,22 +448,23 @@ luz_metric_f1score <- luz::luz_metric(
 
   update = function(preds, target){
 
+    if(self$usedDS) preds <- preds[[1]]
     preds <- cropTensor(preds, crpFactor=self$cropFactorPred)
     target <- cropTensor(target, crpFactor=self$cropFactorMsk)
 
     if(self$mode == "multiclass"){
       predsMax <- torch::torch_argmax(preds, dim = 2)
-      target1 <- torch::torch_tensor(target, dtype=torch::torch_long())
+      target1 <- target$to(dtype=torch::torch_long())
 
       if(self$zeroStart == TRUE){
-        target1 <- torch::torch_tensor(target+1, dtype=torch::torch_long())
+        target1 <- target1 + 1L
       }
 
       preds_one_hot <- torch::nnf_one_hot(predsMax, num_classes = self$nCls)
       preds_one_hot <- preds_one_hot$permute(c(1,4,2,3))
 
       target_one_hot <- torch::nnf_one_hot(target1, num_classes = self$nCls)
-      target_one_hot <- target_one_hot$squeeze()
+      target_one_hot <- target_one_hot$squeeze(2L)
       target_one_hot <- target_one_hot$permute(c(1,4,2,3))
 
       dims <- c(1, 3, 4)
@@ -478,18 +482,17 @@ luz_metric_f1score <- luz::luz_metric(
     }else{
 
       preds <- torch::nnf_sigmoid(preds)
-      preds <- preds > self$biThresh
-      preds <- torch::torch_tensor(preds, dtype=torch::torch_float32())
+      preds <- (preds > self$biThresh)$to(dtype=torch::torch_float32())
       preds <- preds$flatten()
-      target <- target$flatten()
+      target <- target$to(dtype=torch::torch_float32())$flatten()
 
-      self$tps <- self$tps + sum(preds * target)$cpu() |>
+      self$tps <- self$tps + torch::torch_sum(preds * target)$cpu() |>
         torch::as_array() |>
         as.vector()
-      self$fps <- self$fps + sum((1.0 - target) * preds)$cpu() |>
+      self$fps <- self$fps + torch::torch_sum((1.0 - target) * preds)$cpu() |>
         torch::as_array() |>
         as.vector()
-      self$fns <- self$fns + sum(target * (1.0 - preds))$cpu() |>
+      self$fns <- self$fns + torch::torch_sum(target * (1.0 - preds))$cpu() |>
         torch::as_array() |>
         as.vector()
     }
@@ -594,6 +597,7 @@ luz_metric_overall_accuracy <- luz::luz_metric(
     self$mode <- mode
     self$biThresh <- biThresh
     self$zeroStart <- zeroStart
+    self$usedDS <- usedDS
 
     self$correct <- 0
     self$total <- 0
@@ -601,6 +605,7 @@ luz_metric_overall_accuracy <- luz::luz_metric(
 
   update = function(preds, target) {
 
+    if(self$usedDS) preds <- preds[[1]]
     preds <- cropTensor(preds, crpFactor=self$cropFactorPred)
     target <- cropTensor(target, crpFactor=self$cropFactorMsk)
 
@@ -608,23 +613,21 @@ luz_metric_overall_accuracy <- luz::luz_metric(
     if(self$mode == "multiclass"){
 
       predsMax <- torch::torch_argmax(preds, dim = 2)
-      target1 <- torch::torch_tensor(target, dtype=torch::torch_long())
+      target1 <- target$to(dtype=torch::torch_long())
 
       if(self$zeroStart == TRUE){
-        target1 <- torch::torch_tensor(target1+1, dtype=torch::torch_long())
+        target1 <- target1 + 1L
       }
 
       preds_one_hot <- torch::nnf_one_hot(predsMax, num_classes = self$nCls)
       preds_one_hot <- preds_one_hot$permute(c(1,4,2,3))
 
       target_one_hot <- torch::nnf_one_hot(target1, num_classes = self$nCls)
-      target_one_hot <- target_one_hot$squeeze()
+      target_one_hot <- target_one_hot$squeeze(2L)
       target_one_hot <- target_one_hot$permute(c(1,4,2,3))
 
-      currentCnt <- torch::torch_sum(target_one_hot >= 0)$
-        to(dtype = torch::torch_float())$cpu() |>
-        torch::as_array() |>
-        as.vector() |> sum()/self$nCls
+      # Total pixels = N * H * W (pred shape after cropping)
+      currentCnt <- predsMax$numel()
 
       dims <- c(1, 2, 3, 4)
 
@@ -634,14 +637,12 @@ luz_metric_overall_accuracy <- luz::luz_metric(
       self$total <- self$total + currentCnt
     }else{
       preds <- torch::nnf_sigmoid(preds)
-      preds <- preds > self$biThresh
-      preds <- torch::torch_tensor(preds, dtype=torch::torch_float32())
+      preds <- (preds > self$biThresh)$to(dtype=torch::torch_float32())
       preds <- preds$flatten()
-      target <- target$flatten()
+      target <- target$to(dtype=torch::torch_float32())$flatten()
 
       self$correct <- self$correct + torch::torch_sum(preds == target)$
         to(dtype = torch::torch_float())$
-        sum()$
         item()
       self$total <- self$total + preds$numel()
 

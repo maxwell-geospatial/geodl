@@ -4,15 +4,7 @@
 \alias{checkDynamicChips}
 \title{checkDymamicChips}
 \usage{
-checkDynamicChips(
-  chipsSF,
-  chipSize = 512,
-  cellSize = 1,
-  doJitter = FALSE,
-  jitterSD = 15,
-  useSeed = TRUE,
-  seed = 42
-)
+checkDynamicChips(chipsSF, chipSize = 512, cellSize = 1)
 }
 \arguments{
 \item{chipsSF}{sf object created by makeDynamicChipsSF().}
@@ -20,15 +12,6 @@ checkDynamicChips(
 \item{chipSize}{Size of desired image chips. Default is 512 (512x512 cells)}
 
 \item{cellSize}{Cells size of input data. Default is 1 m.}
-
-\item{doJitter}{Whether or not to add random noise to chip center coordinates. Default is FALSE.}
-
-\item{jitterSD}{If doJitter is TRUE, standard deviation of random positional noise to add in
-both the x and y directions. Default is 15 (15 meters).}
-
-\item{useSeed}{Whether or not to use a random seed for added jitter noise. Default is FALSE.}
-
-\item{seed}{Random seed value.}
 }
 \value{
 Dataframe of summary information about image chips.

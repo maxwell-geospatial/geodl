@@ -8,10 +8,6 @@ defineDynmamicSegDataSet(
   chipsSF,
   chipSize = 512,
   cellSize = 2,
-  doJitter = TRUE,
-  jitterSD = 15,
-  useSeed = TRUE,
-  seed = 42,
   normalize = FALSE,
   rescaleFactor = 1,
   mskRescale = 1,
@@ -42,15 +38,6 @@ defineDynmamicSegDataSet(
 \item{chipSize}{Size of desired image chips. Default is 512 (512x512 cells)}
 
 \item{cellSize}{Cells size of input data. Default is 1 m.}
-
-\item{doJitter}{Whether or not to add random noise to chip center coordinates. Default is FALSE.}
-
-\item{jitterSD}{If doJitter is TRUE, standard deviation of random positional noise to add in
-both the x and y directions. Default is 15 (15 meters).}
-
-\item{useSeed}{Whether or not to use a random seed for added jitter noise. Default is FALSE.}
-
-\item{seed}{Random seed value.}
 
 \item{normalize}{TRUE or FALSE. Whether to apply normalization. If FALSE,
 bMns and bSDs are ignored. Default is FALSE. If TRUE, you must provide bMns
@@ -151,7 +138,7 @@ Instantiate a subclass of torch::dataset() for geospatial semantic segmentation 
 }
 \details{
 This function instantiates a subclass of torch::dataset() that dynmaically generates chips
-using tghe output from makeDynamicChips.R Can also define random augmentations to combat
+using the output from makeDynamicChipsSF(). Can also define random augmentations to combat
 overfitting. Note that horizontal and vertical flips will affect the alignment of the
 image and associated mask chips. As a result, the same augmentation will be applied
 to both the image and the mask. Changes in brightness, contrast, gamma, hue, and

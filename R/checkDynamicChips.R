@@ -13,31 +13,18 @@
 #' @param chipsSF sf object created by makeDynamicChipsSF().
 #' @param chipSize Size of desired image chips. Default is 512 (512x512 cells)
 #' @param cellSize Cells size of input data. Default is 1 m.
-#' @param doJitter Whether or not to add random noise to chip center coordinates. Default is FALSE.
-#' @param jitterSD If doJitter is TRUE, standard deviation of random positional noise to add in
-#' both the x and y directions. Default is 15 (15 meters).
-#' @param useSeed Whether or not to use a random seed for added jitter noise. Default is FALSE.
-#' @param seed Random seed value.
 #' @return Dataframe of summary information about image chips.
 #' @export
 checkDynamicChips <- function(chipsSF,
                               chipSize=512,
-                              cellSize=1,
-                              doJitter=FALSE,
-                              jitterSD=15,
-                              useSeed=TRUE,
-                              seed=42){
+                              cellSize=1){
 
   checkDF <- data.frame()
 
   for(i in 1:nrow(chipsSF)){
     c1 <- makeDynamicChip(chipIn=chipsSF[i,],
                           chipSize=chipSize,
-                          cellSize=cellSize,
-                          doJitter=doJitter,
-                          jitterSD=jitterSD,
-                          useSeed=useSeed,
-                          seed=seed)
+                          cellSize=cellSize)
 
     c1DF <- data.frame(cCntImg = terra::ncol(c1$image),
                        rCntImg = terra::nrow(c1$image),

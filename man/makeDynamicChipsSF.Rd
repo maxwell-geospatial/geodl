@@ -5,6 +5,8 @@
 \title{makeDynamicChipsSF}
 \usage{
 makeDynamicChipsSF(
+  pntPth,
+  pntName,
   featPth,
   featName,
   extentPth,
@@ -21,9 +23,16 @@ makeDynamicChipsSF(
 )
 }
 \arguments{
-\item{featPth}{Full folder path or relative path to vector features. Must include final forward slash.}
+\item{pntPth}{Full folder path or relative path to vector point layer defining chip centers. Must
+include final forward slash.}
 
-\item{featName}{File name of reference features including file extension.}
+\item{pntName}{File name of point layer including file extension. Must contain "code" (numeric class
+code) and "class" (text class name) columns.}
+
+\item{featPth}{Full folder path or relative path to vector polygon features used as the mask source.
+Must include final forward slash.}
+
+\item{featName}{File name of polygon feature layer including file extension.}
 
 \item{extentPth}{Full folder path or relative path to vector extent. Must include final forward slash.}
 
@@ -32,22 +41,22 @@ makeDynamicChipsSF(
 \item{extentCrop}{Amount to crop extent to avoid edge effects. We recommend cropping
 the extent more than the size of the chips you will use to avoid chips with NA cells. Default is 50 cells.}
 
-\item{imgPth}{Path to image or predictor variable raster data. Must include the final forward slash}
+\item{imgPth}{Path to image or predictor variable raster data. Must include the final forward slash.}
 
-\item{imgName}{File name of image or predictor variable raster data including file extension}
+\item{imgName}{File name of image or predictor variable raster data including file extension.}
 
 \item{doBackground}{Whether or not to randomly select background cells. Default is FALSE.}
 
 \item{backgroundCnt}{Number of background cells to select.}
 
-\item{backgroundDist}{Minimum allowed distance between randomly selected background locations and boundaries
-of reference features.}
+\item{backgroundDist}{Minimum allowed distance between randomly selected background locations and
+boundaries of reference features.}
 
 \item{useSeed}{Whether or not to set a random seed for replicability. Default is FALSE.}
 
 \item{seed}{Random seed value.}
 
-\item{doShuffle}{Whether or to shuffle the rows in the resulting table. Default is FALSE or no shuffling.}
+\item{doShuffle}{Whether or not to shuffle the rows in the resulting table. Default is FALSE.}
 }
 \value{
 sf dataframe object of center locations for chip creation with associated information as attributes.
@@ -56,21 +65,24 @@ sf dataframe object of center locations for chip creation with associated inform
 Generate a vector point sf object of chip center locations for use with defineDynamicSegDataSet().
 }
 \details{
-Requires an input vector object of feature examples, a boundary extent, and the path and name of the
-associated raster predictor variables. Note that the raster predictor variable must cover the full
-spatial extent defined by the extent object. If not, a smaller extent should be defined for which
-predictor variables are available.
+Requires an input vector point object defining chip center locations, an input vector polygon object
+of reference features used to generate segmentation masks, a boundary extent, and the path and name
+of the associated raster predictor variables. Note that the raster predictor variable must cover the
+full spatial extent defined by the extent object. If not, a smaller extent should be defined for
+which predictor variables are available.
 
-The input vector features must contain a "code" column of numeric class codes and a "class" column of
-text class names. If the data are not spatial contiguous, we recommend reserving code 0 for the
-background class.
+The input point layer must contain a "code" column of numeric class codes and a "class" column of
+text class names. The input polygon feature layer is used only as the mask source during training
+and is not required to share attributes with the point layer, but must also contain "code" and
+"class" columns if class-specific masking is expected downstream.
 
 The extent can be cropped to avoid generating chips without a full set of cells available. We recommend
 cropping by a factor larger than 50\% the width/height of the desired chip size.
 
 The tool returns a sf dataframe with class name ("class"), class numeric code ("code"), path to the
 image or predictor variables ("imgPth"), name of the image or predictor variables ("imgName"), the
-path to the input features ("featPth"), the file name of the input features ("featName"), the file
-path to the extent ("extentPth"), the file name for the extent ("extentName"), and the point feature
-geometry ("geometry").
+path to the input point layer ("pntPth"), the file name of the input point layer ("pntName"), the
+path to the input polygon features ("featPth"), the file name of the input polygon features
+("featName"), the file path to the extent ("extentPth"), the file name for the extent ("extentName"),
+and the point geometry ("geometry").
 }

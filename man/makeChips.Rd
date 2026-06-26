@@ -40,12 +40,13 @@ the function if useExistingDir = FALSE. You must include the final forward slash
 in the file path (e.g., "C:/data/chips/").}
 
 \item{mode}{Either "All", "Positive", or "Divided". Please see the explanations
-provided above. The default is "All".}
+provided above. The default is "All". For multiclass problems, "All" or
+"Positive" are recommended.}
 
 \item{useExistingDir}{TRUE or FALSE. Write chips into an existing directory
 with subfolders already defined as opposed to using a new directory. This can be used
 if you want to add chips to an existing set of chips. However, the "mode" should
-be the same as that used to generated the original chips. Default is FALSE.}
+be the same as that used to generate the original chips. Default is FALSE.}
 }
 \value{
 Image and mask files written to disk in TIFF format. No R object is returned.
@@ -62,35 +63,49 @@ the size argument, resulting chips will either overlap or have gaps between
 them. In order to not have overlap or gaps, the stride_x and stride_y arguments
 should be the same as the size argument. Both the image chips and associated
 masks are written to TIFF format (".tif"). Input data are not limited to three
-band images. This function is specifically for a binary classification where
-the positive case is indicated with a cell value of 1 and the background or
-negative case is indicated with a cell value of 0. If an irregular shaped raster
-grid is provided, only chips and masks that contain no NA or NoDATA cells will
-be produced.
+band images. This function supports both binary and multiclass classification
+problems. For binary classification the background class should be coded 0 and
+the positive class coded 1. For multiclass problems, class codes should be
+sequential integers (e.g., 0 to n-1 or 1 to n). In all modes, chips or masks
+that contain any NA or NoData cells are excluded.
 
-Three modes are available. If "All" is used, all image chips are
-generated even if they do not contain pixels mapped to the positive case.
-Within the provided directory, image chips will be written to an "images" folder
-and masks will be written to a "masks" folder. If "Positive" is used, only chips
-that have at least 1 pixel mapped to the positive class will be produced. Background-
-only chips will not be generated. Within the provided directory, image chips will
-be written to an "images" folder and masks will be written to a "masks" folder.
-Lastly, if the "Divided" method is used, separate "positive" and "background"
-folders will be created with "images" and "masks" subfolders. Any chip that has
-at least 1 pixel mapped to the positive class will be written to the "positive"
-folder while any chip having only background pixels will be written to the
-"background" folder.
+Three modes are available. If "All" is used, all image chips are generated,
+including those that contain only background pixels (class code 0). Within the
+provided directory, image chips will be written to an "images" folder and masks
+will be written to a "masks" folder. If "Positive" is used, only chips that
+contain at least one non-background pixel (i.e., any pixel with a class code
+greater than 0) will be produced. This mode is recommended for both binary and
+multiclass problems where background-only chips should be excluded. Within the
+provided directory, image chips will be written to an "images" folder and masks
+will be written to a "masks" folder. Lastly, if the "Divided" mode is used,
+separate "positive" and "background" folders will be created with "images" and
+"masks" subfolders. Any chip containing at least one non-background pixel will
+be written to the "positive" folder; chips containing only background pixels
+will be written to the "background" folder. This mode is primarily intended for
+binary classification problems.
 }
 \examples{
 \dontrun{
+# Binary classification
 makeChips(image = "INPUT IMAGE FILE NAME AND PATH",
           mask = "INPUT RASTER MASK FILE NAME AND PATH",
           n_channels = 3,
           size = 256,
           stride_x = 256,
           stride_y = 256,
-          outDir = "OUTPUT DIRECTY IN WHICH TO SAVE CHIPS",
+          outDir = "OUTPUT DIRECTORY IN WHICH TO SAVE CHIPS",
           mode = "Positive",
-          useExistingDir=FALSE)
+          useExistingDir = FALSE)
+
+# Multiclass classification
+makeChips(image = "INPUT IMAGE FILE NAME AND PATH",
+          mask = "INPUT RASTER MASK FILE NAME AND PATH",
+          n_channels = 3,
+          size = 256,
+          stride_x = 256,
+          stride_y = 256,
+          outDir = "OUTPUT DIRECTORY IN WHICH TO SAVE CHIPS",
+          mode = "Positive",
+          useExistingDir = FALSE)
 }
 }

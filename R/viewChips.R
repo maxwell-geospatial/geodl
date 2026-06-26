@@ -27,7 +27,7 @@
 #' For gray scale or single-band images, assign the same index to all three bands.
 #' @param g Band number to map to the green channel. Default is 2 or the second channel.
 #' For gray scale or single-band images, assign the same index to all three bands.
-#' @param b Band number to map to the red channel. Default is 3 or the third channel.
+#' @param b Band number to map to the blue channel. Default is 3 or the third channel.
 #' For gray scale or single-band images, assign the same index to all three bands.
 #' @param rescale TRUE or FALSE. Whether or not to rescale image data. Default is FALSE or no rescaling.
 #' @param rescaleVal If rescale is TRUE, value used to rescale data. For example, 255 could
@@ -104,7 +104,7 @@ viewChips <- function(chpDF,
 
   subset1 <- chpDF |> dplyr::sample_n(nSamps, replace=FALSE)
 
-  testImg <- terra::rast(paste0(folder,subset1[1,"chpPth"]))
+  testImg <- terra::rast(paste0(folder, subset1[1, "chpPth"]))
 
   w <- terra::nrow(testImg)
   h <- terra::ncol(testImg)
@@ -116,8 +116,8 @@ viewChips <- function(chpDF,
                         extent=c(xmin=1, xmax=cCnt*w, ymin=1, ymax=rCnt*h))
   blankR[] <- 1
 
-  rSeq <- seq(1,terra::nrow(blankR),w)
-  cSeq <- seq(1,terra::ncol(blankR), h)
+  rSeq <- seq(1, terra::nrow(blankR), w)
+  cSeq <- seq(1, terra::ncol(blankR), h)
 
   theGrid <- expand.grid(rSeq, cSeq)
   names(theGrid) <- c("rI", "cI")
@@ -127,38 +127,36 @@ viewChips <- function(chpDF,
     blankM <- terra::subset(blankR, 1)
     blankM[] <- 0
     for(i in 1:nrow(subset1)){
-      img1 <- terra::rast(paste0(folder,subset1[i,"chpPth"]))
-      msk1 <- terra::rast(paste0(folder,subset1[i,"mskPth"]))
+      img1 <- terra::rast(paste0(folder, subset1[i, "chpPth"]))
+      msk1 <- terra::rast(paste0(folder, subset1[i, "mskPth"]))
       if(rescale == TRUE){
         img1 <- img1/rescaleVal
       }
-      currentR <-subset1[i,"rI"]
-      currentC <-subset1[i, "cI"]
+      currentR <- subset1[i, "rI"]
+      currentC <- subset1[i, "cI"]
       blankR[currentR:(currentR+w-1), currentC:(currentC+h-1), 1:l] <- img1[]
-      blankM[currentR:(currentR+w-1), currentC:(currentC+h-1), 1] <- msk1[]
+      blankM[currentR:(currentR+w-1), currentC:(currentC+h-1), 1]   <- msk1[]
     }
 
-    used <- usedCodes <- terra::unique(blankM) |> as.vector() |> unlist()
-
+    used    <- terra::unique(blankM) |> as.vector() |> unlist()
     catData <- catData |> dplyr::filter(cCodes %in% used)
 
-    layout(matrix(1:2, nrow = 2), heights = c(1, 1))
+    layout(matrix(1:2, nrow=2), heights=c(1, 1))
+    par(mar=c(1, 1, 1, 1))
 
-    par(mar = c(1, 1, 1, 1))
-
-    imgPlot = terra::plotRGB(blankR, r=1, g=2, b=3, scale=255, axes=FALSE, stretch="lin", maxcell=1000000)
-    mskPlot = terra::plot(blankM, type="classes", axes=FALSE, levels=cNames, col=cColors, maxcell=1000000)
+    terra::plotRGB(blankR, r=r, g=g, b=b, scale=255, axes=FALSE, stretch="lin", maxcell=1000000)
+    terra::plot(blankM, type="classes", axes=FALSE, levels=catData$cNames, col=catData$cColors, maxcell=1000000)
 
     layout(1)
 
   }else if(mode == "image"){
     for(i in 1:nrow(subset1)){
-      img1 <- terra::rast(paste0(folder,subset1[i,"chpPth"]))
+      img1 <- terra::rast(paste0(folder, subset1[i, "chpPth"]))
       if(rescale == TRUE){
         img1 <- img1/rescaleVal
       }
-      currentR <-subset1[i,"rI"]
-      currentC <-subset1[i, "cI"]
+      currentR <- subset1[i, "rI"]
+      currentC <- subset1[i, "cI"]
       blankR[currentR:(currentR+w-1), currentC:(currentC+h-1), 1:l] <- img1[]
     }
 
@@ -168,21 +166,15 @@ viewChips <- function(chpDF,
     blankM <- terra::subset(blankR, 1)
     blankM[] <- 0
     for(i in 1:nrow(subset1)){
-      msk1 <- terra::rast(paste0(folder,subset1[i,"mskPth"]))
-      currentR <-subset1[i,"rI"]
-      currentC <-subset1[i, "cI"]
+      msk1 <- terra::rast(paste0(folder, subset1[i, "mskPth"]))
+      currentR <- subset1[i, "rI"]
+      currentC <- subset1[i, "cI"]
       blankM[currentR:(currentR+w-1), currentC:(currentC+h-1), 1] <- msk1[]
     }
 
-    catData <- data.frame(cCodes=cCodes,
-                          cNames=cNames,
-                          cColors=cColors)
-
-    used <- usedCodes <- terra::unique(blankM) |> as.vector() |> unlist()
-
+    used    <- terra::unique(blankM) |> as.vector() |> unlist()
     catData <- catData |> dplyr::filter(cCodes %in% used)
 
     terra::plot(blankM, type="classes", axes=FALSE, levels=catData$cNames, col=catData$cColors, maxcell=1000000)
-
   }
 }

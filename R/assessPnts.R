@@ -68,6 +68,8 @@ assessPnts <- function(reference,
                       decimals=4){
 
   if(multiclass == TRUE){
+    reference <- factor(reference, levels=mappings)
+    predicted  <- factor(predicted,  levels=mappings)
     t1 <- table(predicted, reference)
 
     colnames(t1) <- mappings
@@ -94,7 +96,7 @@ assessPnts <- function(reference,
                     referenceCounts = col1,
                     predictionCounts = row1,
                     confusionMatrix = t1,
-                    aggMetrics = data.frame(OA = round(oa, digits=4),
+                    aggMetrics = data.frame(OA = round(oa, digits=decimals),
                                             macroF1 = round(aF1, digits=decimals),
                                             macroPA = round(aPA, digits=decimals),
                                             macroUA = round(aUA, digits=decimals)),
@@ -130,7 +132,7 @@ assessPnts <- function(reference,
     results <- list(Classes = mappings,
                     referenceCounts = col1,
                     predictionCounts = row1,
-                    ConfusionMatrix = t1,
+                    confusionMatrix = t1,
                     Mets = data.frame(OA = round(oa, digits=decimals),
                                       Recall = round(pa[2], digits=decimals),
                                       Precision = round(ua[2], digits=decimals),

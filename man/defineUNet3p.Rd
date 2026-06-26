@@ -7,14 +7,16 @@
 defineUNet3p(
   inChn = 3,
   nCls = 2,
+  actFunc = "lrelu",
   enChn = c(16, 32, 64, 128),
   outChn = 64,
   btnChn = 256,
-  useASPP = TRUE,
+  useASPP = FALSE,
   dilRates = c(6, 12, 18),
   dilChn = c(256, 256, 256, 256),
   negative_slope = 0.01,
-  useDS = FALSE
+  useDS = FALSE,
+  stageLRs = NULL
 )
 }
 \arguments{
@@ -25,6 +27,9 @@ image or raster data. Default is 3.}
 this can be either 1 or 2. If 2, the problem is treated as a multiclass problem,
 and a multiclass loss metric should be used. Default is 3.
 double convolution operation. Default is FALSE or the ASPP module is not used as the bottleneck.}
+
+\item{actFunc}{Activation function to use throughout. "relu" = ReLU; "lrelu" = leaky ReLU;
+"swish" = SiLU/Swish; "gelu" = GELU. Default is "lrelu".}
 
 \item{enChn}{Vector of 4 integers defining the number of output
 feature maps for each of the four encoder blocks. Default is 16, 32, 64, and 128.
@@ -49,6 +54,13 @@ rate within the ASPP module. Default is 256 for each dilation rate.}
 made, one at each decoder block resolution, and the predictions are returned as a list object
 containing the 4 predictions. If FALSE, only the final prediction at the original resolution is
 returned. Default is FALSE or deep supervision is not implemented.}
+
+\item{stageLRs}{Optional numeric vector of length 9 specifying a base learning
+rate for each stage: encoder stages encoder1, encoder2, encoder3, encoder4
+(including their cross-scale projections), the bottleneck (including its
+decoder projections), and decoder stages d1, d2, d3, d4 (in that order).
+Call \code{model$get_param_groups()} to obtain optimizer parameter groups.
+Default is NULL (single learning rate).}
 }
 \value{
 UNet3+ model using nn_module().
@@ -68,21 +80,4 @@ The architecture was inspired by:
 Huang, H., Lin, L., Tong, R., Hu, H., Zhang, Q., Iwamoto, Y., Han, X., Chen, Y.W. and Wu, J., 2020, May.
 Unet 3+: A full-scale connected unet for medical image segmentation. In ICASSP 2020-2020 IEEE international
 conference on acoustics, speech and signal processing (ICASSP) (pp. 1055-1059). IEEE.
-}
-\examples{
-\donttest{
-library(torch)
-model <- defineUNet3p(inChn=4,
-nCls=2,
-enChn = c(16,32,64,128),
-outChn = 64,
-btnChn = 256,
-useASPP = TRUE,
-dilRates=c(6,12,18),
-dilChn=c(256,256,256,256),
-negative_slope=0.01,
-useDS = FALSE)$to(device="cuda")
-t1 <- torch::torch_rand(2,4,512,512)$to(device="cuda")
-tp <- model(t1)
-}
 }

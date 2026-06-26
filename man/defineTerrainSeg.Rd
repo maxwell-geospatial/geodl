@@ -5,8 +5,7 @@
 \title{defineTerrainSeg}
 \usage{
 defineTerrainSeg(
-  segModel = "UNet",
-  nCls = 2,
+  segMod,
   cellSize = 1,
   spatDim = 640,
   tCrop = 64,
@@ -14,120 +13,57 @@ defineTerrainSeg(
   innerRadius = 2,
   outerRadius = 10,
   hsRadius = 50,
-  smoothRadius = 11,
-  actFunc = "lrelu",
-  useAttn = FALSE,
-  useSE = FALSE,
-  useRes = TRUE,
-  useASPP = TRUE,
-  useDS = FALSE,
-  pretrainedEncoder = TRUE,
-  freezeEncoder = TRUE,
-  avgImNetWeights = FALSE,
-  enChn = c(16, 32, 64, 128),
-  dcChn = c(128, 64, 32, 16),
-  outChn = 64,
-  btnChn = 256,
-  dilChn = c(256, 256, 256, 256),
-  dilRates = c(6, 12, 18),
-  negative_slope = 0.01,
-  seRatio = 8
+  smoothRadius = 11
 )
 }
 \arguments{
-\item{segModel}{Segmentation architecture to use. Either UNet ("UNet"), UNet3+
-("UNet3p"), or UNet with a MobileNetv2 encoder.}
+\item{segMod}{An already-instantiated trainable segmentation model
+(torch \code{nn_module}). Must accept the number of input channels produced
+by the LSP module: 6 when \code{doGP = FALSE}, 31 when \code{doGP = TRUE}.}
 
-\item{nCls}{Number of classes being differentiated. For a binary classification,
-this can be either 1 or 2. If 2, the problem is treated as a multiclass problem,
-and a multiclass loss metric should be used. Default is 2.}
+\item{cellSize}{Input resolution of DTM data in map units. Default is 1.}
 
-\item{cellSize}{Input resolution of DTM data. Default in 1 m.}
+\item{spatDim}{Spatial dimension (height = width) of the input chip in cells.
+Default is 640.}
 
-\item{spatDim}{Input chip size. Default is 640 (640x640 cells)}
+\item{tCrop}{Number of rows and columns to crop from each side of the LSP
+output before passing to the segmentation model. This removes edge artefacts
+introduced by the convolution-based LSP calculations. Default is 64.}
 
-\item{tCrop}{Number of rows and columns to crop from each side prior to passing LSPs to trainable model. Default is 64.}
+\item{doGP}{Whether to compute Gaussian Pyramids of the DTM and derive LSPs
+at multiple scales. Default is FALSE. If FALSE, 6 LSPs are passed to the
+model. If TRUE, 31 LSPs are passed.}
 
-\item{doGP}{Whether or not to include Gaussian Pyramids of DTM and calulate LSPs at
-different scales. Default is FALSE. If FALSE, 6 LSPs are passed to model. If TRUE,
-31 LSPs are passed to model.}
+\item{innerRadius}{Inner radius (cells) of the annulus window used for local
+TPI calculation. Default is 2.}
 
-\item{innerRadius}{Inner radius for annulus window for local TPI calculation. Default is 2 cells.}
+\item{outerRadius}{Outer radius (cells) of the annulus window used for local
+TPI calculation. Default is 10.}
 
-\item{outerRadius}{Outer radius for annulus window for local TPI calculation. Default is 10 cells.}
+\item{hsRadius}{Radius (cells) of the circular moving window for hillslope
+TPI calculation. Default is 50.}
 
-\item{hsRadius}{Radius for circular moving window for hillslope TPI calculation. Defaults is 50 cells.}
-
-\item{smoothRadius}{Radius of circular moving window to smooth DTM prior to curvature calculations.
-Default is 11 cells.}
-
-\item{actFunc}{Defines activation function to use throughout the network when using UNet. "relu" =
-rectified linear unit (ReLU); "lrelu" = leaky ReLU; "swish" = swish. Default is "relu".}
-
-\item{useAttn}{TRUE or FALSE. Whether to add attention gates along the skip connections when using UNet, UNet with a MobileNet-V2 backbone, or UNet3+.
-Default is FALSE or no attention gates are added.}
-
-\item{useSE}{TRUE or FALSE. Whether or not to include squeeze and excitation modules in
-the encoder when using UNet. Default is FALSE or no squeeze and excitation modules are used.}
-
-\item{useRes}{TRUE or FALSE. Whether to include residual connections in the encoder, decoder,
-and bottleneck/ASPP module blocks when using UNet. Default is FALSE or no residual connections are included.}
-
-\item{useASPP}{TRUE or FALSE. Whether to use an ASPP module as the bottleneck as opposed to a
-double convolution operation when using UNet or UNet3+. Default is FALSE or the ASPP module is not used as the bottleneck.}
-
-\item{useDS}{TRUE or FALSE. Whether or not to use deep supervision when using UNet, Net with a MobileNet-V2 backbone, or
-UNet3+. If TRUE, four predictions are made, one at each decoder block resolution, and the predictions are returned
-as a list object containing the 4 predictions. If FALSE, only the final prediction at the original resolution is
-returned. Default is FALSE or deep supervision is not implemented.}
-
-\item{pretrainedEncoder}{TRUE or FALSE. Whether or not to initialized using pre-trained ImageNet
-weights for the MobileNet-v2 encoder. Default is TRUE.}
-
-\item{freezeEncoder}{TRUE or FALSE. Whether or not to freeze the encoder during training when using the MobileNet-V2 encoder.
-The default is TRUE. If TRUE, only the decoder component is trained.}
-
-\item{avgImNetWeights}{TRUE or FALSE. If three predictor variables are provided and
-ImageNet weights are used, whether or not to use the original weights or average them.
-This only applies when using MobileNet-V2 encoder. Default is FALSE.}
-
-\item{enChn}{Vector of 4 integers defining the number of output
-feature maps for each of the four encoder blocks for UNet or UNet3+. Default is 16, 32, 64, and 128.}
-
-\item{dcChn}{Vector of 4 or 5 integers defining the number of output feature
-maps for each of the 4 decoder blocks for UNet or UNet  with a MobileNet-V2 encoder. Default is 128,
-64, 32, and 16. Will need to change if using the MobileNet-V2 backbone.}
-
-\item{outChn}{Number of output channels for each decoder block for UNet3+. Default is 64.}
-
-\item{btnChn}{Number of output feature maps from the bottleneck block. Default
-is 256.}
-
-\item{dilChn}{Vector of 4 values specifying the number of channels to produce at each dilation
-rate within the ASPP module. Default is 256 for each dilation rate.}
-
-\item{dilRates}{Vector of 3 values specifying the dilation rates used in the ASPP module.
-Default is 6, 12, and 18.}
-
-\item{negative_slope}{If actFunc = "lrelu", specifies the negative slope term
-to use. Default is 0.01.}
-
-\item{seRatio}{Ratio to use in squeeze and excitation module when using UNet. The default is 8.}
+\item{smoothRadius}{Radius (cells) of the circular moving window used to
+smooth the DTM before curvature calculations. Default is 11.}
 }
 \value{
-terrainSeg model consisting of LSP generation of UNet3+ model.
+A \code{terrainSeg} \code{nn_module} wrapping the LSP pipeline and
+the supplied segmentation model.
 }
 \description{
-CNN-based semantic segmentation architecture of landform extraction or
-classification from a DTM.
+CNN-based semantic segmentation wrapper that generates LSPs from a DTM and
+passes them to a user-supplied trainable segmentation model.
 }
 \details{
 Define a CNN-based semantic segmentation model for landform extraction or
-classification that includes a module that generates land surface parameters
-(LSPs) from the input DTM that are then passed to a semantic segmentation model.
-A UNet, UNet with a MobileNetv2 encoder, UNet3+, or HRNet architecture can be used.
-Gaussian pyramids can be calculated from the DTM to calculate LSPs at different
-scales. If Gaussian pyramids are not use, 6 LSPs are passed to the segmentation
-model. If Gaussian pyramids are used, 31 LSPs are passed to UNet3+. Model assumes
-a single band DTM of elevation measurements as input.
+classification. The module generates land surface parameters (LSPs) from the
+input DTM, crops the LSP tensor to remove edge artefacts, and then passes the
+result to an externally instantiated trainable segmentation model. The model
+assumes a single-band DTM of elevation measurements as input.
+
+When \code{doGP = FALSE} the LSP module produces 6 channels; when
+\code{doGP = TRUE} it produces 31 channels. The segmentation model supplied
+via \code{segMod} must be instantiated with a matching \code{inChn} value and
+with an \code{inChn} that accounts for the spatial reduction caused by
+\code{tCrop} (input chip size minus 2 * tCrop).
 }

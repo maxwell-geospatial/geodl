@@ -27,6 +27,7 @@ C%3A%2FUsers%2Famaxwel6%2FDropbox%2Fcode_dev%2Fgeodl%2Fgeodl%2FR%2FdefineAttnDSU
 C%3A%2FUsers%2Famaxwel6%2FDropbox%2Fcode_dev%2Fgeodl%2Fgeodl%2FR%2FdefineAugmentations.R="9139BF27"
 C%3A%2FUsers%2Famaxwel6%2FDropbox%2Fcode_dev%2Fgeodl%2Fgeodl%2FR%2FdefineDilatedUNet.R="52B99EC4"
 C%3A%2FUsers%2Famaxwel6%2FDropbox%2Fcode_dev%2Fgeodl%2Fgeodl%2FR%2FdefineDynamicSegDataSet.R="3E8B737D"
+C%3A%2FUsers%2Famaxwel6%2FDropbox%2Fcode_dev%2Fgeodl%2Fgeodl%2FR%2FdefineDynamicSegDataSet2.R="654E0992"
 C%3A%2FUsers%2Famaxwel6%2FDropbox%2Fcode_dev%2Fgeodl%2Fgeodl%2FR%2FdefineLoss.R="5ABB3F51"
 C%3A%2FUsers%2Famaxwel6%2FDropbox%2Fcode_dev%2Fgeodl%2Fgeodl%2FR%2FdefineOptimizer.R="DFF589B6"
 C%3A%2FUsers%2Famaxwel6%2FDropbox%2Fcode_dev%2Fgeodl%2Fgeodl%2FR%2FdefineResUNet.R="8F45893E"
@@ -80,4 +81,5 @@ C%3A%2FUsers%2Famaxwel6%2FDropbox%2Fcode_dev%2FgeodlBackup%2FdefineUnet.R="8EC7B
 C%3A%2FUsers%2Famaxwel6%2FDropbox%2Fcode_dev%2FsinkholesExample.R="8DB6E289"
 C%3A%2FUsers%2Famaxwel6%2FDropbox%2Fcode_dev%2FterrainUNet%2FinR%2FterrainUnet2.R="25F3EA23"
 C%3A%2FUsers%2Famaxwel6%2FDropbox%2Fcode_dev%2FunetWork%2FunetComponents.R="8A661FBB"
+C%3A%2FUsers%2Famaxwel6%2FDropbox%2FsabbaticalPapers%2FfeatureMaps%2FforPapers%2FmsCompareWork3.R="7549F310"
 D%3A%2FscansMultiTemp%2FpredExperiments.qmd="93A398C2"
