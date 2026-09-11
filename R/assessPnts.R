@@ -28,6 +28,10 @@
 #' If no mappings are provided, then the factor levels are used by default. For a
 #' binary classification, it is assumed that the first class is "Background" and
 #' the second class is "Positive".
+#' @param aliases Optional vector of display names used to label the output (confusion
+#' matrix row/column names, class name lists, and metric name vectors). Must be the
+#' same length as \code{mappings} and provided in the same order. If NULL (default),
+#' the \code{mappings} values are used as labels.
 #' @param decimals Number of decimal places to return for assessment metrics. Default is 4.
 #' @return List object containing the resulting metrics and ancillary information.
 #' @examples
@@ -45,6 +49,19 @@
 #'                      decimals=4)
 #'
 #' print(metsOut)
+#'
+#' #Multiclass example with aliases to rename output labels
+#' inDF2 <- data.frame(ref  = sample(c("cls_a", "cls_b", "cls_c"), 1000, replace=TRUE),
+#'                     pred = sample(c("cls_a", "cls_b", "cls_c"), 1000, replace=TRUE))
+#'
+#' metsOut2 <- assessPnts(reference=inDF2$ref,
+#'                        predicted=inDF2$pred,
+#'                        multiclass=TRUE,
+#'                        mappings = c("cls_a", "cls_b", "cls_c"),
+#'                        aliases  = c("Class A", "Class B", "Class C"),
+#'                        decimals=4)
+#'
+#' print(metsOut2)
 #'
 #' #Binary example
 #'
@@ -65,15 +82,21 @@ assessPnts <- function(reference,
                       predicted,
                       multiclass=TRUE,
                       mappings = levels(as.factor(reference)),
+                      aliases = NULL,
                       decimals=4){
+
+  if (!is.null(aliases) && length(aliases) != length(mappings))
+    stop("'aliases' must be the same length as 'mappings'.")
+
+  labels <- if (!is.null(aliases)) aliases else mappings
 
   if(multiclass == TRUE){
     reference <- factor(reference, levels=mappings)
     predicted  <- factor(predicted,  levels=mappings)
     t1 <- table(predicted, reference)
 
-    colnames(t1) <- mappings
-    rownames(t1) <- mappings
+    colnames(t1) <- labels
+    rownames(t1) <- labels
     dimnames(t1) <- stats::setNames(dimnames(t1),c("Predicted", "Reference"))
 
     diag1 <- diag(t1)
@@ -82,17 +105,17 @@ assessPnts <- function(reference,
 
     pa <- diag1/col1
     ua <- diag1/row1
-    names(pa) <- mappings
-    names(ua) <- mappings
+    names(pa) <- labels
+    names(ua) <- labels
 
     f1 <- (2*pa*ua)/(pa+ua)
-    names(f1) <- mappings
+    names(f1) <- labels
 
     aUA <- mean(ua)
     aPA <- mean(pa)
     oa <- sum(diag1)/sum(t1)
     aF1 <- (2*aUA*aPA)/(aUA+aPA)
-    results <- list(Classes = mappings,
+    results <- list(Classes = labels,
                     referenceCounts = col1,
                     predictionCounts = row1,
                     confusionMatrix = t1,
@@ -109,8 +132,8 @@ assessPnts <- function(reference,
 
     t1 <- table(predicted, reference)
 
-    colnames(t1) <- c("Negative", "Positive")
-    rownames(t1) <- c("Negative", "Positive")
+    colnames(t1) <- labels
+    rownames(t1) <- labels
     dimnames(t1) <- stats::setNames(dimnames(t1),c("Predicted", "Reference"))
 
     diag1 <- diag(t1)
@@ -119,17 +142,17 @@ assessPnts <- function(reference,
 
     pa <- diag1/col1
     ua <- diag1/row1
-    names(pa) <- mappings
-    names(ua) <- mappings
+    names(pa) <- labels
+    names(ua) <- labels
 
     f1 <- (2*pa*ua)/(pa+ua)
-    names(f1) <- mappings
+    names(f1) <- labels
 
     aUA <- mean(ua)
     aPA <- mean(pa)
     oa <- sum(diag1)/sum(t1)
     f1bi <- (2*ua[2]*pa[2])/(ua[2]+pa[2])
-    results <- list(Classes = mappings,
+    results <- list(Classes = labels,
                     referenceCounts = col1,
                     predictionCounts = row1,
                     confusionMatrix = t1,

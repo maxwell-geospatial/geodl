@@ -28,7 +28,8 @@ defineSegDataSet(
   contrastFactor = c(0.8, 1.2),
   gammaFactor = c(0.8, 1.2, 1),
   hueFactor = c(-0.2, 0.2),
-  saturationFactor = c(0.8, 1.2)
+  saturationFactor = c(0.8, 1.2),
+  useEdgeDist = FALSE
 )
 }
 \arguments{
@@ -128,9 +129,16 @@ Therefore, both -0.5 and 0.5 will give an image with complementary colors while
 Random value will be selected between these extremes. The default is 0.8 to 1.2.
 For example, 0 will give a black-and-white image, 1 will give the original image, and 2 will
 enhance the saturation by a factor of 2.}
+
+\item{useEdgeDist}{TRUE or FALSE. Whether to load and return the distance-to-class-boundary
+grid for each chip. Requires a \code{distPth} column in \code{chpDF}, produced by
+\code{makeChipsDF} with \code{useEdgeDist = TRUE}. When TRUE, the returned list
+includes a \code{dist} element of shape (1, H, W). Default is FALSE.}
 }
 \value{
-A dataset object that can be provided to torch::dataloader().
+A dataset object that can be provided to torch::dataloader(). Each item is a
+named list with elements \code{image} and \code{mask}. When \code{useEdgeDist = TRUE}
+a third element \code{dist} is also returned.
 }
 \description{
 Instantiate a subclass of torch::dataset() for geospatial semantic segmentation
@@ -146,6 +154,15 @@ since alignment is not impacted by these transformations. Predictor variables ar
 generated with three dimensions (channel/variable, width, height) regardless of
 the number of channels/variables. Masks are generated as three dimensional tensors
 (class index, width, height).
+
+When \code{useEdgeDist = TRUE} the dataset expects \code{chpDF} to contain a
+\code{distPth} column (produced by \code{makeChipsDF} with \code{useEdgeDist = TRUE}).
+Each distance chip is loaded as a single-band float32 tensor of shape (1, H, W).
+Spatial augmentations (flips, rotation) are applied consistently across the image,
+mask, and distance grid. Photometric augmentations (brightness, contrast, gamma,
+hue, saturation) are applied to the image only and do not affect the distance grid.
+When \code{useEdgeDist = TRUE} the returned list contains a third element named
+\code{dist}; this should be passed as the third argument to the loss function.
 }
 \examples{
 \dontrun{
@@ -158,6 +175,7 @@ trainDS <- defineSegDataSet(
   mskRescale= 255,
   bands = c(1,2,3),
   mskAdd=1,
+  useEdgeDist=TRUE,
   doAugs = TRUE,
   maxAugs = 1,
   probVFlip = .5,

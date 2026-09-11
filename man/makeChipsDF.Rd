@@ -10,7 +10,8 @@ makeChipsDF(
   extension = ".tif",
   mode = "All",
   shuffle = FALSE,
-  saveCSV = FALSE
+  saveCSV = FALSE,
+  useEdgeDist = FALSE
 )
 }
 \arguments{
@@ -37,11 +38,16 @@ default is FALSE.}
 \item{saveCSV}{TRUE or FALSE. Whether or not to save the CSV file or just
 return the data frame. If this is set to FALSE then the outCSV parameter is
 ignored and no CSV file is generated. The default is FALSE.}
+
+\item{useEdgeDist}{TRUE or FALSE. Whether to include a \code{distPth} column
+pointing to the distance-to-class-boundary grids produced by
+\code{makeBoundaryDistance}. Supported for all modes. Default is FALSE.}
 }
 \value{
 Data frame with three columns (chpN, chpPth, and mskPth) and, optionally,
 a CSV file written to disk. If mode = "Divided", a division column is added to
-differentiate "positive" and "background" samples.
+differentiate "positive" and "background" samples. If \code{useEdgeDist = TRUE},
+an additional \code{distPth} column is included.
 }
 \description{
 Create data frame and CSV file listing image chips and associated masks
@@ -54,6 +60,14 @@ provides the path to the chip, and the chpMsk column provides the path to the
 associated mask. All paths are relative to the input folder as opposed to
 the full file path so that the results can still be used if the data are copied
 to a new location on disk or to a new computer.
+
+If \code{useEdgeDist = TRUE}, a fourth column \code{distPth} is added that
+points to the corresponding distance-to-class-boundary grid produced by
+\code{makeBoundaryDistance}. All three modes are supported. For \code{mode = "All"}
+or \code{mode = "Positive"} the paths resolve to \code{dist/<name>.tif}; for
+\code{mode = "Divided"} they resolve to \code{dist/positive/<name>.tif} or
+\code{dist/background/<name>.tif} to match the layout written by
+\code{makeBoundaryDistance} when it detects the divided folder structure.
 }
 \examples{
 \dontrun{
@@ -62,6 +76,7 @@ chpDF <- makeChipsDF(folder = "PATHT TO CHIPS FOLDER",
                       extension = ".tif",
                       mode="Positive",
                       shuffle=TRUE,
-                      saveCSV=TRUE)
+                      saveCSV=TRUE,
+                      useEdgeDist=TRUE)
 }
 }

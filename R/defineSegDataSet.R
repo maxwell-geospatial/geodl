@@ -13,6 +13,15 @@
 #' the number of channels/variables. Masks are generated as three dimensional tensors
 #' (class index, width, height).
 #'
+#' When \code{useEdgeDist = TRUE} the dataset expects \code{chpDF} to contain a
+#' \code{distPth} column (produced by \code{makeChipsDF} with \code{useEdgeDist = TRUE}).
+#' Each distance chip is loaded as a single-band float32 tensor of shape (1, H, W).
+#' Spatial augmentations (flips, rotation) are applied consistently across the image,
+#' mask, and distance grid. Photometric augmentations (brightness, contrast, gamma,
+#' hue, saturation) are applied to the image only and do not affect the distance grid.
+#' When \code{useEdgeDist = TRUE} the returned list contains a third element named
+#' \code{dist}; this should be passed as the third argument to the loss function.
+#'
 #' @param chpDF Data frame of image chip and mask paths created using makeChipsDF().
 #' @param folder Full path or path relative to the working directory to the
 #' folder containing the image chips and associated masks. You must include the
@@ -86,7 +95,13 @@
 #' Random value will be selected between these extremes. The default is 0.8 to 1.2.
 #' For example, 0 will give a black-and-white image, 1 will give the original image, and 2 will
 #' enhance the saturation by a factor of 2.
-#' @return A dataset object that can be provided to torch::dataloader().
+#' @param useEdgeDist TRUE or FALSE. Whether to load and return the distance-to-class-boundary
+#' grid for each chip. Requires a \code{distPth} column in \code{chpDF}, produced by
+#' \code{makeChipsDF} with \code{useEdgeDist = TRUE}. When TRUE, the returned list
+#' includes a \code{dist} element of shape (1, H, W). Default is FALSE.
+#' @return A dataset object that can be provided to torch::dataloader(). Each item is a
+#' named list with elements \code{image} and \code{mask}. When \code{useEdgeDist = TRUE}
+#' a third element \code{dist} is also returned.
 #' @examples
 #' \dontrun{
 #' #Define training dataset and augmentations
@@ -98,6 +113,7 @@
 #'   mskRescale= 255,
 #'   bands = c(1,2,3),
 #'   mskAdd=1,
+#'   useEdgeDist=TRUE,
 #'   doAugs = TRUE,
 #'   maxAugs = 1,
 #'   probVFlip = .5,
@@ -142,7 +158,8 @@ defineSegDataSet <- torch::dataset(
                         contrastFactor = c(.8,1.2),
                         gammaFactor = c(.8, 1.2, 1),
                         hueFactor = c(-.2, .2),
-                        saturationFactor = c(.8, 1.2)){
+                        saturationFactor = c(.8, 1.2),
+                        useEdgeDist = FALSE){
      self$chpDF <- chpDF
      self$folder <- folder
      self$normalize <- normalize
@@ -167,55 +184,64 @@ defineSegDataSet <- torch::dataset(
      self$gammaFactor <- gammaFactor
      self$hueFactor <- hueFactor
      self$saturationFactor <- saturationFactor
+     self$useEdgeDist <- useEdgeDist
    },
 
   .getitem = function(i){
      image_name <- unlist(self$chpDF[i, "chpPth"], use.names=FALSE)
-     mask_name <- unlist(self$chpDF[i, "mskPth"], use.names=FALSE)
+     mask_name  <- unlist(self$chpDF[i, "mskPth"], use.names=FALSE)
      image <- terra::rast(paste0(self$folder, image_name))
-     mask <- terra::rast(paste0(self$folder, mask_name))
+     mask  <- terra::rast(paste0(self$folder, mask_name))
+
+     if (self$useEdgeDist) {
+       dist_name <- unlist(self$chpDF[i, "distPth"], use.names=FALSE)
+       dist <- terra::rast(paste0(self$folder, dist_name))
+       dist <- terra::as.array(dist)
+       dist <- torch::torch_tensor(dist, dtype=torch::torch_float32())
+       dist <- dist$permute(c(3L, 1L, 2L))
+     }
 
      image <- terra::subset(image, self$bands)
 
      image <- terra::as.array(image)
-     mask <- terra::as.array(mask)/self$mskRescale
-     mask <- mask+self$mskAdd
+     mask  <- terra::as.array(mask)/self$mskRescale
+     mask  <- mask + self$mskAdd
 
      image <- torch::torch_tensor(image, dtype=torch::torch_float32())
      image <- image$permute(c(3,1,2))
 
      mask <- torch::torch_tensor(mask, dtype=torch::torch_long())
-
      mask <- mask$permute(c(3,1,2))
 
      if(self$normalize == TRUE){
        image <- torchvision::transform_normalize(image, self$bMns, self$bSDs, inplace = FALSE)
      }
 
-     image <- torch::torch_div(image,self$rescaleFactor)
+     image <- torch::torch_div(image, self$rescaleFactor)
 
      if(self$doAugs == TRUE){
 
-       probVFlipX <- runif(1) < self$probVFlip
-       probHFlipX <- runif(1) < self$probHFlip
+       probVFlipX      <- runif(1) < self$probVFlip
+       probHFlipX      <- runif(1) < self$probHFlip
        probBrightnessX <- runif(1) < self$probBrightness
-       probContrastX <- runif(1) < self$probContrast
-       probGammaX <- runif(1) < self$probGamma
-       probHueX <- runif(1) < self$probHue
+       probContrastX   <- runif(1) < self$probContrast
+       probGammaX      <- runif(1) < self$probGamma
+       probHueX        <- runif(1) < self$probHue
        probSaturationX <- runif(1) < self$probSaturation
-       probRotateX <- runif(1) < self$probRotation
+       probRotateX     <- runif(1) < self$probRotation
 
        augIndex <- sample(c(1:8), self$maxAugs, replace=FALSE)
 
-
        if(probVFlipX == TRUE & 1 %in% augIndex){
          image <- torchvision::transform_vflip(image)
-         mask <- torchvision::transform_vflip(mask)
+         mask  <- torchvision::transform_vflip(mask)
+         if (self$useEdgeDist) dist <- torchvision::transform_vflip(dist)
        }
 
        if(probHFlipX == TRUE & 2 %in% augIndex){
          image <- torchvision::transform_hflip(image)
-         mask <- torchvision::transform_hflip(mask)
+         mask  <- torchvision::transform_hflip(mask)
+         if (self$useEdgeDist) dist <- torchvision::transform_hflip(dist)
        }
 
        if(probBrightnessX == TRUE & 3 %in% augIndex){
@@ -236,7 +262,7 @@ defineSegDataSet <- torch::dataset(
 
        if(probHueX == TRUE & 6 %in% augIndex){
          hueFactor = runif(1, self$hueFactor[1], self$hueFactor[2])
-         image <-torchvision::transform_adjust_hue(image, hue_factor=hueFactor)
+         image <- torchvision::transform_adjust_hue(image, hue_factor=hueFactor)
        }
 
        if(probSaturationX == TRUE & 7 %in% augIndex){
@@ -247,10 +273,15 @@ defineSegDataSet <- torch::dataset(
        if(probRotateX == TRUE & 8 %in% augIndex){
          selectedAngle <- dplyr::sample_n(data.frame(angles = c(0, 90, 180, 270)), 1, replace=FALSE)[1,1]
          image <- torchvision::transform_rotate(image, angle=selectedAngle)
-         mask <- torchvision::transform_rotate(mask, angle=selectedAngle)
+         mask  <- torchvision::transform_rotate(mask, angle=selectedAngle)
+         if (self$useEdgeDist) dist <- torchvision::transform_rotate(dist, angle=selectedAngle)
        }
      }
-     return(list(image = image, mask = mask))
+
+     if (self$useEdgeDist) {
+       return(list(image=image, mask=mask, dist=dist))
+     }
+     return(list(image=image, mask=mask))
    },
 
    .length = function(){

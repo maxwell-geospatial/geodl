@@ -10,8 +10,12 @@
 #'
 #' Modifications include (1) allowing users to define class weights for both the distribution-
 #' based and region-based losses, (2) using class weights as opposed to the symmetric and
-#' asymmetric methods implemented by the authors, and (3) including an option to apply
-#' a logcosh transform to the region-based loss.
+#' asymmetric methods implemented by the authors, (3) including an option to apply
+#' a logcosh transform to the region-based loss, (4) optionally incorporating
+#' distance-to-class-boundary weights computed by \code{makeBoundaryDistance}, (5) an
+#' option to compute the distribution loss as a weighted average of per-class means rather
+#' than as a single pixel-level weighted mean, and (6) optional label smoothing on the
+#' distribution loss.
 #'
 #' This loss has three key hyperparameters that control its implementation. Lambda controls
 #' the relative weight of the distribution- and region-based losses. Default is 0.5,
@@ -33,6 +37,35 @@
 #' different loss metrics including cross entropy loss, weighted cross entropy loss, focal cross entropy
 #' loss, focal weighted cross entropy loss, Dice loss, focal Dice loss, Tversky loss, and focal Tversky
 #' loss.
+#'
+#' When \code{labelSmoothing > 0} the cross-entropy is computed against soft targets that
+#' spread \code{labelSmoothing} probability mass uniformly across all classes, reducing the
+#' model's incentive to become overconfident. The focal modifier is kept anchored to the
+#' true-class softmax probability gathered directly from the network output, so the focal
+#' weighting continues to reflect genuine model confidence rather than being distorted by
+#' the smoothed targets. Label smoothing is applied only to the distribution loss;
+#' the region-based (Tversky) loss is not affected.
+#'
+#' When \code{useEdgeDist = TRUE} a distance-to-class-boundary tensor must be passed as the third
+#' argument to \code{forward(pred, target, dist)}. The tensor should have shape (N, 1, H, W) and
+#' contain the per-pixel distances produced by \code{makeBoundaryDistance}, stacked into a batch.
+#' Pixels at a class boundary have distance 0; distance increases away from boundaries.
+#'
+#' Three edge-weighting modes are available via \code{edgeMode}:
+#' \itemize{
+#'   \item \code{"threshold"}: pixels within \code{distThreshold} receive one weight; pixels beyond
+#'         receive the other. When \code{prioritizeEdge = TRUE} the inside weight is \code{maxWght}
+#'         and the outside weight is \code{minWght}; the relationship is reversed when
+#'         \code{prioritizeEdge = FALSE}.
+#'   \item \code{"linear"}: weight changes linearly from \code{maxWght} at distance 0 to
+#'         \code{minWght} at \code{distThreshold} (when \code{prioritizeEdge = TRUE}), or from
+#'         \code{minWght} to \code{maxWght} (when \code{prioritizeEdge = FALSE}). Beyond
+#'         \code{distThreshold} the weight is clamped to the far-end value.
+#'   \item \code{"gaussian"}: weight follows a Gaussian curve centred at distance 0. The curve
+#'         uses sigma = distThreshold / 3 so that the weight is approximately \code{minWght}
+#'         at \code{distThreshold} and falls to exactly \code{minWght} beyond it.
+#'         Direction is controlled by \code{prioritizeEdge} as above.
+#' }
 #'
 #' @param nCls Number of classes being differentiated.
 #' @param cropFactorMsk Number of rows and columns of cells to not include for mask in assessment to
@@ -61,6 +94,38 @@
 #' region-based loss. Default is for all classes to be equally weighted.
 #' @param useLogCosH TRUE or FALSE. Whether or not to apply a logCosH transformation to the region-based
 #' loss. Default is FALSE.
+#' @param useEdgeDist TRUE or FALSE. Whether to apply distance-to-class-boundary weights during loss
+#' computation. When TRUE a \code{dist} tensor must be supplied to \code{forward}. Default is FALSE.
+#' @param prioritizeEdge TRUE or FALSE. When \code{useEdgeDist = TRUE}, controls which pixels receive
+#' the higher weight. If TRUE (default), pixels near class boundaries (small distance) receive
+#' \code{maxWght} and pixels far from boundaries receive \code{minWght}. If FALSE, the weighting is
+#' reversed so that non-edge pixels are emphasised.
+#' @param edgeMode Character string specifying how the distance is converted to a per-pixel weight.
+#' One of \code{"threshold"}, \code{"linear"}, or \code{"gaussian"}. Default is \code{"threshold"}.
+#' See the Details section for a full description of each mode.
+#' @param distThreshold Numeric. The distance value (in map units or pixel units, matching the
+#' distance raster) that defines the boundary of the high-weight zone. Default is 10.
+#' @param minWght Numeric. The minimum per-pixel weight applied to loss contributions.
+#' Must be less than \code{maxWght}. Default is 0.5.
+#' @param maxWght Numeric. The maximum per-pixel weight applied to loss contributions.
+#' Must be greater than \code{minWght}. Default is 1.0.
+#' @param applyDistWght Character string controlling which loss component the edge weights are
+#' applied to. One of \code{"distribution"} (distribution-based/CE loss only),
+#' \code{"region"} (region-based/Tversky loss only), or \code{"both"} (default).
+#' @param labelSmoothing Numeric value in [0, 1). When greater than 0, this amount of
+#' probability mass is spread uniformly across all classes when computing the cross-entropy,
+#' preventing the model from becoming overconfident. The focal modifier is always derived
+#' from the true-class softmax probability gathered directly from the network output, so
+#' focal weighting is not distorted by the smoothed targets. Default is 0 (no smoothing).
+#' @param classAvgDist TRUE or FALSE. When FALSE (default), the distribution loss is computed
+#' as a pixel-level weighted mean of the focal cross-entropy, with \code{clsWghtsDist}
+#' rescaling each pixel's contribution by its true class weight. When TRUE, the focal
+#' cross-entropy is first averaged within each class and the resulting per-class means are
+#' then combined as a weighted average using \code{clsWghtsDist}. The per-class approach
+#' mirrors the macro-averaging philosophy already used by the region-based loss and can
+#' give better gradient signal to under-represented classes under severe class imbalance.
+#' Note that if a class has no pixels in a given batch its contribution is effectively
+#' zero for that step, consistent with the behaviour of the region-based loss.
 #' @param device Define device being used for computation. Define using torch_device().
 #' @return Loss metric for use in training process.
 #' @export
@@ -71,28 +136,57 @@ defineUnifiedFocalLoss <- torch::nn_module(
                         lambda=.5,
                         gamma=.5,
                         delta=0.6,
-                        smooth = 1e-8,
+                        smooth=1e-8,
                         zeroStart=TRUE,
                         clsWghtsDist=1,
                         clsWghtsReg=1,
                         useLogCosH=FALSE,
+                        useEdgeDist=FALSE,
+                        prioritizeEdge=TRUE,
+                        edgeMode="threshold",
+                        distThreshold=10,
+                        minWght=0.5,
+                        maxWght=1.0,
+                        applyDistWght="both",
+                        labelSmoothing=0,
+                        classAvgDist=FALSE,
                         device="cuda"){
 
-    self$nCls          <- nCls
-    self$cropFactorMsk <- cropFactorMsk
-    self$cropFactorPred <- cropFactorPred
-    self$lambda        <- lambda
-    self$gamma         <- gamma
-    self$delta         <- delta
-    self$smooth        <- smooth
-    self$zeroStart     <- zeroStart
-    self$useLogCosH    <- useLogCosH
-    self$device        <- device
+    self$nCls            <- nCls
+    self$cropFactorMsk   <- cropFactorMsk
+    self$cropFactorPred  <- cropFactorPred
+    self$lambda          <- lambda
+    self$gamma           <- gamma
+    self$delta           <- delta
+    self$smooth          <- smooth
+    self$zeroStart       <- zeroStart
+    self$useLogCosH      <- useLogCosH
+    self$device          <- device
+    self$useEdgeDist     <- useEdgeDist
+    self$prioritizeEdge  <- prioritizeEdge
+    self$edgeMode        <- edgeMode
+    self$applyDistWght   <- applyDistWght
+    self$labelSmoothing  <- labelSmoothing
+    self$classAvgDist    <- classAvgDist
+
+    if (labelSmoothing < 0 || labelSmoothing >= 1)
+      stop("labelSmoothing must be in [0, 1).")
+
+    if (useEdgeDist) {
+      if (!edgeMode %in% c("threshold", "linear", "gaussian"))
+        stop("edgeMode must be 'threshold', 'linear', or 'gaussian'.")
+      if (!applyDistWght %in% c("distribution", "region", "both"))
+        stop("applyDistWght must be 'distribution', 'region', or 'both'.")
+      if (minWght >= maxWght)
+        stop("minWght must be less than maxWght.")
+      if (distThreshold <= 0)
+        stop("distThreshold must be greater than 0.")
+    }
 
     # Expand scalar delta and class weights to per-class vectors once
-    delta2        <- if(length(delta) == 1)       rep(delta,       nCls) else delta
-    clsWghtsDist2 <- if(length(clsWghtsDist) == 1) rep(clsWghtsDist, nCls) else clsWghtsDist
-    clsWghtsReg2  <- if(length(clsWghtsReg) == 1)  rep(clsWghtsReg,  nCls) else clsWghtsReg
+    delta2        <- if(length(delta) == 1)         rep(delta,        nCls) else delta
+    clsWghtsDist2 <- if(length(clsWghtsDist) == 1)  rep(clsWghtsDist, nCls) else clsWghtsDist
+    clsWghtsReg2  <- if(length(clsWghtsReg) == 1)   rep(clsWghtsReg,  nCls) else clsWghtsReg
 
     # Pre-build all constant tensors so they are not recreated on every forward call
     self$smoothT      <- torch::torch_tensor(smooth,
@@ -121,9 +215,22 @@ defineUnifiedFocalLoss <- torch::nn_module(
     self$clsWghtsDistMapT <- torch::torch_tensor(clsWghtsDist2,
                                                  dtype=torch::torch_float32(),
                                                  device=device)$view(c(1L, nCls, 1L, 1L))
+
+    # Edge distance tensors — only built when needed
+    if (useEdgeDist) {
+      self$distThresholdT <- torch::torch_tensor(as.numeric(distThreshold),
+                                                 dtype=torch::torch_float32(),
+                                                 device=device)
+      self$minWghtT       <- torch::torch_tensor(as.numeric(minWght),
+                                                 dtype=torch::torch_float32(),
+                                                 device=device)
+      self$maxWghtT       <- torch::torch_tensor(as.numeric(maxWght),
+                                                 dtype=torch::torch_float32(),
+                                                 device=device)
+    }
   },
 
-  forward = function(pred, target){
+  forward = function(pred, target, dist=NULL){
 
     pred   <- cropTensor(pred,   crpFactor=self$cropFactorPred)
     target <- cropTensor(target, crpFactor=self$cropFactorMsk)
@@ -140,33 +247,131 @@ defineUnifiedFocalLoss <- torch::nn_module(
     target_one_hot <- target_one_hot$squeeze(2L)
     target_one_hot <- target_one_hot$permute(c(1L, 4L, 2L, 3L))
 
+    # Compute per-pixel edge weight map -------------------------------------------
+    # edgeWghtMap: (N, 1, H, W) — broadcasts over the class dimension in region loss
+    # edgeWghtFlat: (N, H, W)   — matches the shape of the per-pixel distribution loss
+    useEdgeWgt <- self$useEdgeDist && !is.null(dist)
+    if (useEdgeWgt) {
+      dist <- cropTensor(dist, crpFactor=self$cropFactorMsk)
+      dist <- dist$to(dtype=torch::torch_float32(), device=self$device)
+
+      if (self$edgeMode == "threshold") {
+        insideMask  <- (dist <= self$distThresholdT)$to(dtype=torch::torch_float32())
+        outsideMask <- 1.0 - insideMask
+        if (self$prioritizeEdge) {
+          edgeWghtMap <- insideMask * self$maxWghtT + outsideMask * self$minWghtT
+        } else {
+          edgeWghtMap <- insideMask * self$minWghtT + outsideMask * self$maxWghtT
+        }
+
+      } else if (self$edgeMode == "linear") {
+        # t = 0 at boundary, 1 at distThreshold (clamped beyond)
+        t <- torch::torch_clamp(dist / self$distThresholdT, min=0.0, max=1.0)
+        if (self$prioritizeEdge) {
+          edgeWghtMap <- self$maxWghtT * (1.0 - t) + self$minWghtT * t
+        } else {
+          edgeWghtMap <- self$minWghtT * (1.0 - t) + self$maxWghtT * t
+        }
+
+      } else {
+        # gaussian: sigma chosen so the curve reaches ~minWght at distThreshold
+        sigma       <- self$distThresholdT / 3.0
+        gaussFactor <- torch::torch_exp(-(dist * dist) / (2.0 * sigma * sigma))
+        # Hard-clamp to zero beyond the threshold so weights don't creep upward
+        beyondT     <- (dist > self$distThresholdT)$to(dtype=torch::torch_float32())
+        gaussFactor <- gaussFactor * (1.0 - beyondT)
+        # gaussFactor = 1 at dist=0, ~0 at distThreshold, exactly 0 beyond
+        if (self$prioritizeEdge) {
+          edgeWghtMap <- self$minWghtT + (self$maxWghtT - self$minWghtT) * gaussFactor
+        } else {
+          edgeWghtMap <- self$maxWghtT - (self$maxWghtT - self$minWghtT) * gaussFactor
+        }
+      }
+
+      edgeWghtFlat <- edgeWghtMap$squeeze(2L)  # (N, H, W)
+    }
+
     # Distribution-based loss ------------------------------------------------
     if(self$lambda > 0){
       # Remove channel dim for CE; squeeze(2) targets dim of size 1 only
       targetCE <- target1$squeeze(2L)
 
-      # Unweighted per-pixel CE for the focal probability estimate
+      # True-class softmax probability gathered directly from network output.
+      # This is always based on the un-smoothed prediction so that the focal
+      # modifier reflects genuine model confidence regardless of label smoothing.
+      pt <- torch::torch_sum(pred_soft * target_one_hot, dim=2L)  # (N, H, W)
+
+      # CE loss value — label smoothing applied here only, not to pt above.
+      # Implemented manually for version compatibility: CE_smooth = (1-ε)*CE_hard + ε*mean_k(-log p_k)
       ceL <- torch::nnf_cross_entropy(pred, targetCE, reduction="none")
+      if (self$labelSmoothing > 0) {
+        eps     <- self$labelSmoothing
+        log_p   <- torch::nnf_log_softmax(pred, dim=2L)   # (N, C, H, W)
+        ce_unif <- -torch::torch_mean(log_p, dim=2L)       # (N, H, W)
+        ceL     <- (1 - eps) * ceL + eps * ce_unif
+      }
 
-      # True class probability: p_t = exp(-CE_unweighted)
-      pt <- torch::torch_exp(-ceL)
+      # Shared per-pixel focal modifier — weighting strategy diverges below
+      focalMod <- (1.0 - pt)**(1.0 - self$gammaT)  # (N, H, W)
 
-      # Focal modifier * class-weighted CE
-      # Weight applied per-pixel via one-hot broadcast: avoids passing weight to CE
-      # (which would distort pt) while still weighting the loss contribution
-      wghtsPerPixel <- torch::torch_sum(target_one_hot * self$clsWghtsDistMapT, dim=2L)
-      mFL <- ((1.0 - pt)**(1.0 - self$gammaT)) * ceL * wghtsPerPixel
+      if (self$classAvgDist) {
+        # Per-class mean focal CE, then weighted average across classes ----------
+        # Class weights enter only through the final weighted average, not per-pixel,
+        # giving each class a single equal-footing contribution before weighting.
+        focalCE <- focalMod * ceL  # (N, H, W)
 
-      # Normalise by total weight mass across the batch
-      wghtSumT    <- torch::torch_sum(target_one_hot * self$clsWghtsDistMapT)
-      distMetric  <- torch::torch_sum(mFL) / wghtSumT
+        if (useEdgeWgt && self$applyDistWght %in% c("distribution", "both")) {
+          focalCE <- focalCE * edgeWghtFlat
+          # Normalise each class mean by its total edge-weight mass
+          normPerCls <- torch::torch_sum(
+            edgeWghtFlat$unsqueeze(2L) * target_one_hot, dim=c(1L, 3L, 4L))  # (C,)
+        } else {
+          # Normalise each class mean by its pixel count
+          normPerCls <- torch::torch_sum(target_one_hot, dim=c(1L, 3L, 4L))  # (C,)
+        }
+
+        # Sum focal CE over all pixels belonging to each class: (C,)
+        perClsSum  <- torch::torch_sum(
+          focalCE$unsqueeze(2L) * target_one_hot, dim=c(1L, 3L, 4L))
+        normPerCls <- torch::torch_clamp(normPerCls, min=self$smoothT)
+        perClsMean <- perClsSum / normPerCls  # (C,)
+
+        # Weighted average of per-class means
+        distMetric <- torch::torch_sum(perClsMean * self$wghtT) /
+                      torch::torch_sum(self$wghtT)
+
+      } else {
+        # Traditional pixel-level weighted focal CE ----------------------------
+        wghtsPerPixel <- torch::torch_sum(target_one_hot * self$clsWghtsDistMapT, dim=2L)
+        mFL <- focalMod * ceL * wghtsPerPixel
+
+        if (useEdgeWgt && self$applyDistWght %in% c("distribution", "both")) {
+          mFL        <- mFL * edgeWghtFlat
+          # Normalise by combined class-weight + edge-weight mass
+          normFactor <- torch::torch_sum(wghtsPerPixel * edgeWghtFlat)
+          distMetric <- torch::torch_sum(mFL) / normFactor
+        } else {
+          wghtSumT   <- torch::torch_sum(target_one_hot * self$clsWghtsDistMapT)
+          distMetric <- torch::torch_sum(mFL) / wghtSumT
+        }
+      }
     }
 
     # Region-based loss -------------------------------------------------------
     if(self$lambda < 1){
-      tps <- torch::torch_sum(pred_soft * target_one_hot,          dim=c(1L, 3L, 4L))
-      fps <- torch::torch_sum(pred_soft * (1.0 - target_one_hot),  dim=c(1L, 3L, 4L))
-      fns <- torch::torch_sum((1.0 - pred_soft) * target_one_hot,  dim=c(1L, 3L, 4L))
+      if (useEdgeWgt && self$applyDistWght %in% c("region", "both")) {
+        # edgeWghtMap (N, 1, H, W) broadcasts over (N, C, H, W)
+        tps <- torch::torch_sum(pred_soft * target_one_hot * edgeWghtMap,
+                                dim=c(1L, 3L, 4L))
+        fps <- torch::torch_sum(pred_soft * (1.0 - target_one_hot) * edgeWghtMap,
+                                dim=c(1L, 3L, 4L))
+        fns <- torch::torch_sum((1.0 - pred_soft) * target_one_hot * edgeWghtMap,
+                                dim=c(1L, 3L, 4L))
+      } else {
+        tps <- torch::torch_sum(pred_soft * target_one_hot,          dim=c(1L, 3L, 4L))
+        fps <- torch::torch_sum(pred_soft * (1.0 - target_one_hot),  dim=c(1L, 3L, 4L))
+        fns <- torch::torch_sum((1.0 - pred_soft) * target_one_hot,  dim=c(1L, 3L, 4L))
+      }
 
       mTI <- (tps + self$smoothT) /
              (tps + ((1.0 - self$deltaT) * fps) + (self$deltaT * fns) + self$smoothT)
@@ -205,8 +410,12 @@ defineUnifiedFocalLoss <- torch::nn_module(
 #'
 #' Modifications include (1) allowing users to define class weights for both the distribution-
 #' based and region-based losses, (2) using class weights as opposed to the symmetric and
-#' asymmetric methods implemented by the authors, and (3) including an option to apply
-#' a logcosh transform to the region-based loss.
+#' asymmetric methods implemented by the authors, (3) including an option to apply
+#' a logcosh transform to the region-based loss, (4) optionally incorporating
+#' distance-to-class-boundary weights computed by \code{makeBoundaryDistance}, (5) an
+#' option to compute the distribution loss as a weighted average of per-class means rather
+#' than as a single pixel-level weighted mean, and (6) optional label smoothing on the
+#' distribution loss.
 #'
 #' This loss has three key hyperparameters that control its implementation. Lambda controls
 #' the relative weight of the distribution- and region-based losses. Default is 0.5,
@@ -227,6 +436,11 @@ defineUnifiedFocalLoss <- torch::nn_module(
 #' By adjusting the lambda, gamma, delta, and class weight terms, the user can implement a variety of different loss metrics
 #' including cross entropy loss, weighted cross entropy loss, focal cross entropy loss, focal weighted cross entropy loss,
 #' Dice loss, focal Dice loss, Tversky loss, and focal Tversky loss.
+#'
+#' When \code{useEdgeDist = TRUE} a distance-to-class-boundary tensor must be passed as the third
+#' argument to \code{forward(pred, target, dist)}. The same distance tensor is applied to all
+#' decoder-output losses. See \code{defineUnifiedFocalLoss} for a full description of the
+#' edge-distance weighting options.
 #'
 #' @param nCls Number of classes being differentiated.
 #' @param cropFactorMsk Number of rows and columns of cells to not include for mask in assessment to
@@ -262,6 +476,28 @@ defineUnifiedFocalLoss <- torch::nn_module(
 #' region-based loss. Default is for all classes to be equally weighted.
 #' @param useLogCosH TRUE or FALSE. Whether or not to apply a logCosH transformation to the region-based
 #' loss. Default is FALSE.
+#' @param useEdgeDist TRUE or FALSE. Whether to apply distance-to-class-boundary weights during loss
+#' computation. When TRUE a \code{dist} tensor must be supplied to \code{forward}. Default is FALSE.
+#' @param prioritizeEdge TRUE or FALSE. When \code{useEdgeDist = TRUE}, controls which pixels receive
+#' the higher weight. If TRUE (default), pixels near class boundaries receive \code{maxWght} and
+#' pixels far from boundaries receive \code{minWght}. If FALSE, the weighting is reversed.
+#' @param edgeMode Character string specifying how the distance is converted to a per-pixel weight.
+#' One of \code{"threshold"}, \code{"linear"}, or \code{"gaussian"}. Default is \code{"threshold"}.
+#' @param distThreshold Numeric. The distance value that defines the boundary of the high-weight zone.
+#' Default is 10.
+#' @param minWght Numeric. The minimum per-pixel weight. Must be less than \code{maxWght}.
+#' Default is 0.5.
+#' @param maxWght Numeric. The maximum per-pixel weight. Must be greater than \code{minWght}.
+#' Default is 1.0.
+#' @param applyDistWght Character string controlling which loss component the edge weights are
+#' applied to. One of \code{"distribution"}, \code{"region"}, or \code{"both"} (default).
+#' @param labelSmoothing Numeric value in [0, 1). Amount of label smoothing applied to
+#' the cross-entropy component of the distribution loss. The focal modifier is derived
+#' from the true-class softmax probability and is not affected by smoothing.
+#' Default is 0 (no smoothing). See \code{defineUnifiedFocalLoss} for full details.
+#' @param classAvgDist TRUE or FALSE. When TRUE, the distribution loss is computed as a
+#' weighted average of per-class focal cross-entropy means rather than a pixel-level
+#' weighted mean. See \code{defineUnifiedFocalLoss} for a full description. Default is FALSE.
 #' @param device Define device being used for computation. Define using torch_device().
 #' @return Loss metric for use in training process.
 #' @export
@@ -279,6 +515,15 @@ defineUnifiedFocalLossDS <- torch::nn_module(
                         clsWghtsDist=1,
                         clsWghtsReg=1,
                         useLogCosH=FALSE,
+                        useEdgeDist=FALSE,
+                        prioritizeEdge=TRUE,
+                        edgeMode="threshold",
+                        distThreshold=10,
+                        minWght=0.5,
+                        maxWght=1.0,
+                        applyDistWght="both",
+                        labelSmoothing=0,
+                        classAvgDist=FALSE,
                         device="cuda"){
 
     self$device     <- device
@@ -303,23 +548,32 @@ defineUnifiedFocalLossDS <- torch::nn_module(
                                         clsWghtsDist=clsWghtsDist,
                                         clsWghtsReg=clsWghtsReg,
                                         useLogCosH=useLogCosH,
+                                        useEdgeDist=useEdgeDist,
+                                        prioritizeEdge=prioritizeEdge,
+                                        edgeMode=edgeMode,
+                                        distThreshold=distThreshold,
+                                        minWght=minWght,
+                                        maxWght=maxWght,
+                                        applyDistWght=applyDistWght,
+                                        labelSmoothing=labelSmoothing,
+                                        classAvgDist=classAvgDist,
                                         device=device)
   },
 
-  forward = function(pred, target){
+  forward = function(pred, target, dist=NULL){
     if (!is.null(self$weight_env)) {
       w    <- self$weight_env$values
       wSum <- sum(w)
-      lossOut <- w[1] * self$loss(pred[[1]], target)
-      if (w[2] != 0) lossOut <- lossOut + w[2] * self$loss(pred[[2]], target)
-      if (w[3] != 0) lossOut <- lossOut + w[3] * self$loss(pred[[3]], target)
-      if (w[4] != 0) lossOut <- lossOut + w[4] * self$loss(pred[[4]], target)
+      lossOut <- w[1] * self$loss(pred[[1]], target, dist)
+      if (w[2] != 0) lossOut <- lossOut + w[2] * self$loss(pred[[2]], target, dist)
+      if (w[3] != 0) lossOut <- lossOut + w[3] * self$loss(pred[[3]], target, dist)
+      if (w[4] != 0) lossOut <- lossOut + w[4] * self$loss(pred[[4]], target, dist)
       lossOut <- lossOut / wSum
     } else {
-      l1 <- self$loss(pred[[1]], target)
-      l2 <- self$loss(pred[[2]], target)
-      l4 <- self$loss(pred[[3]], target)
-      l8 <- self$loss(pred[[4]], target)
+      l1 <- self$loss(pred[[1]], target, dist)
+      l2 <- self$loss(pred[[2]], target, dist)
+      l4 <- self$loss(pred[[3]], target, dist)
+      l8 <- self$loss(pred[[4]], target, dist)
       lossOut <- ((self$wght1 * l1) + (self$wght2 * l2) +
                   (self$wght4 * l4) + (self$wght8 * l8)) / self$wghtSum
     }

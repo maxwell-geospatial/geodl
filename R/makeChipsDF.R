@@ -10,6 +10,14 @@
 #' the full file path so that the results can still be used if the data are copied
 #' to a new location on disk or to a new computer.
 #'
+#' If \code{useEdgeDist = TRUE}, a fourth column \code{distPth} is added that
+#' points to the corresponding distance-to-class-boundary grid produced by
+#' \code{makeBoundaryDistance}. All three modes are supported. For \code{mode = "All"}
+#' or \code{mode = "Positive"} the paths resolve to \code{dist/<name>.tif}; for
+#' \code{mode = "Divided"} they resolve to \code{dist/positive/<name>.tif} or
+#' \code{dist/background/<name>.tif} to match the layout written by
+#' \code{makeBoundaryDistance} when it detects the divided folder structure.
+#'
 #' @param folder Full path or path relative to the working directory to the
 #' folder containing the image chips and associated masks. You must include the
 #' final forward slash in the path (e.g., "C:/data/chips/").
@@ -28,9 +36,13 @@
 #' @param saveCSV TRUE or FALSE. Whether or not to save the CSV file or just
 #' return the data frame. If this is set to FALSE then the outCSV parameter is
 #' ignored and no CSV file is generated. The default is FALSE.
+#' @param useEdgeDist TRUE or FALSE. Whether to include a \code{distPth} column
+#' pointing to the distance-to-class-boundary grids produced by
+#' \code{makeBoundaryDistance}. Supported for all modes. Default is FALSE.
 #' @return Data frame with three columns (chpN, chpPth, and mskPth) and, optionally,
 #' a CSV file written to disk. If mode = "Divided", a division column is added to
-#' differentiate "positive" and "background" samples.
+#' differentiate "positive" and "background" samples. If \code{useEdgeDist = TRUE},
+#' an additional \code{distPth} column is included.
 #' @examples
 #' \dontrun{
 #' chpDF <- makeChipsDF(folder = "PATHT TO CHIPS FOLDER",
@@ -38,7 +50,8 @@
 #'                       extension = ".tif",
 #'                       mode="Positive",
 #'                       shuffle=TRUE,
-#'                       saveCSV=TRUE)
+#'                       saveCSV=TRUE,
+#'                       useEdgeDist=TRUE)
 #' }
 #' @export
 makeChipsDF <- function(folder,
@@ -46,21 +59,37 @@ makeChipsDF <- function(folder,
                         extension=".tif",
                         mode="All",
                         shuffle=FALSE,
-                        saveCSV=FALSE){
+                        saveCSV=FALSE,
+                        useEdgeDist=FALSE){
   if(mode == "All" || mode == "Positive") {
     lstChps <- list.files(paste0(folder, "images/"), pattern=paste0("\\", extension, "$"))
     lstChpsPth <- paste0("images/", lstChps)
     lstMsksPth <- paste0("masks/", lstChps)
-    chpDF <- data.frame(chpN=lstChps, chpPth=lstChpsPth, mskPth=lstMsksPth)
-  }else{
+    if (useEdgeDist) {
+      lstDistPth <- paste0("dist/", lstChps)
+      chpDF <- data.frame(chpN=lstChps, chpPth=lstChpsPth, mskPth=lstMsksPth,
+                          distPth=lstDistPth)
+    } else {
+      chpDF <- data.frame(chpN=lstChps, chpPth=lstChpsPth, mskPth=lstMsksPth)
+    }
+  } else {
     lstChpsB <- list.files(paste0(folder, "images/background/"), pattern=paste0("\\", extension, "$"))
     lstChpsP <- list.files(paste0(folder, "images/positive/"), pattern=paste0("\\", extension, "$"))
     lstChpsPthB <- paste0("images/background/", lstChpsB)
     lstMsksPthB <- paste0("masks/background/", lstChpsB)
     lstChpsPthP <- paste0("images/positive/", lstChpsP)
     lstMsksPthP <- paste0("masks/positive/", lstChpsP)
-    chpDFB <- data.frame(chpN=lstChpsB, chpPth=lstChpsPthB, mskPth=lstMsksPthB)
-    chpDFP <- data.frame(chpN=lstChpsP, chpPth=lstChpsPthP, mskPth=lstMsksPthP)
+    if (useEdgeDist) {
+      lstDistPthB <- paste0("dist/background/", lstChpsB)
+      lstDistPthP <- paste0("dist/positive/", lstChpsP)
+      chpDFB <- data.frame(chpN=lstChpsB, chpPth=lstChpsPthB, mskPth=lstMsksPthB,
+                           distPth=lstDistPthB)
+      chpDFP <- data.frame(chpN=lstChpsP, chpPth=lstChpsPthP, mskPth=lstMsksPthP,
+                           distPth=lstDistPthP)
+    } else {
+      chpDFB <- data.frame(chpN=lstChpsB, chpPth=lstChpsPthB, mskPth=lstMsksPthB)
+      chpDFP <- data.frame(chpN=lstChpsP, chpPth=lstChpsPthP, mskPth=lstMsksPthP)
+    }
     chpDFP$division <- "Positive"
     chpDFB$division <- "Background"
     chpDF <- dplyr::bind_rows(chpDFB, chpDFP)

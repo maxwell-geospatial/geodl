@@ -590,6 +590,184 @@ callback_training_log <- luz::luz_callback(
   }
 )
 
+# Internal helper: update one parameter on a defineUnifiedFocalLoss instance,
+# rebuilding cached tensors where necessary.
+.apply_loss_param <- function(loss, name, value, device) {
+  switch(name,
+    lambda = {
+      loss$lambda  <- value
+      loss$lambdaT <- torch::torch_tensor(as.numeric(value),
+                                          dtype=torch::torch_float32(), device=device)
+    },
+    gamma = {
+      loss$gamma     <- value
+      loss$gammaT    <- torch::torch_tensor(as.numeric(value),
+                                            dtype=torch::torch_float32(), device=device)
+      loss$gammaRepT <- torch::torch_tensor(rep(as.numeric(value), loss$nCls),
+                                            dtype=torch::torch_float32(), device=device)
+    },
+    delta = {
+      loss$delta  <- value
+      delta2      <- if (length(value) == 1L) rep(as.numeric(value), loss$nCls) else as.numeric(value)
+      loss$deltaT <- torch::torch_tensor(delta2, dtype=torch::torch_float32(), device=device)
+    },
+    clsWghtsDist = {
+      wd2 <- if (length(value) == 1L) rep(as.numeric(value), loss$nCls) else as.numeric(value)
+      loss$wghtT            <- torch::torch_tensor(wd2,
+                                                   dtype=torch::torch_float32(), device=device)
+      loss$clsWghtsDistMapT <- torch::torch_tensor(wd2,
+                                                   dtype=torch::torch_float32(), device=device)$view(c(1L, loss$nCls, 1L, 1L))
+    },
+    clsWghtsReg = {
+      wr2 <- if (length(value) == 1L) rep(as.numeric(value), loss$nCls) else as.numeric(value)
+      loss$clsWghtsRegT <- torch::torch_tensor(wr2,
+                                               dtype=torch::torch_float32(), device=device)
+    },
+    smooth = {
+      loss$smooth  <- value
+      loss$smoothT <- torch::torch_tensor(as.numeric(value),
+                                          dtype=torch::torch_float32(), device=device)
+    },
+    distThreshold = {
+      loss$distThresholdT <- torch::torch_tensor(as.numeric(value),
+                                                 dtype=torch::torch_float32(), device=device)
+    },
+    minWght = {
+      loss$minWghtT <- torch::torch_tensor(as.numeric(value),
+                                           dtype=torch::torch_float32(), device=device)
+    },
+    maxWght = {
+      loss$maxWghtT <- torch::torch_tensor(as.numeric(value),
+                                           dtype=torch::torch_float32(), device=device)
+    },
+    {
+      known_scalars <- c("useLogCosH", "labelSmoothing", "classAvgDist",
+                         "prioritizeEdge", "edgeMode", "applyDistWght",
+                         "useEdgeDist", "cropFactorMsk", "cropFactorPred", "zeroStart")
+      if (!name %in% known_scalars) {
+        warning(sprintf(
+          "callback_reconfigure_loss: unknown parameter '%s' — skipping.", name
+        ))
+      } else {
+        loss[[name]] <- value
+      }
+    }
+  )
+}
+
+
+#' callback_reconfigure_loss
+#'
+#' Reconfigure the unified focal loss hyperparameters at specified epochs during training.
+#'
+#' A luz callback that updates one or more parameters of an instantiated
+#' \code{defineUnifiedFocalLoss} or \code{defineUnifiedFocalLossDS} loss object at defined
+#' epoch boundaries. Because torch \code{nn_module} objects are reference types, the
+#' same object passed here is used by the luz training loop, so changes applied by the
+#' callback take effect immediately for the following epoch.
+#'
+#' For \code{defineUnifiedFocalLossDS}, parameters are routed to the inner
+#' \code{defineUnifiedFocalLoss} sub-object automatically.
+#'
+#' Parameters that have pre-computed tensor counterparts (see Details) have both the
+#' scalar field and the corresponding tensor updated atomically so that the forward
+#' pass always reads consistent values.
+#'
+#' @details
+#' The following parameters may be reconfigured:
+#' \describe{
+#'   \item{\code{lambda}}{Relative weight of distribution vs. region loss.}
+#'   \item{\code{gamma}}{Focal weighting strength.}
+#'   \item{\code{delta}}{False positive / false negative balance (scalar or per-class vector).}
+#'   \item{\code{clsWghtsDist}}{Class weights for the distribution loss (scalar or per-class vector).}
+#'   \item{\code{clsWghtsReg}}{Class weights for the region loss (scalar or per-class vector).}
+#'   \item{\code{smooth}}{Smoothing constant for numeric stability.}
+#'   \item{\code{distThreshold}}{Distance threshold for edge weighting.}
+#'   \item{\code{minWght}}{Minimum per-pixel edge weight.}
+#'   \item{\code{maxWght}}{Maximum per-pixel edge weight.}
+#'   \item{\code{useLogCosH}}{Toggle log-cosh transform on the region loss.}
+#'   \item{\code{labelSmoothing}}{Label smoothing factor for the distribution loss.}
+#'   \item{\code{classAvgDist}}{Switch between macro-averaged and pixel-level distribution loss.}
+#'   \item{\code{prioritizeEdge}}{Flip which pixels receive the higher edge weight.}
+#'   \item{\code{edgeMode}}{Edge weighting mode: \code{"threshold"}, \code{"linear"}, or \code{"gaussian"}.}
+#'   \item{\code{applyDistWght}}{Which loss component receives edge weights: \code{"distribution"}, \code{"region"}, or \code{"both"}.}
+#'   \item{\code{cropFactorMsk}}{Mask crop factor.}
+#'   \item{\code{cropFactorPred}}{Prediction crop factor.}
+#'   \item{\code{zeroStart}}{Whether class indices start at 0.}
+#' }
+#'
+#' @param loss An instantiated \code{defineUnifiedFocalLoss} or
+#'   \code{defineUnifiedFocalLossDS} object. Must be the same object passed as
+#'   \code{loss} to \code{luz::setup()}.
+#' @param schedule A list of named lists, each specifying one reconfiguration event.
+#'   Each entry must contain:
+#'   \describe{
+#'     \item{\code{epoch}}{Single integer. The training epoch at the end of which the
+#'       parameters are updated. The new values take effect from the following epoch onward.}
+#'     \item{\code{params}}{Named list of parameter name–value pairs to update. Names
+#'       must match those listed in the Details section above.}
+#'   }
+#' @returns A luz callback object.
+#' @examples
+#' \dontrun{
+#' loss_fn <- defineUnifiedFocalLoss(nCls = 3, lambda = 0.5, gamma = 0.5, delta = 0.6)
+#'
+#' reconfigure_cb <- callback_reconfigure_loss(
+#'   loss = loss_fn,
+#'   schedule = list(
+#'     list(epoch = 5,  params = list(lambda = 0.7, gamma = 0.3)),
+#'     list(epoch = 10, params = list(lambda = 0.9, clsWghtsDist = c(1, 2, 3))),
+#'     list(epoch = 15, params = list(labelSmoothing = 0.1))
+#'   )
+#' )
+#'
+#' fitted <- model |>
+#'   luz::setup(loss = loss_fn, optimizer = torch::optim_adamw) |>
+#'   luz::fit(train_dl, epochs = 20,
+#'             callbacks = list(reconfigure_cb))
+#' }
+#' @importFrom luz luz_callback
+#' @export
+callback_reconfigure_loss <- luz::luz_callback(
+  name = "reconfigure_loss",
+
+  initialize = function(loss, schedule) {
+    if (!is.list(schedule))
+      stop("schedule must be a list of named lists with 'epoch' and 'params' elements.")
+    for (i in seq_along(schedule)) {
+      item <- schedule[[i]]
+      if (!is.list(item) || is.null(item$epoch) || is.null(item$params))
+        stop(sprintf(
+          "schedule[[%d]] must be a list with 'epoch' and 'params' elements.", i
+        ))
+      if (!is.numeric(item$epoch) || length(item$epoch) != 1L)
+        stop(sprintf("schedule[[%d]]$epoch must be a single integer.", i))
+      if (!is.list(item$params) || length(item$params) == 0L)
+        stop(sprintf("schedule[[%d]]$params must be a non-empty named list.", i))
+    }
+    self$loss     <- loss
+    self$schedule <- schedule
+    # Detect DS wrapper: DS loss stores the base loss as $loss
+    self$is_ds <- !is.null(loss$loss)
+  },
+
+  on_epoch_end = function() {
+    epoch <- self$ctx$epoch
+    inner <- if (self$is_ds) self$loss$loss else self$loss
+    device <- inner$device
+
+    for (item in self$schedule) {
+      if (epoch != as.integer(item$epoch)) next
+      for (nm in names(item$params)) {
+        .apply_loss_param(inner, nm, item$params[[nm]], device)
+      }
+      updated <- paste(names(item$params), collapse = ", ")
+      cat(sprintf("Epoch %d: reconfigured loss — updated: %s\n", epoch, updated))
+    }
+  }
+)
+
+
 #' plotTrainingSchedule
 #'
 #' Visualise per-stage base learning rates, an optional LR scheduler trace,

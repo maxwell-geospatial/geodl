@@ -18,6 +18,15 @@ defineUnifiedFocalLossDS(
   clsWghtsDist = 1,
   clsWghtsReg = 1,
   useLogCosH = FALSE,
+  useEdgeDist = FALSE,
+  prioritizeEdge = TRUE,
+  edgeMode = "threshold",
+  distThreshold = 10,
+  minWght = 0.5,
+  maxWght = 1,
+  applyDistWght = "both",
+  labelSmoothing = 0,
+  classAvgDist = FALSE,
   device = "cuda"
 )
 }
@@ -69,6 +78,37 @@ region-based loss. Default is for all classes to be equally weighted.}
 \item{useLogCosH}{TRUE or FALSE. Whether or not to apply a logCosH transformation to the region-based
 loss. Default is FALSE.}
 
+\item{useEdgeDist}{TRUE or FALSE. Whether to apply distance-to-class-boundary weights during loss
+computation. When TRUE a \code{dist} tensor must be supplied to \code{forward}. Default is FALSE.}
+
+\item{prioritizeEdge}{TRUE or FALSE. When \code{useEdgeDist = TRUE}, controls which pixels receive
+the higher weight. If TRUE (default), pixels near class boundaries receive \code{maxWght} and
+pixels far from boundaries receive \code{minWght}. If FALSE, the weighting is reversed.}
+
+\item{edgeMode}{Character string specifying how the distance is converted to a per-pixel weight.
+One of \code{"threshold"}, \code{"linear"}, or \code{"gaussian"}. Default is \code{"threshold"}.}
+
+\item{distThreshold}{Numeric. The distance value that defines the boundary of the high-weight zone.
+Default is 10.}
+
+\item{minWght}{Numeric. The minimum per-pixel weight. Must be less than \code{maxWght}.
+Default is 0.5.}
+
+\item{maxWght}{Numeric. The maximum per-pixel weight. Must be greater than \code{minWght}.
+Default is 1.0.}
+
+\item{applyDistWght}{Character string controlling which loss component the edge weights are
+applied to. One of \code{"distribution"}, \code{"region"}, or \code{"both"} (default).}
+
+\item{labelSmoothing}{Numeric value in [0, 1). Amount of label smoothing applied to
+the cross-entropy component of the distribution loss. The focal modifier is derived
+from the true-class softmax probability and is not affected by smoothing.
+Default is 0 (no smoothing). See \code{defineUnifiedFocalLoss} for full details.}
+
+\item{classAvgDist}{TRUE or FALSE. When TRUE, the distribution loss is computed as a
+weighted average of per-class focal cross-entropy means rather than a pixel-level
+weighted mean. See \code{defineUnifiedFocalLoss} for a full description. Default is FALSE.}
+
 \item{device}{Define device being used for computation. Define using torch_device().}
 }
 \value{
@@ -86,8 +126,12 @@ medical image segmentation. Computerized Medical Imaging and Graphics, 95, p.102
 
 Modifications include (1) allowing users to define class weights for both the distribution-
 based and region-based losses, (2) using class weights as opposed to the symmetric and
-asymmetric methods implemented by the authors, and (3) including an option to apply
-a logcosh transform to the region-based loss.
+asymmetric methods implemented by the authors, (3) including an option to apply
+a logcosh transform to the region-based loss, (4) optionally incorporating
+distance-to-class-boundary weights computed by \code{makeBoundaryDistance}, (5) an
+option to compute the distribution loss as a weighted average of per-class means rather
+than as a single pixel-level weighted mean, and (6) optional label smoothing on the
+distribution loss.
 
 This loss has three key hyperparameters that control its implementation. Lambda controls
 the relative weight of the distribution- and region-based losses. Default is 0.5,
@@ -108,4 +152,9 @@ placing a higher weight on false negative as opposed to false positive errors re
 By adjusting the lambda, gamma, delta, and class weight terms, the user can implement a variety of different loss metrics
 including cross entropy loss, weighted cross entropy loss, focal cross entropy loss, focal weighted cross entropy loss,
 Dice loss, focal Dice loss, Tversky loss, and focal Tversky loss.
+
+When \code{useEdgeDist = TRUE} a distance-to-class-boundary tensor must be passed as the third
+argument to \code{forward(pred, target, dist)}. The same distance tensor is applied to all
+decoder-output losses. See \code{defineUnifiedFocalLoss} for a full description of the
+edge-distance weighting options.
 }

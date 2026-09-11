@@ -68,6 +68,58 @@ simpleConvBlk <- torch::nn_module(
 )
 
 
+#Single 3x3 convolution block with a residual connection.
+#Used for blocks (e.g. UNet3+'s per-node feature aggregation blocks) where
+#inChn typically equals outChn; in that case the skip path is a parameter-free
+#identity, and a 1x1 projection (via featReduce) is only added when the
+#channel count changes.
+simpleConvBlkR <- torch::nn_module(
+  initialize = function(inChn,
+                        outChn,
+                        actFunc="relu",
+                        negative_slope=0.01){
+
+    self$conv3_3 <- torch::nn_sequential(
+      torch::nn_conv2d(inChn,
+                       outChn,
+                       kernel_size=c(3,3),
+                       stride=1,
+                       padding=1),
+      torch::nn_batch_norm2d(outChn)
+    )
+
+    self$skipPath <- if(inChn == outChn){
+      torch::nn_identity()
+    }else{
+      featReduce(inChn=inChn,
+                outChn=outChn,
+                actFunc=actFunc,
+                dobnAct=FALSE,
+                negative_slope=negative_slope)
+    }
+
+    self$finalAct <- torch::nn_sequential(
+    if(actFunc == "lrelu"){
+      torch::nn_leaky_relu(inplace=TRUE,
+                           negative_slope=negative_slope)
+    }else if(actFunc == "swish"){
+      torch::nn_silu(inplace=TRUE)
+    }else if(actFunc == "gelu"){
+      torch::nn_gelu()
+    }else{
+      torch::nn_relu(inplace=TRUE)
+    })
+  },
+
+  forward = function(x){
+    res <- self$conv3_3(x)
+    skip <- self$skipPath(x)
+    out <- res + skip
+    return(self$finalAct(out))
+  }
+)
+
+
 
 #Use 1x1 2D convolution to change the number of feature maps
 featReduce <- torch::nn_module(
@@ -257,6 +309,218 @@ doubleConvBlkR <- torch::nn_module(
     skip <- self$skipPath(x)
     out = res + skip
     return(self$finalAct(out))
+  }
+)
+
+
+#Used to create feature maps in the encoder and decoder.
+#Same as doubleConvBlk, but the second 3x3 convolution is replaced with a
+#depthwise separable convolution (depthwise 3x3 followed by a pointwise 1x1).
+#The first convolution remains a standard 3x3 convolution.
+dwsDoubleConv <- torch::nn_module(
+  initialize = function(inChn,
+                         outChn,
+                         actFunc="relu",
+                         negative_slope=0.01){
+
+    self$dConv <- torch::nn_sequential(
+      torch::nn_conv2d(inChn,
+                       outChn,
+                       kernel_size=c(3,3),
+                       stride=1,
+                       padding=1),
+      torch::nn_batch_norm2d(outChn),
+      if(actFunc == "lrelu"){
+        torch::nn_leaky_relu(inplace=TRUE,
+                             negative_slope=negative_slope)
+      }else if(actFunc == "swish"){
+        torch::nn_silu(inplace=TRUE)
+      }else if(actFunc == "gelu"){
+        torch::nn_gelu()
+      }else{
+        torch::nn_relu(inplace=TRUE)
+      },
+      torch::nn_conv2d(outChn,
+                       outChn,
+                       kernel_size=c(3,3),
+                       stride=1,
+                       padding=1,
+                       groups=outChn),
+      torch::nn_conv2d(outChn,
+                       outChn,
+                       kernel_size=c(1,1),
+                       stride=1,
+                       padding=0),
+      torch::nn_batch_norm2d(outChn),
+      if(actFunc == "lrelu"){
+        torch::nn_leaky_relu(inplace=TRUE,
+                             negative_slope=negative_slope)
+      }else if(actFunc == "swish"){
+        torch::nn_silu(inplace=TRUE)
+      }else if(actFunc == "gelu"){
+        torch::nn_gelu()
+      }else{
+        torch::nn_relu(inplace=TRUE)
+      }
+      )
+  },
+
+  forward = function(x){
+    xx <- self$dConv(x)
+    return(xx)
+  }
+)
+
+
+#Used to create feature maps in the encoder and decoder.
+#Same as dwsDoubleConv, but with a residual connection (1x1 projection skip
+#path added to the block output), mirroring doubleConvBlkR.
+dwsDoubleConvR <- torch::nn_module(
+  initialize = function(inChn,
+                         outChn,
+                         actFunc="relu",
+                         negative_slope=0.01){
+
+    self$dConv <- torch::nn_sequential(
+      torch::nn_conv2d(inChn,
+                       outChn,
+                       kernel_size=c(3,3),
+                       stride=1,
+                       padding=1),
+      torch::nn_batch_norm2d(outChn),
+      if(actFunc == "lrelu"){
+        torch::nn_leaky_relu(inplace=TRUE,
+                             negative_slope=negative_slope)
+      }else if(actFunc == "swish"){
+        torch::nn_silu(inplace=TRUE)
+      }else if(actFunc == "gelu"){
+        torch::nn_gelu()
+      }else{
+        torch::nn_relu(inplace=TRUE)
+      },
+      torch::nn_conv2d(outChn,
+                       outChn,
+                       kernel_size=c(3,3),
+                       stride=1,
+                       padding=1,
+                       groups=outChn),
+      torch::nn_conv2d(outChn,
+                       outChn,
+                       kernel_size=c(1,1),
+                       stride=1,
+                       padding=0),
+      torch::nn_batch_norm2d(outChn)
+      )
+
+    self$skipPath <- featReduce(inChn=inChn,
+                                outChn=outChn,
+                                actFunc=actFunc,
+                                dobnAct=FALSE,
+                                negative_slope = negative_slope)
+
+    self$finalAct <- torch::nn_sequential(
+    if(actFunc == "lrelu"){
+      torch::nn_leaky_relu(inplace=TRUE,
+                           negative_slope=negative_slope)
+    }else if(actFunc == "swish"){
+      torch::nn_silu(inplace=TRUE)
+    }else if(actFunc == "gelu"){
+      torch::nn_gelu()
+    }else{
+      torch::nn_relu(inplace=TRUE)
+    })
+
+  },
+
+  forward = function(x){
+    res <- self$dConv(x)
+    skip <- self$skipPath(x)
+    out = res + skip
+    return(self$finalAct(out))
+  }
+)
+
+
+# Internal LayerNorm wrapper for (N, C, H, W) tensors.
+# Permutes to channels-last, normalises over the channel dim, permutes back.
+# This matches the ConvNeXt paper's "channels_first" LayerNorm convention.
+layerNorm2d <- torch::nn_module(
+  initialize = function(numChn, eps = 1e-6) {
+    self$norm <- torch::nn_layer_norm(numChn, eps = eps)
+  },
+  forward = function(x) {
+    x <- x$permute(c(1L, 3L, 4L, 2L))   # (N,C,H,W) -> (N,H,W,C)
+    x <- self$norm(x)
+    x <- x$permute(c(1L, 4L, 2L, 3L))   # (N,H,W,C) -> (N,C,H,W)
+    return(x)
+  }
+)
+
+# Single ConvNeXt block at a fixed channel count.
+# Depthwise 7x7 -> LayerNorm -> 1x1 expand -> GELU -> 1x1 project + residual.
+convNeXtBlk <- torch::nn_module(
+  initialize = function(numChn, expRatio = 4L) {
+    hidChn       <- numChn * expRatio
+    self$dwConv  <- torch::nn_conv2d(numChn, numChn,  kernel_size = 7L,
+                                     padding = 3L, groups = numChn, bias = TRUE)
+    self$norm    <- layerNorm2d(numChn)
+    self$expand  <- torch::nn_conv2d(numChn, hidChn,  kernel_size = 1L, bias = TRUE)
+    self$act     <- torch::nn_gelu()
+    self$project <- torch::nn_conv2d(hidChn, numChn,  kernel_size = 1L, bias = TRUE)
+  },
+  forward = function(x) {
+    res <- x
+    x   <- self$dwConv(x)
+    x   <- self$norm(x)
+    x   <- self$expand(x)
+    x   <- self$act(x)
+    x   <- self$project(x)
+    return(x + res)
+  }
+)
+
+# Double ConvNeXt block: channel-adapting first block followed by a refining second block.
+#
+# Block 1 maps inChn -> outChn:
+#   depthwise 7x7 at inChn -> LayerNorm -> 1x1 expand (outChn*expRatio) ->
+#   GELU -> 1x1 project to outChn, with a 1x1 residual skip from inChn -> outChn.
+#
+# Block 2 refines at outChn -> outChn using a standard convNeXtBlk residual.
+#
+# GELU is used throughout as per the original ConvNeXt design; actFunc is not
+# exposed since activation choice is intrinsic to the ConvNeXt formulation.
+# expRatio controls the hidden-channel multiplier in the inverted-bottleneck
+# MLP (default 4, matching the original paper).
+doubleConvBlkCNX <- torch::nn_module(
+  initialize = function(inChn, outChn, expRatio = 4L) {
+    hidChn        <- outChn * expRatio
+
+    # Block 1 — handles channel transition inChn -> outChn
+    self$dw1      <- torch::nn_conv2d(inChn,  inChn,  kernel_size = 7L,
+                                      padding = 3L, groups = inChn, bias = TRUE)
+    self$norm1    <- layerNorm2d(inChn)
+    self$expand1  <- torch::nn_conv2d(inChn,  hidChn, kernel_size = 1L, bias = TRUE)
+    self$act1     <- torch::nn_gelu()
+    self$project1 <- torch::nn_conv2d(hidChn, outChn, kernel_size = 1L, bias = TRUE)
+    self$skip1    <- torch::nn_conv2d(inChn,  outChn, kernel_size = 1L, bias = FALSE)
+
+    # Block 2 — refines at outChn -> outChn
+    self$blk2     <- convNeXtBlk(outChn, expRatio = expRatio)
+  },
+  forward = function(x) {
+    # Block 1
+    res <- self$skip1(x)
+    x   <- self$dw1(x)
+    x   <- self$norm1(x)
+    x   <- self$expand1(x)
+    x   <- self$act1(x)
+    x   <- self$project1(x)
+    x   <- x + res
+
+    # Block 2
+    x <- self$blk2(x)
+
+    return(x)
   }
 )
 
@@ -1346,29 +1610,69 @@ dws <- torch::nn_module(
 #' Define a UNet architecture with 4 blocks in the encoder, a bottleneck
 #' block, and 4 blocks in the decoder. UNet can accept a variable number of input
 #' channels, and the user can define the number of feature maps produced in each
-#' encoder and decoder block and the bottleneck. Users can also choose to (1) replace
-#' all ReLU activation functions with leaky ReLU or swish, (2) implement attention
-#' gates along the skip connections, (3) implement squeeze and excitation modules within
-#' the encoder blocks, (4) add residual connections within all blocks, (5) replace the
-#' bottleneck with a modified atrous spatial pyramid pooling (ASPP) module, and/or (6)
-#' implement deep supervision using predictions generated at each stage in the decoder.
+#' encoder and decoder block and the bottleneck.
+#'
+#' Each encoder block, each decoder block, and the bottleneck can independently
+#' use one of several block implementations via \code{encBlocks}, \code{decBlocks},
+#' and \code{btnBlock}:
+#' \itemize{
+#'   \item \code{"double"} — the standard double 3x3 convolution block (default
+#'         everywhere). Becomes a residual double convolution block when
+#'         \code{useRes = TRUE}.
+#'   \item \code{"dws"} — a double convolution block whose second 3x3 convolution
+#'         is replaced with a depthwise separable convolution (\code{dwsDoubleConv}).
+#'         Becomes a residual variant (\code{dwsDoubleConvR}) when \code{useRes = TRUE}.
+#'   \item \code{"convnext"} — a ConvNeXt-style block (depthwise 7x7, LayerNorm,
+#'         1x1 inverted-bottleneck expansion, GELU, 1x1 projection, residual;
+#'         \code{doubleConvBlkCNX}). Always residual and always GELU, so
+#'         \code{useRes} and \code{actFunc} do not affect these blocks.
+#'   \item \code{"aspp"} — (\code{btnBlock} only) a modified atrous spatial
+#'         pyramid pooling module for multi-scale context.
+#' }
+#'
+#' Users can also choose to (1) replace all ReLU activation functions with leaky
+#' ReLU, swish, or GELU in the non-ConvNeXt blocks, (2) implement attention gates
+#' along the skip connections (\code{useAttn}), (3) implement squeeze-and-excitation
+#' modules within the encoder (\code{useSE}), (4) apply Convolutional Block
+#' Attention Modules (CBAM) to the skip connections (\code{useCBAM}), (5) add
+#' residual connections within the "double" blocks and ASPP bottleneck
+#' (\code{useRes}), and/or (6) implement deep supervision using predictions
+#' generated at each stage in the decoder (\code{useDS}). Because CBAM already
+#' performs both channel and spatial recalibration, setting \code{useCBAM = TRUE}
+#' forces \code{useSE} and \code{useAttn} to FALSE.
 #'
 #' @param inChn Number of channels, bands, or predictor variables in the input
 #' image or raster data. Default is 3.
 #' @param nCls Number of classes being differentiated. For a binary classification,
 #' this can be either 1 or 2. If 2, the problem is treated as a multiclass problem,
 #' and a multiclass loss metric should be used. Default is 3.
-#' @param actFunc Defines activation function to use throughout the network. "relu" =
-#' rectified linear unit (ReLU); "lrelu" = leaky ReLU; "swish" = swish; "gelu" = GELU.
-#' Default is "relu".
+#' @param actFunc Defines activation function to use throughout the network for the
+#' non-ConvNeXt blocks. "relu" = rectified linear unit (ReLU); "lrelu" = leaky ReLU;
+#' "swish" = swish; "gelu" = GELU. Default is "relu".
+#' @param encBlocks Block implementation for the four encoder blocks. Either a
+#' single value applied to all four blocks or a length-4 character vector, with
+#' entries "double", "dws", or "convnext". Default is "double".
+#' @param btnBlock Block implementation for the bottleneck: "double", "dws",
+#' "convnext", or "aspp". Default is "double".
+#' @param decBlocks Block implementation for the four decoder blocks. Either a
+#' single value applied to all four blocks or a length-4 character vector, with
+#' entries "double", "dws", or "convnext". Default is "double".
 #' @param useAttn TRUE or FALSE. Whether to add attention gates along the skip connections.
-#' Default is FALSE or no attention gates are added.
+#' Default is FALSE or no attention gates are added. Ignored (forced FALSE) when
+#' \code{useCBAM = TRUE}.
 #' @param useSE TRUE or FALSE. Whether or not to include squeeze and excitation modules in
-#' the encoder. Default is FALSE or no squeeze and excitation modules are used.
-#' @param useRes TRUE or FALSE. Whether to include residual connections in the encoder, decoder,
-#' and bottleneck/ASPP module blocks. Default is FALSE or no residual connections are included.
-#' @param useASPP TRUE or FALSE. Whether to use an ASPP module as the bottleneck as opposed to a
-#' double convolution operation. Default is FALSE or the ASPP module is not used as the bottleneck.
+#' the encoder. Default is FALSE or no squeeze and excitation modules are used. Ignored
+#' (forced FALSE) when \code{useCBAM = TRUE}.
+#' @param useCBAM TRUE or FALSE. Whether to apply a Convolutional Block Attention
+#' Module (CBAM) to each encoder skip connection before it is concatenated with the
+#' upsampled decoder features. When TRUE, \code{useSE} and \code{useAttn} are forced
+#' to FALSE. Default is FALSE.
+#' @param useRes TRUE or FALSE. Whether to include residual connections in the "double"
+#' and "dws" encoder, decoder, and bottleneck blocks and in the ASPP bottleneck. Has no
+#' effect on "convnext" blocks (always residual). Default is FALSE or no residual
+#' connections are included.
+#' @param useASPP Deprecated. Use \code{btnBlock = "aspp"} instead. If TRUE and
+#' \code{btnBlock} is left at its default, the bottleneck is set to "aspp". Default is FALSE.
 #' @param useDS TRUE or FALSE. Whether or not to use deep supervision. If TRUE, four predictions are
 #' made, one at each decoder block resolution, and the predictions are returned as a list object
 #' containing the 4 predictions. If FALSE, only the final prediction at the original resolution is
@@ -1385,11 +1689,17 @@ dws <- torch::nn_module(
 #' rate within the ASPP module. Default is 256 for each dilation rate.
 #' @param negative_slope If actFunc = "lrelu", specifies the negative slope term
 #' to use. Default is 0.01.
-#' @param seRatio Ratio to use in squeeze and excitation module. The default is 8.
+#' @param seRatio Ratio to use in the squeeze and excitation modules. The default is 8.
+#' @param cbamRatio Channel reduction ratio used in the CBAM channel attention MLP.
+#' Default is 8.
+#' @param cbamKernelSize Kernel size for the CBAM spatial attention convolution. Must
+#' be odd. Default is 7.
+#' @param expRatio Inverted-bottleneck expansion ratio for "convnext" blocks. Default is 4.
 #' @param stageLRs Optional numeric vector of length 9 specifying a base learning
-#' rate for each stage of the network: encoder stages e1, e2, e3, e4, the
-#' bottleneck, and decoder stages d1, d2, d3, d4 (in that order). When provided,
-#' call \code{model$get_param_groups()} to obtain a list of optimizer parameter
+#' rate for each stage of the network: encoder stages e1, e2, e3, e4 (each paired
+#' with its squeeze-and-excitation or CBAM module when enabled), the bottleneck,
+#' and decoder stages d1, d2, d3, d4 (in that order). When provided, call
+#' \code{model$get_param_groups()} to obtain a list of optimizer parameter
 #' groups with per-stage learning rates. Default is NULL (single learning rate).
 #' @return Unet model instance as torch nn_module
 #' @export
@@ -1398,8 +1708,12 @@ defineUNet <- torch::nn_module(
   initialize  = function(inChn = 3,
                           nCls = 3,
                           actFunc = "relu",
+                          encBlocks = "double",
+                          btnBlock = "double",
+                          decBlocks = "double",
                           useAttn = FALSE,
                           useSE = FALSE,
+                          useCBAM = FALSE,
                           useRes = FALSE,
                           useASPP = FALSE,
                           useDS = FALSE,
@@ -1410,15 +1724,56 @@ defineUNet <- torch::nn_module(
                           dilChn=c(256,256,256,256),
                           negative_slope = 0.01,
                           seRatio=8,
+                          cbamRatio=8,
+                          cbamKernelSize=7,
+                          expRatio=4,
                           stageLRs = NULL){
+
+    # ---- normalise block-type selectors ----
+    validBlk <- c("double", "dws", "convnext")
+    normBlocks <- function(spec, nm){
+      spec <- as.character(spec)
+      if(length(spec) == 1L) spec <- rep(spec, 4L)
+      if(length(spec) != 4L){
+        stop("defineUNet: '", nm, "' must be length 1 or 4.")
+      }
+      bad <- setdiff(spec, validBlk)
+      if(length(bad) > 0L){
+        stop("defineUNet: invalid '", nm, "' value(s): ", paste(bad, collapse=", "),
+             ". Valid values are 'double', 'dws', 'convnext'.")
+      }
+      spec
+    }
+    encBlocks <- normBlocks(encBlocks, "encBlocks")
+    decBlocks <- normBlocks(decBlocks, "decBlocks")
+    btnBlock  <- match.arg(btnBlock, c("double", "dws", "convnext", "aspp"))
+
+    # ---- deprecated useASPP shim ----
+    if(isTRUE(useASPP)){
+      warning("defineUNet: 'useASPP' is deprecated; use btnBlock = \"aspp\" instead.")
+      if(identical(btnBlock, "double")) btnBlock <- "aspp"
+    }
+
+    # ---- CBAM supersedes SE / attention gates ----
+    if(isTRUE(useCBAM)){
+      if(isTRUE(useSE) || isTRUE(useAttn)){
+        warning("defineUNet: useCBAM = TRUE; ignoring useSE and useAttn (forced to FALSE).")
+      }
+      useSE   <- FALSE
+      useAttn <- FALSE
+    }
 
     self$inChn = inChn
     self$nCls = nCls
     self$actFunc = actFunc
+    self$encBlocks = encBlocks
+    self$btnBlock = btnBlock
+    self$decBlocks = decBlocks
     self$useAttn = useAttn
     self$useSE = useSE
+    self$useCBAM = useCBAM
     self$useRes = useRes
-    self$useASPP = useASPP
+    self$useASPP = identical(btnBlock, "aspp")
     self$useDS = useDS
     self$enChn = enChn
     self$dcChn = dcChn
@@ -1427,119 +1782,96 @@ defineUNet <- torch::nn_module(
     self$dilChn = dilChn
     self$negative_slope = negative_slope
     self$seRatio = seRatio
+    self$cbamRatio = cbamRatio
+    self$cbamKernelSize = cbamKernelSize
+    self$expRatio = expRatio
     self$stageLRs = stageLRs
 
-    if(useRes == TRUE){
-      self$e1 <- geodl:::doubleConvBlkR(inChn=inChn,
-                                outChn=enChn[1],
-                                actFunc=actFunc,
-                                negative_slope=negative_slope)
-      self$e2 <- geodl:::doubleConvBlkR(inChn=enChn[1],
-                                outChn=enChn[2],
-                                actFunc=actFunc,
-                                negative_slope=negative_slope)
-      self$e3 <- geodl:::doubleConvBlkR(inChn=enChn[2],
-                                outChn=enChn[3],
-                                actFunc=actFunc,
-                                negative_slope=negative_slope)
-      self$e4 <- geodl:::doubleConvBlkR(inChn=enChn[3],
-                                outChn=enChn[4],
-                                actFunc=actFunc,
-                                negative_slope=negative_slope)
-
-      self$dUp1 <- geodl:::upConvBlk(inChn=btnChn,
-                             outChn=btnChn)
-      self$dUp2 <- geodl:::upConvBlk(inChn=dcChn[1],
-                             outChn=dcChn[1])
-      self$dUp3 <- geodl:::upConvBlk(inChn=dcChn[2],
-                             outChn=dcChn[2])
-      self$dUp4 <- geodl:::upConvBlk(inChn=dcChn[3],
-                             outChn=dcChn[3])
-      self$d1 <- geodl:::doubleConvBlkR(inChn=btnChn+enChn[4],
-                                outChn=dcChn[1],
-                                actFunc=actFunc,
-                                negative_slope=negative_slope)
-      self$d2 <- geodl:::doubleConvBlkR(inChn=dcChn[1]+enChn[3],
-                                outChn=dcChn[2],
-                                actFunc=actFunc,
-                                negative_slope=negative_slope)
-      self$d3 <- geodl:::doubleConvBlkR(inChn=dcChn[2]+enChn[2],
-                                outChn=dcChn[3],
-                                actFunc=actFunc,
-                                negative_slope=negative_slope)
-      self$d4 <- geodl:::doubleConvBlkR(inChn=dcChn[3]+enChn[1],
-                                outChn=dcChn[4],
-                                actFunc=actFunc,
-                                negative_slope=negative_slope)
-
-    }else{
-      self$e1 <- geodl:::doubleConvBlk(inChn=inChn,
-                               outChn=enChn[1],
+    # ---- block builder ----
+    makeBlk <- function(kind, inC, outC){
+      if(kind == "dws" & useRes == TRUE){
+        geodl:::dwsDoubleConvR(inChn=inC,
+                               outChn=outC,
                                actFunc=actFunc,
                                negative_slope=negative_slope)
-      self$e2 <- geodl:::doubleConvBlk(inChn=enChn[1],
-                               outChn=enChn[2],
-                               actFunc=actFunc,
-                               negative_slope=negative_slope)
-      self$e3 <- geodl:::doubleConvBlk(inChn=enChn[2],
-                               outChn=enChn[3],
-                               actFunc=actFunc,
-                               negative_slope=negative_slope)
-      self$e4 <- geodl:::doubleConvBlk(inChn=enChn[3],
-                               outChn=enChn[4],
-                               actFunc=actFunc,
-                               negative_slope=negative_slope)
-
-      self$dUp1 <- geodl:::upConvBlk(inChn=btnChn,
-                             outChn=btnChn)
-      self$dUp2 <- geodl:::upConvBlk(inChn=dcChn[1],
-                             outChn=dcChn[1])
-      self$dUp3 <- geodl:::upConvBlk(inChn=dcChn[2],
-                             outChn=dcChn[2])
-      self$dUp4 <- geodl:::upConvBlk(inChn=dcChn[3],
-                             outChn=dcChn[3])
-      self$d1 <- geodl:::doubleConvBlk(inChn=btnChn+enChn[4],
-                               outChn=dcChn[1],
-                               actFunc=actFunc,
-                               negative_slope=negative_slope)
-      self$d2 <- geodl:::doubleConvBlk(inChn=dcChn[1]+enChn[3],
-                               outChn=dcChn[2],
-                               actFunc=actFunc,
-                               negative_slope=negative_slope)
-      self$d3 <- geodl:::doubleConvBlk(inChn=dcChn[2]+enChn[2],
-                               outChn=dcChn[3],
-                               actFunc=actFunc,
-                               negative_slope=negative_slope)
-      self$d4 <- geodl:::doubleConvBlk(inChn=dcChn[3]+enChn[1],
-                               outChn=dcChn[4],
-                               actFunc=actFunc,
-                               negative_slope=negative_slope)
-    }
-
-    if(useASPP == FALSE & useRes == FALSE){
-      self$btn <-geodl::: bottleneck(inChn=enChn[4],
-                             outChn=btnChn,
-                             actFunc=actFunc,
-                             negative_slope=negative_slope)
-    }else if(useASPP == FALSE & useRes == TRUE){
-      self$btn <- geodl:::bottleneckR(inChn=enChn[4],
-                              outChn=btnChn,
+      }else if(kind == "dws"){
+        geodl:::dwsDoubleConv(inChn=inC,
+                              outChn=outC,
                               actFunc=actFunc,
                               negative_slope=negative_slope)
-    }else if(useASPP == TRUE & useRes == FALSE){
+      }else if(kind == "convnext"){
+        geodl:::doubleConvBlkCNX(inChn=inC,
+                                 outChn=outC,
+                                 expRatio=expRatio)
+      }else if(useRes == TRUE){
+        geodl:::doubleConvBlkR(inChn=inC,
+                               outChn=outC,
+                               actFunc=actFunc,
+                               negative_slope=negative_slope)
+      }else{
+        geodl:::doubleConvBlk(inChn=inC,
+                              outChn=outC,
+                              actFunc=actFunc,
+                              negative_slope=negative_slope)
+      }
+    }
+
+    # ---- encoder ----
+    self$e1 <- makeBlk(encBlocks[1], inChn,    enChn[1])
+    self$e2 <- makeBlk(encBlocks[2], enChn[1], enChn[2])
+    self$e3 <- makeBlk(encBlocks[3], enChn[2], enChn[3])
+    self$e4 <- makeBlk(encBlocks[4], enChn[3], enChn[4])
+
+    # ---- decoder up-convolutions ----
+    self$dUp1 <- geodl:::upConvBlk(inChn=btnChn,
+                           outChn=btnChn)
+    self$dUp2 <- geodl:::upConvBlk(inChn=dcChn[1],
+                           outChn=dcChn[1])
+    self$dUp3 <- geodl:::upConvBlk(inChn=dcChn[2],
+                           outChn=dcChn[2])
+    self$dUp4 <- geodl:::upConvBlk(inChn=dcChn[3],
+                           outChn=dcChn[3])
+
+    # ---- decoder convolution blocks ----
+    self$d1 <- makeBlk(decBlocks[1], btnChn  + enChn[4], dcChn[1])
+    self$d2 <- makeBlk(decBlocks[2], dcChn[1] + enChn[3], dcChn[2])
+    self$d3 <- makeBlk(decBlocks[3], dcChn[2] + enChn[2], dcChn[3])
+    self$d4 <- makeBlk(decBlocks[4], dcChn[3] + enChn[1], dcChn[4])
+
+    # ---- bottleneck ----
+    if(btnBlock == "aspp" & useRes == FALSE){
       self$btn <- geodl:::asppBlk(inChn=enChn[4],
                           outChn=btnChn,
                           dilChn=dilChn,
                           dilRates=dilRates,
                           actFunc=actFunc,
                           negative_slope=negative_slope)
-    }else{
+    }else if(btnBlock == "aspp" & useRes == TRUE){
       self$btn <- geodl:::asppBlkR(inChn=enChn[4],
                            outChn=btnChn,
                            dilChn=dilChn,
                            dilRates=dilRates,
                            actFunc=actFunc,
                            negative_slope=negative_slope)
+    }else if(btnBlock == "dws"){
+      self$btn <- geodl:::dwsDoubleConv(inChn=enChn[4],
+                                        outChn=btnChn,
+                                        actFunc=actFunc,
+                                        negative_slope=negative_slope)
+    }else if(btnBlock == "convnext"){
+      self$btn <- geodl:::doubleConvBlkCNX(inChn=enChn[4],
+                                           outChn=btnChn,
+                                           expRatio=expRatio)
+    }else if(useRes == FALSE){
+      self$btn <- geodl:::bottleneck(inChn=enChn[4],
+                             outChn=btnChn,
+                             actFunc=actFunc,
+                             negative_slope=negative_slope)
+    }else{
+      self$btn <- geodl:::bottleneckR(inChn=enChn[4],
+                              outChn=btnChn,
+                              actFunc=actFunc,
+                              negative_slope=negative_slope)
     }
 
     if(useSE == TRUE){
@@ -1551,6 +1883,21 @@ defineUNet <- torch::nn_module(
                            ratio=seRatio)
       self$se4 <- geodl:::seModule(inChn=enChn[4],
                            ratio=seRatio)
+    }
+
+    if(useCBAM == TRUE){
+      self$cbam1 <- geodl:::cbamBlk(inChn=enChn[1],
+                             ratio=cbamRatio,
+                             kernelSize=cbamKernelSize)
+      self$cbam2 <- geodl:::cbamBlk(inChn=enChn[2],
+                             ratio=cbamRatio,
+                             kernelSize=cbamKernelSize)
+      self$cbam3 <- geodl:::cbamBlk(inChn=enChn[3],
+                             ratio=cbamRatio,
+                             kernelSize=cbamKernelSize)
+      self$cbam4 <- geodl:::cbamBlk(inChn=enChn[4],
+                             ratio=cbamRatio,
+                             kernelSize=cbamKernelSize)
     }
 
     if(useAttn == TRUE){
@@ -1627,6 +1974,13 @@ defineUNet <- torch::nn_module(
 
     btnx <- self$btn(e4xMP)
 
+    if(self$useCBAM == TRUE){
+      e1x <- self$cbam1(e1x)
+      e2x <- self$cbam2(e2x)
+      e3x <- self$cbam3(e3x)
+      e4x <- self$cbam4(e4x)
+    }
+
     if(self$useAttn == TRUE){
       e4x <- self$ag4(e4x, btnx)
     }
@@ -1679,10 +2033,18 @@ defineUNet <- torch::nn_module(
            "encoder stages e1, e2, e3, e4, bottleneck, decoder stages d1, d2, d3, d4")
     }
     list(
-      list(params = .collect_params(self$e1, if (self$useSE) self$se1),           lr = stageLRs[1]),
-      list(params = .collect_params(self$e2, if (self$useSE) self$se2),           lr = stageLRs[2]),
-      list(params = .collect_params(self$e3, if (self$useSE) self$se3),           lr = stageLRs[3]),
-      list(params = .collect_params(self$e4, if (self$useSE) self$se4),           lr = stageLRs[4]),
+      list(params = .collect_params(self$e1,
+                                    if (self$useSE) self$se1,
+                                    if (self$useCBAM) self$cbam1),              lr = stageLRs[1]),
+      list(params = .collect_params(self$e2,
+                                    if (self$useSE) self$se2,
+                                    if (self$useCBAM) self$cbam2),              lr = stageLRs[2]),
+      list(params = .collect_params(self$e3,
+                                    if (self$useSE) self$se3,
+                                    if (self$useCBAM) self$cbam3),              lr = stageLRs[3]),
+      list(params = .collect_params(self$e4,
+                                    if (self$useSE) self$se4,
+                                    if (self$useCBAM) self$cbam4),              lr = stageLRs[4]),
       list(params = .collect_params(self$btn),                                     lr = stageLRs[5]),
       list(params = .collect_params(self$dUp1, self$d1,
                                     if (self$useAttn) self$ag4),                  lr = stageLRs[6]),
@@ -1703,6 +2065,7 @@ defineUNet <- torch::nn_module(
     if (encoderOnly) {
       pfx <- c("e1.", "e2.", "e3.", "e4.")
       if (self$useSE) pfx <- c(pfx, "se1.", "se2.", "se3.", "se4.")
+      if (self$useCBAM) pfx <- c(pfx, "cbam1.", "cbam2.", "cbam3.", "cbam4.")
       keep <- vapply(names(state), function(k) any(startsWith(k, pfx)), logical(1L))
       self$load_state_dict(state[keep], strict = FALSE)
     } else {
@@ -1715,6 +2078,7 @@ defineUNet <- torch::nn_module(
   freeze_encoder = function(freeze = TRUE) {
     mods <- list(self$e1, self$e2, self$e3, self$e4)
     if (self$useSE) mods <- c(mods, list(self$se1, self$se2, self$se3, self$se4))
+    if (self$useCBAM) mods <- c(mods, list(self$cbam1, self$cbam2, self$cbam3, self$cbam4))
     for (mod in mods) for (p in mod$parameters) p$requires_grad_(!freeze)
     invisible(self)
   }
@@ -1826,7 +2190,7 @@ defineMobileUNet <- torch::nn_module(
         padding      = old_conv$padding,
         bias         = !is.null(old_conv$bias)
       )
-      new_conv$weight <- torch::nn_parameter(new_w$clone())
+      new_conv$weight <- torch::nn_parameter(new_w$detach()$clone())
 
       orig_bn    <- first_block[[2]]
       orig_relu6 <- first_block[[3]]
@@ -1975,7 +2339,7 @@ defineMobileUNet <- torch::nn_module(
 
   freeze_encoder = function(freeze = TRUE) {
     for (mod in list(self$e1, self$e2, self$e3, self$e4, self$e5))
-      for (p in mod$parameters) p$requires_grad_(!freeze)
+      for (p in mod$parameters) if (p$is_leaf) p$requires_grad_(!freeze)
     invisible(self)
   }
 )
@@ -1983,16 +2347,339 @@ defineMobileUNet <- torch::nn_module(
 
 
 
+#' defineResNetUNet
+#'
+#' Define a UNet architecture for geospatial semantic segmentation with a ResNet backbone.
+#'
+#' Define a UNet architecture with a torchvision ResNet encoder (ResNet-18, -34,
+#' -50, -101, or -152), following the same design as \code{\link{defineMobileUNet}}:
+#' 5 encoder stages (the shallowest is an identity pass-through of the input image,
+#' so the final decoder block skips from the raw input), a bottleneck, and 5
+#' decoder blocks with transpose-convolution upsampling. Optional attention gates
+#' along the skip connections (\code{useAttn}) and deep supervision (\code{useDS})
+#' are available.
+#'
+#' The encoder is tapped as: stem (\code{conv1 + bn1 + relu}, stride 2),
+#' \code{maxpool + layer1} (stride 4), \code{layer2} (stride 8), \code{layer3}
+#' (stride 16), and \code{layer4} as the bottleneck (stride 32). Channel counts
+#' are taken from the chosen backbone (64/64/128/256/512 for ResNet-18/34;
+#' 64/256/512/1024/2048 for ResNet-50/101/152).
+#'
+#' If ImageNet weights are used and the number of input channels differs from 3,
+#' or if \code{avgImNetWeights = TRUE}, the stem convolution weights are averaged
+#' over the input-channel dimension and expanded to \code{inChn} channels.
+#'
+#' @param inChn Number of input channels or predictor variables. Default is 3.
+#' @param nCls Number of classes being differentiated. For a binary classification,
+#' this can be either 1 or 2. If 2, the problem is treated as a multiclass problem,
+#' and a multiclass loss metric should be used. Default is 3.
+#' @param backbone ResNet variant to use as the encoder: "resnet18", "resnet34",
+#' "resnet50", "resnet101", or "resnet152". Default is "resnet34".
+#' @param pretrainedEncoder TRUE or FALSE. Whether to initialize the encoder with
+#' pre-trained ImageNet weights. Default is TRUE.
+#' @param freezeEncoder TRUE or FALSE. Whether to freeze the encoder during
+#' training. If TRUE, only the decoder is trained. Default is FALSE.
+#' @param avgImNetWeights TRUE or FALSE. If three predictor variables are provided
+#' and ImageNet weights are used, whether to average the stem weights rather than
+#' use the originals. If the input has a number of channels other than 3, the stem
+#' weights are always averaged regardless of this argument. Default is FALSE.
+#' @param actFunc Activation function used in the decoder (the ResNet encoder
+#' layers are not affected; they use ReLU internally). "relu" = rectified linear
+#' unit (ReLU); "lrelu" = leaky ReLU; "swish" = swish; "gelu" = GELU. Default is "relu".
+#' @param useAttn TRUE or FALSE. Whether to add attention gates along the skip
+#' connections. Default is FALSE.
+#' @param useDS TRUE or FALSE. Whether to use deep supervision. If TRUE, four
+#' predictions are made, one at each of the four largest decoder block resolutions,
+#' and the predictions are returned as a list object. If FALSE, only the final
+#' prediction at the original resolution is returned. Default is FALSE.
+#' @param dcChn Vector of 5 integers defining the number of output feature maps for
+#' each of the 5 decoder blocks. Default is 256, 128, 64, 32, and 16.
+#' @param negative_slope If actFunc = "lrelu", specifies the negative slope term to
+#' use. Default is 0.01.
+#' @param stageLRs Optional numeric vector of length 11 specifying a base learning
+#' rate for each stage: encoder stages e1, e2, e3, e4, e5, the bottleneck, and
+#' decoder stages d1, d2, d3, d4, d5 (in that order). Call
+#' \code{model$get_param_groups()} to obtain optimizer parameter groups with
+#' per-stage learning rates. Default is NULL (single learning rate).
+#' @return ResNetUNet model instance as torch nn_module.
+#' @export
+defineResNetUNet <- torch::nn_module(
+  "ResNetUNet",
 
-#' defineUnet3p
+  initialize = function(inChn             = 3,
+                        nCls              = 3,
+                        backbone          = "resnet34",
+                        pretrainedEncoder = TRUE,
+                        freezeEncoder     = FALSE,
+                        avgImNetWeights   = FALSE,
+                        actFunc           = "relu",
+                        useAttn           = FALSE,
+                        useDS             = FALSE,
+                        dcChn             = c(256, 128, 64, 32, 16),
+                        negative_slope    = 0.01,
+                        stageLRs          = NULL) {
+
+    backbone <- match.arg(backbone,
+                          c("resnet34", "resnet18", "resnet50", "resnet101", "resnet152"))
+
+    # Store settings
+    self$inChn             <- inChn
+    self$nCls              <- nCls
+    self$backbone          <- backbone
+    self$pretrainedEncoder <- pretrainedEncoder
+    self$freezeEncoder     <- freezeEncoder
+    self$avgImNetWeights   <- avgImNetWeights
+    self$actFunc           <- actFunc
+    self$useAttn           <- useAttn
+    self$useDS             <- useDS
+    self$dcChn             <- dcChn
+    self$negative_slope    <- negative_slope
+    self$stageLRs          <- stageLRs
+
+    # --------------------------------------------------
+    # ResNet backbone
+    # --------------------------------------------------
+    self$base_model <- switch(
+      backbone,
+      resnet18  = torchvision::model_resnet18(pretrained = pretrainedEncoder),
+      resnet34  = torchvision::model_resnet34(pretrained = pretrainedEncoder),
+      resnet50  = torchvision::model_resnet50(pretrained = pretrainedEncoder),
+      resnet101 = torchvision::model_resnet101(pretrained = pretrainedEncoder),
+      resnet152 = torchvision::model_resnet152(pretrained = pretrainedEncoder)
+    )
+
+    # Drop the unused classification head to keep it out of the state dict
+    self$base_model$avgpool <- torch::nn_identity()
+    self$base_model$fc      <- torch::nn_identity()
+
+    expansion <- if (backbone %in% c("resnet18", "resnet34")) 1L else 4L
+    stemChn   <- self$base_model$conv1$out_channels          # 64
+    e3Chn     <- 64L  * expansion                            # layer1 output
+    e4Chn     <- 128L * expansion                            # layer2 output
+    e5Chn     <- 256L * expansion                            # layer3 output
+    btnChn    <- 512L * expansion                            # layer4 output
+    self$encChn <- c(inChn, stemChn, e3Chn, e4Chn, e5Chn, btnChn)
+
+    # --------------------------------------------------
+    # Handle input channels / ImageNet weight averaging on the stem conv
+    # --------------------------------------------------
+    orig_conv <- self$base_model$conv1
+    orig_in   <- orig_conv$in_channels
+
+    if (avgImNetWeights || inChn != orig_in) {
+      old_w  <- orig_conv$weight
+      mean_w <- old_w$mean(dim = 2L, keepdim = TRUE)
+      out_ch <- old_w$size(1L)
+      k_h    <- old_w$size(3L)
+      k_w    <- old_w$size(4L)
+      new_w  <- mean_w$expand(c(out_ch, inChn, k_h, k_w))
+
+      new_conv <- torch::nn_conv2d(
+        in_channels  = inChn,
+        out_channels = out_ch,
+        kernel_size  = c(k_h, k_w),
+        stride       = orig_conv$stride,
+        padding      = orig_conv$padding,
+        bias         = !is.null(orig_conv$bias)
+      )
+      new_conv$weight <- torch::nn_parameter(new_w$detach()$clone())
+      self$base_model$conv1 <- new_conv
+
+      cat("Stem conv rebuilt: weight size is now ",
+          self$base_model$conv1$weight$size(), "\n")
+    }
+
+    # --------------------------------------------------
+    # Optionally freeze encoder
+    # --------------------------------------------------
+    if (freezeEncoder) {
+      for (p in self$base_model$parameters) p$requires_grad_(FALSE)
+    }
+
+    # --------------------------------------------------
+    # Encoder stages (e1 = identity / input, e5 = layer3 /16, btn = layer4 /32)
+    # --------------------------------------------------
+    self$e1  <- torch::nn_identity()
+    self$e2  <- torch::nn_sequential(self$base_model$conv1,
+                                     self$base_model$bn1,
+                                     self$base_model$relu)
+    self$e3  <- torch::nn_sequential(self$base_model$maxpool,
+                                     self$base_model$layer1)
+    self$e4  <- torch::nn_sequential(self$base_model$layer2)
+    self$e5  <- torch::nn_sequential(self$base_model$layer3)
+    self$btn <- torch::nn_sequential(self$base_model$layer4)
+
+    # --------------------------------------------------
+    # Decoder up-conv blocks
+    # --------------------------------------------------
+    self$dUp1 <- geodl:::upConvBlk(btnChn,   btnChn)
+    self$dUp2 <- geodl:::upConvBlk(dcChn[1], dcChn[1])
+    self$dUp3 <- geodl:::upConvBlk(dcChn[2], dcChn[2])
+    self$dUp4 <- geodl:::upConvBlk(dcChn[3], dcChn[3])
+    self$dUp5 <- geodl:::upConvBlk(dcChn[4], dcChn[4])
+
+    # --------------------------------------------------
+    # Decoder conv blocks. d5 skips from the original input x (H x W, inChn ch).
+    # --------------------------------------------------
+    self$d1 <- geodl:::doubleConvBlk(btnChn   + e5Chn,   dcChn[1], actFunc, negative_slope)
+    self$d2 <- geodl:::doubleConvBlk(dcChn[1] + e4Chn,   dcChn[2], actFunc, negative_slope)
+    self$d3 <- geodl:::doubleConvBlk(dcChn[2] + e3Chn,   dcChn[3], actFunc, negative_slope)
+    self$d4 <- geodl:::doubleConvBlk(dcChn[3] + stemChn, dcChn[4], actFunc, negative_slope)
+    self$d5 <- geodl:::doubleConvBlk(dcChn[4] + inChn,   dcChn[5], actFunc, negative_slope)
+
+    # --------------------------------------------------
+    # Optional attention gates (one per skip connection)
+    # --------------------------------------------------
+    if (useAttn) {
+      self$ag5 <- geodl:::attnBlk(e5Chn,   btnChn)    # e5x (H/16) gated by btnx (H/32)
+      self$ag4 <- geodl:::attnBlk(e4Chn,   dcChn[1])  # e4x (H/8)  gated by d1x  (H/16)
+      self$ag3 <- geodl:::attnBlk(e3Chn,   dcChn[2])  # e3x (H/4)  gated by d2x  (H/8)
+      self$ag2 <- geodl:::attnBlk(stemChn, dcChn[3])  # e2x (H/2)  gated by d3x  (H/4)
+      self$ag1 <- geodl:::attnBlk(inChn,   dcChn[4])  # x   (H)    gated by d4x  (H/2)
+    }
+
+    # --------------------------------------------------
+    # Classifier and optional deep-supervision heads
+    # --------------------------------------------------
+    self$c4 <- geodl:::classifierBlk(dcChn[5], nCls)
+
+    if (useDS) {
+      self$upSamp2 <- torch::nn_upsample(scale_factor = 2, mode = "bilinear", align_corners = TRUE)
+      self$upSamp4 <- torch::nn_upsample(scale_factor = 4, mode = "bilinear", align_corners = TRUE)
+      self$upSamp8 <- torch::nn_upsample(scale_factor = 8, mode = "bilinear", align_corners = TRUE)
+      self$c3 <- geodl:::classifierBlk(dcChn[4], nCls)
+      self$c2 <- geodl:::classifierBlk(dcChn[3], nCls)
+      self$c1 <- geodl:::classifierBlk(dcChn[2], nCls)
+    }
+  },
+
+  forward = function(x) {
+
+    e1x  <- self$e1(x)
+    e2x  <- self$e2(e1x)
+    e3x  <- self$e3(e2x)
+    e4x  <- self$e4(e3x)
+    e5x  <- self$e5(e4x)
+    btnx <- self$btn(e5x)
+
+    if (self$useAttn) e5x <- self$ag5(e5x, btnx)
+    d1x <- self$d1(torch::torch_cat(list(self$dUp1(btnx), e5x), dim = 2))
+
+    if (self$useAttn) e4x <- self$ag4(e4x, d1x)
+    d2x <- self$d2(torch::torch_cat(list(self$dUp2(d1x), e4x), dim = 2))
+
+    if (self$useAttn) e3x <- self$ag3(e3x, d2x)
+    d3x <- self$d3(torch::torch_cat(list(self$dUp3(d2x), e3x), dim = 2))
+
+    if (self$useAttn) e2x <- self$ag2(e2x, d3x)
+    d4x <- self$d4(torch::torch_cat(list(self$dUp4(d3x), e2x), dim = 2))
+
+    if (self$useAttn) x <- self$ag1(x, d4x)
+    d5x <- self$d5(torch::torch_cat(list(self$dUp5(d4x), x), dim = 2))
+
+    c4x <- self$c4(d5x)
+
+    if (self$useDS) {
+      u2 <- self$upSamp2(d4x); u4 <- self$upSamp4(d3x); u8 <- self$upSamp8(d2x)
+      c3x <- self$c3(u2); c2x <- self$c2(u4); c1x <- self$c1(u8)
+      return(list(pred1 = c4x, pred2 = c3x, pred4 = c2x, pred8 = c1x))
+    } else {
+      return(c4x)
+    }
+  },
+
+  get_param_groups = function(stageLRs = self$stageLRs) {
+    if (is.null(stageLRs)) {
+      return(list(list(params = unname(self$parameters))))
+    }
+    if (length(stageLRs) != 11L) {
+      stop("stageLRs must be a numeric vector of length 11 for defineResNetUNet: ",
+           "encoder stages e1-e5, bottleneck, decoder stages d1-d5")
+    }
+    list(
+      list(params = .collect_params(self$e1),  lr = stageLRs[1]),
+      list(params = .collect_params(self$e2),  lr = stageLRs[2]),
+      list(params = .collect_params(self$e3),  lr = stageLRs[3]),
+      list(params = .collect_params(self$e4),  lr = stageLRs[4]),
+      list(params = .collect_params(self$e5),  lr = stageLRs[5]),
+      list(params = .collect_params(self$btn), lr = stageLRs[6]),
+      list(params = .collect_params(self$dUp1, self$d1,
+                                    if (self$useAttn) self$ag5),             lr = stageLRs[7]),
+      list(params = .collect_params(self$dUp2, self$d2,
+                                    if (self$useAttn) self$ag4),             lr = stageLRs[8]),
+      list(params = .collect_params(self$dUp3, self$d3,
+                                    if (self$useAttn) self$ag3),             lr = stageLRs[9]),
+      list(params = .collect_params(self$dUp4, self$d4,
+                                    if (self$useAttn) self$ag2),             lr = stageLRs[10]),
+      list(params = .collect_params(self$dUp5, self$d5,
+                                    if (self$useAttn) self$ag1,
+                                    self$c4,
+                                    if (self$useDS) self$c1,
+                                    if (self$useDS) self$c2,
+                                    if (self$useDS) self$c3),                lr = stageLRs[11])
+    )
+  },
+
+  load_weights = function(path, encoderOnly = FALSE, freezeEncoder = FALSE) {
+    state <- torch::torch_load(path)
+    if (encoderOnly) {
+      pfx  <- c("e1.", "e2.", "e3.", "e4.", "e5.")
+      keep <- vapply(names(state), function(k) any(startsWith(k, pfx)), logical(1L))
+      self$load_state_dict(state[keep], strict = FALSE)
+    } else {
+      self$load_state_dict(state)
+    }
+    if (freezeEncoder) self$freeze_encoder(TRUE)
+    invisible(self)
+  },
+
+  freeze_encoder = function(freeze = TRUE) {
+    for (mod in list(self$e1, self$e2, self$e3, self$e4, self$e5))
+      for (p in mod$parameters) if (p$is_leaf) p$requires_grad_(!freeze)
+    invisible(self)
+  }
+)
+
+
+
+
+#' defineUNet3p
 #'
-#' Define a UNet3+ architecture for use in luz training loop.
+#' Define a UNet3+ architecture for use in a luz training loop.
 #'
-#' Define a UNet3+-like architecture for use in luz training loop. User can specify the
-#' number of output feature maps from each encoder and decoder block and the bottleneck
-#' block. Deep supervision can also be implemented. The default bottleneck block can be replaced
-#' with a atrous spatial pyramid pooling module. Leaky ReLU is used throughout.
-#' A variable number of input predictor variables and output classes can be defined.
+#' Define a UNet3+-like architecture with full-scale skip connections. The user can
+#' specify the number of output feature maps from each encoder block, the per-branch
+#' channel count used in the full-scale skip connections (\code{outChn}), and the
+#' bottleneck. Deep supervision can also be implemented. A variable number of input
+#' predictor variables and output classes can be defined.
+#'
+#' As in the original UNet3+, downsampling within the full-scale skip connections
+#' uses non-overlapping max pooling and upsampling uses bilinear interpolation
+#' (there are no transpose convolutions). Each resampled branch is passed through a
+#' channel-unification convolution before the branches are concatenated;
+#' \code{skipProj} selects a 3x3 convolution ("conv3x3", the original UNet3+
+#' design) or a lighter 1x1 convolution ("conv1x1"). The per-node feature
+#' aggregation block that follows each concatenation is always a 3x3 convolution.
+#'
+#' Each of the four encoder blocks and the bottleneck can independently use one of
+#' three block implementations via \code{encBlocks} and \code{btnBlock}, matching
+#' \code{\link{defineUNet}}:
+#' \itemize{
+#'   \item \code{"double"} - the standard double 3x3 convolution block (default).
+#'         Becomes a residual double convolution block when \code{useRes = TRUE}.
+#'   \item \code{"dws"} - a double convolution block whose second 3x3 convolution
+#'         is replaced with a depthwise separable convolution (\code{dwsDoubleConv}).
+#'         Becomes a residual variant (\code{dwsDoubleConvR}) when \code{useRes = TRUE}.
+#'   \item \code{"convnext"} - a ConvNeXt-style block (\code{doubleConvBlkCNX});
+#'         always residual and always GELU, so \code{useRes} and \code{actFunc} do
+#'         not affect these blocks.
+#' }
+#' \code{btnBlock} additionally accepts \code{"aspp"} for an atrous spatial pyramid
+#' pooling bottleneck, which also respects \code{useRes} (\code{asppBlk} vs.
+#' \code{asppBlkR}). The four per-node feature-aggregation blocks (\code{d1Blk}
+#' through \code{d4Blk}) likewise become residual when \code{useRes = TRUE}; since
+#' their input and output channel counts are always equal, the residual skip there
+#' is a parameter-free identity.
 #'
 #' The architecture was inspired by:
 #'
@@ -2005,21 +2692,35 @@ defineMobileUNet <- torch::nn_module(
 #' @param nCls Number of classes being differentiated. For a binary classification,
 #' this can be either 1 or 2. If 2, the problem is treated as a multiclass problem,
 #' and a multiclass loss metric should be used. Default is 3.
-#' double convolution operation. Default is FALSE or the ASPP module is not used as the bottleneck.
-#' @param enChn Vector of 4 integers defining the number of output
-#' feature maps for each of the four encoder blocks. Default is 16, 32, 64, and 128.
-#' maps for each of the 4 decoder blocks. Default is 128, 64, 32, and 16.
-#' @param outChn Number of output channels for each decoder block. Default is 64.
+#' @param actFunc Activation function to use throughout the non-ConvNeXt blocks.
+#' "relu" = ReLU; "lrelu" = leaky ReLU; "swish" = SiLU/Swish; "gelu" = GELU.
+#' Default is "lrelu".
+#' @param encBlocks Block implementation for the four encoder blocks. Either a
+#' single value applied to all four blocks or a length-4 character vector, with
+#' entries "double", "dws", or "convnext". Default is "double".
+#' @param btnBlock Block implementation for the bottleneck: "double", "dws",
+#' "convnext", or "aspp". Default is "double".
+#' @param skipProj Channel-unification convolution used on each branch of the
+#' full-scale skip connections: "conv3x3" (original UNet3+) or "conv1x1" (lighter).
+#' Default is "conv3x3".
+#' @param useRes TRUE or FALSE. Whether to include residual connections in the
+#' "double" and "dws" encoder blocks, the "double"/"dws"/"aspp" bottleneck, and the
+#' four per-node decoder feature-aggregation blocks (\code{d1Blk}-\code{d4Blk}). Has
+#' no effect on "convnext" blocks (always residual). Default is FALSE.
+#' @param enChn Vector of 4 integers defining the number of output feature maps for
+#' each of the four encoder blocks. Default is 16, 32, 64, and 128.
+#' @param outChn Number of channels each skip-connection branch is projected to
+#' before concatenation. Each decoder node therefore operates on 5 * outChn
+#' channels. Default is 64.
 #' @param btnChn Number of output feature maps from the bottleneck block. Default is 256.
-#' @param useASPP TRUE or FALSE. Whether to use an ASPP module as the bottleneck as opposed to a
-#' double convolution operation. Default is FALSE or the ASPP module is not used as the bottleneck.
+#' @param useASPP Deprecated. Use \code{btnBlock = "aspp"} instead. If TRUE and
+#' \code{btnBlock} is left at its default, the bottleneck is set to "aspp". Default is FALSE.
 #' @param dilRates Vector of 3 values specifying the dilation rates used in the ASPP module.
 #' Default is 6, 12, and 18.
 #' @param dilChn Vector of 4 values specifying the number of channels to produce at each dilation
 #' rate within the ASPP module. Default is 256 for each dilation rate.
-#' @param actFunc Activation function to use throughout. "relu" = ReLU; "lrelu" = leaky ReLU;
-#' "swish" = SiLU/Swish; "gelu" = GELU. Default is "lrelu".
 #' @param negative_slope Specifies the negative slope term for leaky ReLU activation. Default is 0.01.
+#' @param expRatio Inverted-bottleneck expansion ratio for "convnext" blocks. Default is 4.
 #' @param useDS TRUE or FALSE. Whether or not to use deep supervision. If TRUE, four predictions are
 #' made, one at each decoder block resolution, and the predictions are returned as a list object
 #' containing the 4 predictions. If FALSE, only the final prediction at the original resolution is
@@ -2039,6 +2740,10 @@ defineUNet3p <- torch::nn_module(
   initialize = function(inChn=3,
                         nCls=2,
                         actFunc="lrelu",
+                        encBlocks = "double",
+                        btnBlock = "double",
+                        skipProj = "conv3x3",
+                        useRes = FALSE,
                         enChn = c(16,32,64,128),
                         outChn = 64,
                         btnChn = 256,
@@ -2046,20 +2751,77 @@ defineUNet3p <- torch::nn_module(
                         dilRates=c(6,12,18),
                         dilChn=c(256,256,256,256),
                         negative_slope=0.01,
+                        expRatio = 4,
                         useDS = FALSE,
                         stageLRs = NULL){
 
+    # ---- normalise block-type / projection selectors ----
+    validBlk <- c("double", "dws", "convnext")
+    normBlocks <- function(spec, nm, n){
+      spec <- as.character(spec)
+      if(length(spec) == 1L) spec <- rep(spec, n)
+      if(length(spec) != n){
+        stop("defineUNet3p: '", nm, "' must be length 1 or ", n, ".")
+      }
+      bad <- setdiff(spec, validBlk)
+      if(length(bad) > 0L){
+        stop("defineUNet3p: invalid '", nm, "' value(s): ", paste(bad, collapse=", "),
+             ". Valid values are 'double', 'dws', 'convnext'.")
+      }
+      spec
+    }
+    encBlocks <- normBlocks(encBlocks, "encBlocks", 4L)
+    btnBlock  <- match.arg(btnBlock, c("double", "dws", "convnext", "aspp"))
+    skipProj  <- match.arg(skipProj, c("conv3x3", "conv1x1"))
+
+    # deprecated useASPP shim
+    if(isTRUE(useASPP)){
+      warning("defineUNet3p: 'useASPP' is deprecated; use btnBlock = \"aspp\" instead.")
+      if(identical(btnBlock, "double")) btnBlock <- "aspp"
+    }
+
     self$inChn <- inChn
     self$nCls <- nCls
+    self$actFunc <- actFunc
+    self$encBlocks <- encBlocks
+    self$btnBlock <- btnBlock
+    self$skipProj <- skipProj
+    self$useRes <- useRes
     self$enChn <- enChn
     self$outChn <- outChn
     self$btnChn <- btnChn
     self$negative_slope <- negative_slope
+    self$expRatio <- expRatio
     self$useDS <- useDS
-    self$useASPP <- useASPP
+    self$useASPP <- identical(btnBlock, "aspp")
     self$dilRates <- dilRates
     self$dilChn <- dilChn
     self$stageLRs <- stageLRs
+
+    # ---- encoder / bottleneck block builder ----
+    makeBlk <- function(kind, inC, outC){
+      if(kind == "dws" & useRes == TRUE){
+        dwsDoubleConvR(inChn=inC, outChn=outC, actFunc=actFunc, negative_slope=negative_slope)
+      }else if(kind == "dws"){
+        dwsDoubleConv(inChn=inC, outChn=outC, actFunc=actFunc, negative_slope=negative_slope)
+      }else if(kind == "convnext"){
+        doubleConvBlkCNX(inChn=inC, outChn=outC, expRatio=expRatio)
+      }else if(useRes == TRUE){
+        doubleConvBlkR(inChn=inC, outChn=outC, actFunc=actFunc, negative_slope=negative_slope)
+      }else{
+        doubleConvBlk(inChn=inC, outChn=outC, actFunc=actFunc, negative_slope=negative_slope)
+      }
+    }
+
+    # ---- per-scale channel-unification projection for the full-scale skip connections ----
+    # "conv3x3" matches the original UNet3+; "conv1x1" is a lighter variant.
+    mkProj <- function(inC, outC){
+      if(skipProj == "conv1x1"){
+        featReduce(inChn=inC, outChn=outC, actFunc=actFunc, dobnAct=TRUE, negative_slope=negative_slope)
+      }else{
+        simpleConvBlk(inChn=inC, outChn=outC, actFunc=actFunc, negative_slope=negative_slope)
+      }
+    }
 
     self$maxP2 <- torch::nn_max_pool2d(kernel_size=2, stride=2)
 
@@ -2068,65 +2830,60 @@ defineUNet3p <- torch::nn_module(
     self$up8 <- torch::nn_upsample(scale_factor=8,  mode="bilinear", align_corners=TRUE)
 
     # Encoder blocks
-    self$encoder1 <- doubleConvBlk(inChn,    enChn[1], actFunc=actFunc, negative_slope=negative_slope)
-    self$encoder2 <- doubleConvBlk(enChn[1], enChn[2], actFunc=actFunc, negative_slope=negative_slope)
-    self$encoder3 <- doubleConvBlk(enChn[2], enChn[3], actFunc=actFunc, negative_slope=negative_slope)
-    self$encoder4 <- doubleConvBlk(enChn[3], enChn[4], actFunc=actFunc, negative_slope=negative_slope)
+    self$encoder1 <- makeBlk(encBlocks[1], inChn,    enChn[1])
+    self$encoder2 <- makeBlk(encBlocks[2], enChn[1], enChn[2])
+    self$encoder3 <- makeBlk(encBlocks[3], enChn[2], enChn[3])
+    self$encoder4 <- makeBlk(encBlocks[4], enChn[3], enChn[4])
 
-    # Encoder -> each decoder level projections (downsample as needed)
-    self$e1d4 <- simpleConvBlk(enChn[1], outChn, actFunc=actFunc, negative_slope=negative_slope)
-    self$e1d3 <- torch::nn_sequential(torch::nn_max_pool2d(kernel_size=2, stride=2),
-                                       simpleConvBlk(enChn[1], outChn, actFunc=actFunc, negative_slope=negative_slope))
-    self$e1d2 <- torch::nn_sequential(torch::nn_max_pool2d(kernel_size=4, stride=4),
-                                       simpleConvBlk(enChn[1], outChn, actFunc=actFunc, negative_slope=negative_slope))
-    self$e1d1 <- torch::nn_sequential(torch::nn_max_pool2d(kernel_size=8, stride=8),
-                                       simpleConvBlk(enChn[1], outChn, actFunc=actFunc, negative_slope=negative_slope))
+    # Encoder -> each decoder level projections (downsample with non-overlapping max pooling)
+    self$e1d4 <- mkProj(enChn[1], outChn)
+    self$e1d3 <- torch::nn_sequential(torch::nn_max_pool2d(kernel_size=2, stride=2), mkProj(enChn[1], outChn))
+    self$e1d2 <- torch::nn_sequential(torch::nn_max_pool2d(kernel_size=4, stride=4), mkProj(enChn[1], outChn))
+    self$e1d1 <- torch::nn_sequential(torch::nn_max_pool2d(kernel_size=8, stride=8), mkProj(enChn[1], outChn))
 
-    self$e2d3 <- simpleConvBlk(enChn[2], outChn, actFunc=actFunc, negative_slope=negative_slope)
-    self$e2d2 <- torch::nn_sequential(torch::nn_max_pool2d(kernel_size=2, stride=2),
-                                       simpleConvBlk(enChn[2], outChn, actFunc=actFunc, negative_slope=negative_slope))
-    self$e2d1 <- torch::nn_sequential(torch::nn_max_pool2d(kernel_size=4, stride=4),
-                                       simpleConvBlk(enChn[2], outChn, actFunc=actFunc, negative_slope=negative_slope))
+    self$e2d3 <- mkProj(enChn[2], outChn)
+    self$e2d2 <- torch::nn_sequential(torch::nn_max_pool2d(kernel_size=2, stride=2), mkProj(enChn[2], outChn))
+    self$e2d1 <- torch::nn_sequential(torch::nn_max_pool2d(kernel_size=4, stride=4), mkProj(enChn[2], outChn))
 
-    self$e3d2 <- simpleConvBlk(enChn[3], outChn, actFunc=actFunc, negative_slope=negative_slope)
-    self$e3d1 <- torch::nn_sequential(torch::nn_max_pool2d(kernel_size=2, stride=2),
-                                       simpleConvBlk(enChn[3], outChn, actFunc=actFunc, negative_slope=negative_slope))
+    self$e3d2 <- mkProj(enChn[3], outChn)
+    self$e3d1 <- torch::nn_sequential(torch::nn_max_pool2d(kernel_size=2, stride=2), mkProj(enChn[3], outChn))
 
-    self$e4d1 <- simpleConvBlk(enChn[4], outChn, actFunc=actFunc, negative_slope=negative_slope)
+    self$e4d1 <- mkProj(enChn[4], outChn)
 
     # Bottleneck
-    if(useASPP == FALSE){
-      self$btn <- doubleConvBlk(enChn[4], btnChn, actFunc=actFunc, negative_slope=negative_slope)
-    }else{
+    if(btnBlock == "aspp" & useRes == TRUE){
       self$btn <- geodl:::asppBlkR(inChn=enChn[4], outChn=btnChn, dilChn=dilChn,
                                    dilRates=dilRates, actFunc=actFunc, negative_slope=negative_slope)
+    }else if(btnBlock == "aspp"){
+      self$btn <- geodl:::asppBlk(inChn=enChn[4], outChn=btnChn, dilChn=dilChn,
+                                  dilRates=dilRates, actFunc=actFunc, negative_slope=negative_slope)
+    }else{
+      self$btn <- makeBlk(btnBlock, enChn[4], btnChn)
     }
 
-    # Bottleneck -> each decoder level (upsample to match resolution)
-    self$bd1 <- upConvBlk(btnChn,  outChn, actFunc=actFunc, negative_slope=negative_slope)
-    self$bd2 <- torch::nn_sequential(interpUp(sFactor=4),
-                                     simpleConvBlk(btnChn, outChn, actFunc=actFunc, negative_slope=negative_slope))
-    self$bd3 <- torch::nn_sequential(interpUp(sFactor=8),
-                                     simpleConvBlk(btnChn, outChn, actFunc=actFunc, negative_slope=negative_slope))
-    self$bd4 <- torch::nn_sequential(interpUp(sFactor=16),
-                                     simpleConvBlk(btnChn, outChn, actFunc=actFunc, negative_slope=negative_slope))
+    # Bottleneck -> each decoder level (bilinear upsample to match resolution, then project)
+    self$bd1 <- torch::nn_sequential(interpUp(sFactor=2),  mkProj(btnChn, outChn))
+    self$bd2 <- torch::nn_sequential(interpUp(sFactor=4),  mkProj(btnChn, outChn))
+    self$bd3 <- torch::nn_sequential(interpUp(sFactor=8),  mkProj(btnChn, outChn))
+    self$bd4 <- torch::nn_sequential(interpUp(sFactor=16), mkProj(btnChn, outChn))
 
-    # Decoder -> higher decoder level projections (upsample as needed)
-    self$d1d2 <- upConvBlk(5*outChn, outChn, actFunc=actFunc, negative_slope=negative_slope)
-    self$d1d3 <- torch::nn_sequential(interpUp(sFactor=4),
-                                       simpleConvBlk(5*outChn, outChn, actFunc=actFunc, negative_slope=negative_slope))
-    self$d1d4 <- torch::nn_sequential(interpUp(sFactor=8),
-                                       simpleConvBlk(5*outChn, outChn, actFunc=actFunc, negative_slope=negative_slope))
-    self$d2d3 <- upConvBlk(5*outChn, outChn, actFunc=actFunc, negative_slope=negative_slope)
-    self$d2d4 <- torch::nn_sequential(interpUp(sFactor=4),
-                                       simpleConvBlk(5*outChn, outChn, actFunc=actFunc, negative_slope=negative_slope))
-    self$d3d4 <- upConvBlk(5*outChn, outChn, actFunc=actFunc, negative_slope=negative_slope)
+    # Decoder -> higher decoder level projections (bilinear upsample as needed, then project)
+    self$d1d2 <- torch::nn_sequential(interpUp(sFactor=2), mkProj(5*outChn, outChn))
+    self$d1d3 <- torch::nn_sequential(interpUp(sFactor=4), mkProj(5*outChn, outChn))
+    self$d1d4 <- torch::nn_sequential(interpUp(sFactor=8), mkProj(5*outChn, outChn))
+    self$d2d3 <- torch::nn_sequential(interpUp(sFactor=2), mkProj(5*outChn, outChn))
+    self$d2d4 <- torch::nn_sequential(interpUp(sFactor=4), mkProj(5*outChn, outChn))
+    self$d3d4 <- torch::nn_sequential(interpUp(sFactor=2), mkProj(5*outChn, outChn))
 
-    # Independent processing block for each decoder node (separate learned weights per scale)
-    self$d1Blk <- simpleConvBlk(5*outChn, 5*outChn, actFunc=actFunc, negative_slope=negative_slope)
-    self$d2Blk <- simpleConvBlk(5*outChn, 5*outChn, actFunc=actFunc, negative_slope=negative_slope)
-    self$d3Blk <- simpleConvBlk(5*outChn, 5*outChn, actFunc=actFunc, negative_slope=negative_slope)
-    self$d4Blk <- simpleConvBlk(5*outChn, 5*outChn, actFunc=actFunc, negative_slope=negative_slope)
+    # Independent processing block for each decoder node (separate learned weights per scale).
+    # Always a single 3x3 conv: this is the UNet3+ feature-aggregation step, not a channel
+    # projection. inChn == outChn (5*outChn) here, so the residual variant's skip path is a
+    # parameter-free identity when useRes = TRUE.
+    dNodeBlk <- if(useRes == TRUE) simpleConvBlkR else simpleConvBlk
+    self$d1Blk <- dNodeBlk(5*outChn, 5*outChn, actFunc=actFunc, negative_slope=negative_slope)
+    self$d2Blk <- dNodeBlk(5*outChn, 5*outChn, actFunc=actFunc, negative_slope=negative_slope)
+    self$d3Blk <- dNodeBlk(5*outChn, 5*outChn, actFunc=actFunc, negative_slope=negative_slope)
+    self$d4Blk <- dNodeBlk(5*outChn, 5*outChn, actFunc=actFunc, negative_slope=negative_slope)
 
     self$ch <- classifierBlk(5*outChn, nCls=nCls)
 
@@ -2369,7 +3126,7 @@ defineEfficientUNetB2 <- torch::nn_module(
         padding      = orig_conv$padding,
         bias         = !is.null(orig_conv$bias)
       )
-      new_conv$weight <- torch::nn_parameter(new_w$clone())
+      new_conv$weight <- torch::nn_parameter(new_w$detach()$clone())
 
       orig_bn  <- self$base_model$features[[1]][[2]]
       orig_act <- self$base_model$features[[1]][[3]]
@@ -2549,229 +3306,41 @@ defineEfficientUNetB2 <- torch::nn_module(
 
   freeze_encoder = function(freeze = TRUE) {
     for (mod in list(self$e1, self$e2, self$e3, self$e4, self$e5))
-      for (p in mod$parameters) p$requires_grad_(!freeze)
+      for (p in mod$parameters) if (p$is_leaf) p$requires_grad_(!freeze)
     invisible(self)
   }
 )
 
 
 
-#' defineConvnextUNet
+#' defineDLab
 #'
-#' Define a UNet architecture for geospatial semantic segmentation with a ConvNext-Tiny backbone.
+#' Define a DeepLabv3+-style encoder-ASPP-decoder architecture for geospatial
+#' semantic segmentation.
 #'
-#' @param inChn Number of input channels or predictor variables. Default is 3.
-#' @param nCls Number of classes being differentiated. For a binary classification,
-#' this can be either 1 or 2. If 2, the problem is treated as a multiclass problem,
-#' and a multiclass loss metric should be used. Default is 3.
-#' @param pretrainedEncoder TRUE or FALSE. Whether or not to initialized using pre-trained
-#' ImageNet weights for the MobileNet-v2 encoder. Default is TRUE.
-#' @param freezeEncoder TRUE or FALSE. Whether or not to freeze the encoder during training. T
-#' he default is TRUE. If TRUE, only the decoder component is trained.
-#' @param avgImNetWeights TRUE or FALSE. If three predictor variables are provided
-#' and ImageNet weights are used, whether or not to use the original weights or average them.
-#' Default is FALSE.
-#' @param actFunc Defines activation function to use throughout the network (note
-#' that ConvNeXt encoder layers are not impacted). "relu" = rectified linear unit (ReLU);
-#' "lrelu" = leaky ReLU; "swish" = swish; "gelu" = GELU. Default is "relu".
-#' @param useDS TRUE or FALSE. Whether or not to use deep supervision. If TRUE, four
-#' predictions are made, one at each of the four largest decoder block resolutions, and
-#' the predictions are returned as a list object containing the 4 predictions. If FALSE,
-#' only the final prediction at the original resolution is returned. Default is FALSE
-#' or deep supervision is not implemented.
-#' @param dcChn Vector of 4 integers defining the number of output feature
-#' maps for each of the 4 decoder blocks. Default is 128, 64, 32, and 16.
-#' @param negative_slope If actFunc = "lrelu", specifies the negative slope term
-#' to use. Default is 0.01.
-#' @param stageLRs Optional numeric vector of length 9 specifying a base learning
-#' rate for each stage: encoder stages e1, e2, e3, e4, then decoder stages d1,
-#' d2, d3, d4, d5 (in that order). The ConvNeXt-Tiny bottleneck is an identity
-#' transform with no learnable parameters and is therefore excluded from the
-#' stage count. Call \code{model$get_param_groups()} to obtain optimizer
-#' parameter groups. Default is NULL (single learning rate).
-#' @return ModileUNet model instance as torch nn_module
-#' @export
-defineConvNeXtTinyUNet <- torch::nn_module(
-  "ConvNeXtTinyUNet",
-
-  initialize = function(inChn = 3,
-                        nCls = 3,
-                        pretrainedEncoder = TRUE,
-                        freezeEncoder = TRUE,
-                        avgImNetWeights = FALSE,
-                        actFunc = "relu",
-                        useDS = FALSE,
-                        dcChn = c(256,128,64,32,16),
-                        negative_slope = 0.01,
-                        stageLRs = NULL){
-
-    self$inChn    <- inChn
-    self$nCls     <- nCls
-    self$useDS    <- useDS
-    self$stageLRs <- stageLRs
-
-    # --------------------------------------------------
-    # ConvNeXt-Tiny backbone
-    # --------------------------------------------------
-    self$base_model <- torchvision::model_convnext_tiny_1k(
-      pretrained = pretrainedEncoder
-    )
-
-    # ---- rebuild patch stem for multispectral input ----
-    stem <- self$base_model$features[[1]]
-    old_conv <- stem[[1]]   # 4x4 stride-4 conv
-    if (avgImNetWeights || inChn != old_conv$in_channels) {
-
-      old_w  <- old_conv$weight
-      mean_w <- old_w$mean(dim = 2, keepdim = TRUE)
-
-      new_w <- mean_w$expand(c(old_w$size(1), inChn,
-                               old_w$size(3), old_w$size(4)))
-
-      new_conv <- torch::nn_conv2d(
-        in_channels  = inChn,
-        out_channels = old_w$size(1),
-        kernel_size  = c(old_w$size(3), old_w$size(4)),
-        stride       = old_conv$stride,
-        padding      = old_conv$padding,
-        bias         = !is.null(old_conv$bias)
-      )
-
-      new_conv$weight <- torch::nn_parameter(new_w$clone())
-      stem[[1]] <- new_conv
-      self$base_model$features[[1]] <- stem
-    }
-
-    if (freezeEncoder) {
-      for (p in self$base_model$parameters) p$requires_grad_(FALSE)
-    }
-
-    # --------------------------------------------------
-    # ConvNeXt stages
-    # --------------------------------------------------
-    self$e1 <- torch::nn_sequential(self$base_model$features[[1]])  # 96  @ H/4
-    self$e2 <- torch::nn_sequential(self$base_model$features[[2]])  # 192 @ H/8
-    self$e3 <- torch::nn_sequential(self$base_model$features[[3]])  # 384 @ H/16
-    self$e4 <- torch::nn_sequential(self$base_model$features[[4]])  # 768 @ H/32
-    self$btn <- torch::nn_identity()
-
-    # --------------------------------------------------
-    # Decoder
-    # --------------------------------------------------
-    self$dUp1 <- geodl:::upConvBlk(768, 768)
-    self$dUp2 <- geodl:::upConvBlk(dcChn[1], dcChn[1])
-    self$dUp3 <- geodl:::upConvBlk(dcChn[2], dcChn[2])
-    self$dUp4 <- geodl:::upConvBlk(dcChn[3], dcChn[3])
-    self$dUp5 <- geodl:::upConvBlk(dcChn[4], dcChn[4])
-
-    self$d1 <- geodl:::doubleConvBlk(768 + 384, dcChn[1], actFunc, negative_slope)
-    self$d2 <- geodl:::doubleConvBlk(dcChn[1] + 192, dcChn[2], actFunc, negative_slope)
-    self$d3 <- geodl:::doubleConvBlk(dcChn[2] + 96,  dcChn[3], actFunc, negative_slope)
-    self$d4 <- geodl:::doubleConvBlk(dcChn[3],       dcChn[4], actFunc, negative_slope)
-    self$d5 <- geodl:::doubleConvBlk(dcChn[4] + inChn, dcChn[5], actFunc, negative_slope)
-
-    # restore resolution: ConvNeXt stem downsamples by 4
-    self$finalUp <- torch::nn_upsample(scale_factor = 4,
-                                       mode="bilinear",
-                                       align_corners=TRUE)
-
-    self$c4 <- geodl:::classifierBlk(dcChn[5], nCls)
-
-    if (useDS) {
-      self$upSamp2 <- torch::nn_upsample(scale_factor=2, mode="bilinear", align_corners=TRUE)
-      self$upSamp4 <- torch::nn_upsample(scale_factor=4, mode="bilinear", align_corners=TRUE)
-      self$upSamp8 <- torch::nn_upsample(scale_factor=8, mode="bilinear", align_corners=TRUE)
-      self$c3 <- geodl:::classifierBlk(dcChn[4], nCls)
-      self$c2 <- geodl:::classifierBlk(dcChn[3], nCls)
-      self$c1 <- geodl:::classifierBlk(dcChn[2], nCls)
-    }
-  },
-
-  forward = function(x) {
-
-    e1x <- self$e1(x)
-    e2x <- self$e2(e1x)
-    e3x <- self$e3(e2x)
-    e4x <- self$e4(e3x)
-
-    d1x <- self$d1(torch::torch_cat(list(self$dUp1(e4x), e3x), dim=2))
-    d2x <- self$d2(torch::torch_cat(list(self$dUp2(d1x), e2x), dim=2))
-    d3x <- self$d3(torch::torch_cat(list(self$dUp3(d2x), e1x), dim=2))
-    d4x <- self$d4(self$dUp4(d3x))
-    d5x <- self$d5(torch::torch_cat(list(self$dUp5(d4x), x), dim=2))
-
-    d5x <- self$finalUp(d5x)
-    out <- self$c4(d5x)
-
-    if (self$useDS) {
-      return(list(
-        pred1 = out,
-        pred2 = self$c3(self$finalUp(self$upSamp2(d4x))),
-        pred4 = self$c2(self$finalUp(self$upSamp4(d3x))),
-        pred8 = self$c1(self$finalUp(self$upSamp8(d2x)))
-      ))
-    } else {
-      return(out)
-    }
-  },
-
-  get_param_groups = function(stageLRs = self$stageLRs) {
-    if (is.null(stageLRs)) {
-      return(list(list(params = unname(self$parameters))))
-    }
-    if (length(stageLRs) != 9L) {
-      stop("stageLRs must be a numeric vector of length 9 for defineConvNeXtTinyUNet: ",
-           "encoder stages e1-e4, then decoder stages d1-d5 (no learnable bottleneck)")
-    }
-    list(
-      list(params = .collect_params(self$e1), lr = stageLRs[1]),
-      list(params = .collect_params(self$e2), lr = stageLRs[2]),
-      list(params = .collect_params(self$e3), lr = stageLRs[3]),
-      list(params = .collect_params(self$e4), lr = stageLRs[4]),
-      list(params = .collect_params(self$dUp1, self$d1), lr = stageLRs[5]),
-      list(params = .collect_params(self$dUp2, self$d2), lr = stageLRs[6]),
-      list(params = .collect_params(self$dUp3, self$d3), lr = stageLRs[7]),
-      list(params = .collect_params(self$dUp4, self$d4), lr = stageLRs[8]),
-      list(params = .collect_params(self$dUp5, self$d5, self$c4,
-                                    if (self$useDS) self$c1,
-                                    if (self$useDS) self$c2,
-                                    if (self$useDS) self$c3),               lr = stageLRs[9])
-    )
-  },
-
-  load_weights = function(path, encoderOnly = FALSE, freezeEncoder = FALSE) {
-    state <- torch::torch_load(path)
-    if (encoderOnly) {
-      pfx  <- c("e1.", "e2.", "e3.", "e4.")
-      keep <- vapply(names(state), function(k) any(startsWith(k, pfx)), logical(1L))
-      self$load_state_dict(state[keep], strict = FALSE)
-    } else {
-      self$load_state_dict(state)
-    }
-    if (freezeEncoder) self$freeze_encoder(TRUE)
-    invisible(self)
-  },
-
-  freeze_encoder = function(freeze = TRUE) {
-    for (mod in list(self$e1, self$e2, self$e3, self$e4))
-      for (p in mod$parameters) p$requires_grad_(!freeze)
-    invisible(self)
-  }
-)
-
-
-#' defineDeepLabV3Plus
+#' Define an architecture with a custom 4-block encoder, an atrous spatial pyramid
+#' pooling (ASPP) module, and a lightweight decoder that fuses high-level ASPP
+#' features with low-level encoder features. The decoder uses a single skip
+#' connection from the third encoder block (stride 4) and upsamples the ASPP
+#' output (stride 16) 4x before fusion, then upsamples 4x again to reach the
+#' original resolution. This is only loosely based on DeepLabv3+: the encoder is a
+#' plain convolutional network downsampled with max pooling rather than an atrous
+#' backbone, so the name is deliberately generic.
 #'
-#' Define a DeepLabv3+ architecture for geospatial semantic segmentation.
+#' Each of the four encoder blocks and the single decoder block can independently
+#' use one of three block implementations via \code{encBlocks} and \code{decBlock}:
+#' \itemize{
+#'   \item \code{"double"} - the standard double 3x3 convolution block (default).
+#'         Becomes a residual double convolution block when \code{useRes = TRUE}.
+#'   \item \code{"dws"} - a double convolution block whose second 3x3 convolution
+#'         is replaced with a depthwise separable convolution (\code{dwsDoubleConv}).
+#'         Becomes a residual variant (\code{dwsDoubleConvR}) when \code{useRes = TRUE}.
+#'   \item \code{"convnext"} - a ConvNeXt-style block (\code{doubleConvBlkCNX});
+#'         always residual and always GELU, so \code{useRes} and \code{actFunc} do
+#'         not affect these blocks.
+#' }
 #'
-#' Define a DeepLabv3+-like architecture with a custom 4-block encoder, an atrous
-#' spatial pyramid pooling (ASPP) module, and a lightweight decoder that fuses
-#' high-level ASPP features with low-level encoder features. Unlike the symmetric
-#' UNet decoder, the DeepLabv3+ decoder uses a single skip connection from the
-#' third encoder block (stride 4) and upsamples the ASPP output (stride 16) 4x
-#' before fusion, then upsamples 4x again to reach the original resolution.
-#'
-#' The architecture is inspired by:
+#' The overall encoder-ASPP-decoder structure is inspired by:
 #'
 #' Chen, L.C., Zhu, Y., Papandreou, G., Schroff, F. and Adam, H., 2018.
 #' Encoder-decoder with atrous separable convolution for semantic image
@@ -2783,11 +3352,17 @@ defineConvNeXtTinyUNet <- torch::nn_module(
 #' @param nCls Number of classes being differentiated. For a binary classification,
 #' this can be either 1 or 2. If 2, the problem is treated as a multiclass problem,
 #' and a multiclass loss metric should be used. Default is 3.
-#' @param actFunc Defines activation function to use throughout the network. "relu" =
-#' rectified linear unit (ReLU); "lrelu" = leaky ReLU; "swish" = swish; "gelu" = GELU.
-#' Default is "relu".
-#' @param useRes TRUE or FALSE. Whether to include residual connections in the encoder
-#' and decoder blocks. Default is FALSE.
+#' @param actFunc Defines activation function to use throughout the network for the
+#' non-ConvNeXt blocks. "relu" = rectified linear unit (ReLU); "lrelu" = leaky ReLU;
+#' "swish" = swish; "gelu" = GELU. Default is "relu".
+#' @param encBlocks Block implementation for the four encoder blocks. Either a
+#' single value applied to all four blocks or a length-4 character vector, with
+#' entries "double", "dws", or "convnext". Default is "double".
+#' @param decBlock Block implementation for the decoder fusion block: "double",
+#' "dws", or "convnext". Default is "double".
+#' @param useRes TRUE or FALSE. Whether to include residual connections in the
+#' "double" and "dws" encoder and decoder blocks. Has no effect on "convnext"
+#' blocks (always residual). Default is FALSE.
 #' @param enChn Vector of 4 integers defining the number of output feature maps for
 #' each of the four encoder blocks. Default is 16, 32, 64, and 128.
 #' @param btnChn Number of output feature maps from the ASPP module. Default is 256.
@@ -2802,14 +3377,17 @@ defineConvNeXtTinyUNet <- torch::nn_module(
 #' each dilation rate within the ASPP module. Default is 256 for each.
 #' @param negative_slope If actFunc = "lrelu", specifies the negative slope term.
 #' Default is 0.01.
-#' @return DeepLabV3Plus model instance as torch nn_module
+#' @param expRatio Inverted-bottleneck expansion ratio for "convnext" blocks. Default is 4.
+#' @return DLab model instance as torch nn_module
 #' @export
-defineDeepLabV3Plus <- torch::nn_module(
-  "DeepLabV3Plus",
+defineDLab <- torch::nn_module(
+  "DLab",
 
   initialize = function(inChn          = 3,
                         nCls           = 3,
                         actFunc        = "relu",
+                        encBlocks      = "double",
+                        decBlock       = "double",
                         useRes         = FALSE,
                         enChn          = c(16, 32, 64, 128),
                         btnChn         = 256,
@@ -2817,12 +3395,33 @@ defineDeepLabV3Plus <- torch::nn_module(
                         dcChn          = 256,
                         dilRates       = c(6, 12, 18),
                         dilChn         = c(256, 256, 256, 256),
-                        negative_slope = 0.01) {
+                        negative_slope = 0.01,
+                        expRatio       = 4) {
+
+    # ---- normalise block-type selectors ----
+    validBlk <- c("double", "dws", "convnext")
+    normBlocks <- function(spec, nm, n){
+      spec <- as.character(spec)
+      if(length(spec) == 1L) spec <- rep(spec, n)
+      if(length(spec) != n){
+        stop("defineDLab: '", nm, "' must be length 1 or ", n, ".")
+      }
+      bad <- setdiff(spec, validBlk)
+      if(length(bad) > 0L){
+        stop("defineDLab: invalid '", nm, "' value(s): ", paste(bad, collapse=", "),
+             ". Valid values are 'double', 'dws', 'convnext'.")
+      }
+      spec
+    }
+    encBlocks <- normBlocks(encBlocks, "encBlocks", 4L)
+    decBlock  <- normBlocks(decBlock,  "decBlock",  1L)
 
     self$actFunc        <- actFunc
     self$useRes         <- useRes
     self$inChn          <- inChn
     self$nCls           <- nCls
+    self$encBlocks      <- encBlocks
+    self$decBlock       <- decBlock
     self$enChn          <- enChn
     self$btnChn         <- btnChn
     self$lowLevelChn    <- lowLevelChn
@@ -2830,51 +3429,35 @@ defineDeepLabV3Plus <- torch::nn_module(
     self$dilRates       <- dilRates
     self$dilChn         <- dilChn
     self$negative_slope <- negative_slope
+    self$expRatio       <- expRatio
+
+    # ---- block builder ----
+    makeBlk <- function(kind, inC, outC){
+      if(kind == "dws" & useRes == TRUE){
+        geodl:::dwsDoubleConvR(inChn = inC, outChn = outC,
+                               actFunc = actFunc, negative_slope = negative_slope)
+      }else if(kind == "dws"){
+        geodl:::dwsDoubleConv(inChn = inC, outChn = outC,
+                              actFunc = actFunc, negative_slope = negative_slope)
+      }else if(kind == "convnext"){
+        geodl:::doubleConvBlkCNX(inChn = inC, outChn = outC, expRatio = expRatio)
+      }else if(useRes == TRUE){
+        geodl:::doubleConvBlkR(inChn = inC, outChn = outC,
+                               actFunc = actFunc, negative_slope = negative_slope)
+      }else{
+        geodl:::doubleConvBlk(inChn = inC, outChn = outC,
+                              actFunc = actFunc, negative_slope = negative_slope)
+      }
+    }
 
     # Encoder: 4 blocks each followed by 2x max-pool downsampling (total stride 16)
-    if (useRes) {
-      self$e1 <- geodl:::doubleConvBlkR(inChn   = inChn,
-                                        outChn  = enChn[1],
-                                        actFunc = actFunc,
-                                        negative_slope = negative_slope)
-      self$e2 <- geodl:::doubleConvBlkR(inChn   = enChn[1],
-                                        outChn  = enChn[2],
-                                        actFunc = actFunc,
-                                        negative_slope = negative_slope)
-      self$e3 <- geodl:::doubleConvBlkR(inChn   = enChn[2],
-                                        outChn  = enChn[3],
-                                        actFunc = actFunc,
-                                        negative_slope = negative_slope)
-      self$e4 <- geodl:::doubleConvBlkR(inChn   = enChn[3],
-                                        outChn  = enChn[4],
-                                        actFunc = actFunc,
-                                        negative_slope = negative_slope)
-      self$dec <- geodl:::doubleConvBlkR(inChn   = btnChn + lowLevelChn,
-                                         outChn  = dcChn,
-                                         actFunc = actFunc,
-                                         negative_slope = negative_slope)
-    } else {
-      self$e1 <- geodl:::doubleConvBlk(inChn   = inChn,
-                                       outChn  = enChn[1],
-                                       actFunc = actFunc,
-                                       negative_slope = negative_slope)
-      self$e2 <- geodl:::doubleConvBlk(inChn   = enChn[1],
-                                       outChn  = enChn[2],
-                                       actFunc = actFunc,
-                                       negative_slope = negative_slope)
-      self$e3 <- geodl:::doubleConvBlk(inChn   = enChn[2],
-                                       outChn  = enChn[3],
-                                       actFunc = actFunc,
-                                       negative_slope = negative_slope)
-      self$e4 <- geodl:::doubleConvBlk(inChn   = enChn[3],
-                                       outChn  = enChn[4],
-                                       actFunc = actFunc,
-                                       negative_slope = negative_slope)
-      self$dec <- geodl:::doubleConvBlk(inChn   = btnChn + lowLevelChn,
-                                        outChn  = dcChn,
-                                        actFunc = actFunc,
-                                        negative_slope = negative_slope)
-    }
+    self$e1  <- makeBlk(encBlocks[1], inChn,    enChn[1])
+    self$e2  <- makeBlk(encBlocks[2], enChn[1], enChn[2])
+    self$e3  <- makeBlk(encBlocks[3], enChn[2], enChn[3])
+    self$e4  <- makeBlk(encBlocks[4], enChn[3], enChn[4])
+
+    # Decoder fusion block
+    self$dec <- makeBlk(decBlock[1], btnChn + lowLevelChn, dcChn)
 
     # ASPP bottleneck at stride 16
     self$aspp <- geodl:::asppBlk(inChn    = enChn[4],
@@ -2939,329 +3522,3 @@ defineDeepLabV3Plus <- torch::nn_module(
     return(out)
   }
 )
-
-
-#' defineCBAMUNet
-#'
-#' Define a UNet architecture with CBAM attention on skip connections.
-#'
-#' Define a UNet architecture with 4 encoder blocks, a bottleneck, and 4 decoder blocks.
-#' Convolutional Block Attention Modules (CBAM) are applied to each encoder skip connection
-#' before it is concatenated with the upsampled decoder features, allowing the network to
-#' recalibrate features both channel-wise and spatially at each scale. The architecture
-#' supports four activation function choices — ReLU, leaky ReLU, swish/SiLU, and GELU —
-#' applied consistently throughout all encoder, decoder, and bottleneck blocks. Optional
-#' residual connections, an ASPP bottleneck for multi-scale context, and deep supervision
-#' are also available.
-#'
-#' @param inChn Number of channels, bands, or predictor variables in the input image or
-#' raster data. Default is 3.
-#' @param nCls Number of classes being differentiated. For a binary classification, this
-#' can be either 1 or 2. If 2, the problem is treated as multiclass and a multiclass loss
-#' should be used. Default is 3.
-#' @param actFunc Activation function used throughout the network. "relu" = rectified linear
-#' unit; "lrelu" = leaky ReLU; "swish" = Swish/SiLU; "gelu" = GELU. Default is "relu".
-#' @param useRes TRUE or FALSE. Whether to include residual connections in all encoder,
-#' decoder, and bottleneck blocks. Default is FALSE.
-#' @param useASPP TRUE or FALSE. Whether to replace the standard double-convolution bottleneck
-#' with an Atrous Spatial Pyramid Pooling (ASPP) module for multi-scale context aggregation.
-#' Default is FALSE.
-#' @param useDS TRUE or FALSE. Whether to use deep supervision. If TRUE, four predictions are
-#' returned as a list (finest to coarsest resolution). If FALSE, only the final full-resolution
-#' prediction is returned. Default is FALSE.
-#' @param enChn Vector of 4 integers defining the number of output feature maps for each
-#' encoder block. Default is c(16, 32, 64, 128).
-#' @param dcChn Vector of 4 integers defining the number of output feature maps for each
-#' decoder block. Default is c(128, 64, 32, 16).
-#' @param btnChn Number of output feature maps from the bottleneck block. Default is 256.
-#' @param dilRates Vector of 3 dilation rates used in the ASPP module. Default is c(6, 12, 18).
-#' @param dilChn Vector of 4 values specifying the number of channels at each ASPP branch.
-#' Default is c(256, 256, 256, 256).
-#' @param negative_slope Negative slope for leaky ReLU when actFunc = "lrelu". Default is 0.01.
-#' @param cbamRatio Channel reduction ratio used in the CBAM channel attention MLP. Larger
-#' values produce a lighter module. Default is 8.
-#' @param cbamKernelSize Kernel size for the CBAM spatial attention convolution. Must be odd.
-#' Default is 7.
-#' @param stageLRs Optional numeric vector of length 9 specifying a base learning
-#' rate for each stage: encoder stages e1, e2, e3, e4 (each paired with its CBAM
-#' module), the bottleneck, and decoder stages d1, d2, d3, d4 (in that order).
-#' Call \code{model$get_param_groups()} to obtain optimizer parameter groups.
-#' Default is NULL (single learning rate).
-#' @return CBAMUNet model instance as a torch nn_module.
-#' @export
-defineCBAMUNet <- torch::nn_module(
-  "CBAMUNet",
-  initialize = function(inChn          = 3,
-                         nCls           = 3,
-                         actFunc        = "relu",
-                         useRes         = FALSE,
-                         useASPP        = FALSE,
-                         useDS          = FALSE,
-                         enChn          = c(16, 32, 64, 128),
-                         dcChn          = c(128, 64, 32, 16),
-                         btnChn         = 256,
-                         dilRates       = c(6, 12, 18),
-                         dilChn         = c(256, 256, 256, 256),
-                         negative_slope = 0.01,
-                         cbamRatio      = 8,
-                         cbamKernelSize = 7,
-                         stageLRs       = NULL) {
-
-    self$useRes   <- useRes
-    self$useASPP  <- useASPP
-    self$useDS    <- useDS
-    self$enChn    <- enChn
-    self$dcChn    <- dcChn
-    self$btnChn   <- btnChn
-    self$stageLRs <- stageLRs
-
-    if(useRes == TRUE){
-      self$e1 <- geodl:::doubleConvBlkR(inChn=inChn,
-                                outChn=enChn[1],
-                                actFunc=actFunc,
-                                negative_slope=negative_slope)
-      self$e2 <- geodl:::doubleConvBlkR(inChn=enChn[1],
-                                outChn=enChn[2],
-                                actFunc=actFunc,
-                                negative_slope=negative_slope)
-      self$e3 <- geodl:::doubleConvBlkR(inChn=enChn[2],
-                                outChn=enChn[3],
-                                actFunc=actFunc,
-                                negative_slope=negative_slope)
-      self$e4 <- geodl:::doubleConvBlkR(inChn=enChn[3],
-                                outChn=enChn[4],
-                                actFunc=actFunc,
-                                negative_slope=negative_slope)
-
-      self$dUp1 <- geodl:::upConvBlk(inChn=btnChn,   outChn=btnChn)
-      self$dUp2 <- geodl:::upConvBlk(inChn=dcChn[1], outChn=dcChn[1])
-      self$dUp3 <- geodl:::upConvBlk(inChn=dcChn[2], outChn=dcChn[2])
-      self$dUp4 <- geodl:::upConvBlk(inChn=dcChn[3], outChn=dcChn[3])
-
-      self$d1 <- geodl:::doubleConvBlkR(inChn=btnChn+enChn[4],
-                                outChn=dcChn[1],
-                                actFunc=actFunc,
-                                negative_slope=negative_slope)
-      self$d2 <- geodl:::doubleConvBlkR(inChn=dcChn[1]+enChn[3],
-                                outChn=dcChn[2],
-                                actFunc=actFunc,
-                                negative_slope=negative_slope)
-      self$d3 <- geodl:::doubleConvBlkR(inChn=dcChn[2]+enChn[2],
-                                outChn=dcChn[3],
-                                actFunc=actFunc,
-                                negative_slope=negative_slope)
-      self$d4 <- geodl:::doubleConvBlkR(inChn=dcChn[3]+enChn[1],
-                                outChn=dcChn[4],
-                                actFunc=actFunc,
-                                negative_slope=negative_slope)
-    }else{
-      self$e1 <- geodl:::doubleConvBlk(inChn=inChn,
-                               outChn=enChn[1],
-                               actFunc=actFunc,
-                               negative_slope=negative_slope)
-      self$e2 <- geodl:::doubleConvBlk(inChn=enChn[1],
-                               outChn=enChn[2],
-                               actFunc=actFunc,
-                               negative_slope=negative_slope)
-      self$e3 <- geodl:::doubleConvBlk(inChn=enChn[2],
-                               outChn=enChn[3],
-                               actFunc=actFunc,
-                               negative_slope=negative_slope)
-      self$e4 <- geodl:::doubleConvBlk(inChn=enChn[3],
-                               outChn=enChn[4],
-                               actFunc=actFunc,
-                               negative_slope=negative_slope)
-
-      self$dUp1 <- geodl:::upConvBlk(inChn=btnChn,   outChn=btnChn)
-      self$dUp2 <- geodl:::upConvBlk(inChn=dcChn[1], outChn=dcChn[1])
-      self$dUp3 <- geodl:::upConvBlk(inChn=dcChn[2], outChn=dcChn[2])
-      self$dUp4 <- geodl:::upConvBlk(inChn=dcChn[3], outChn=dcChn[3])
-
-      self$d1 <- geodl:::doubleConvBlk(inChn=btnChn+enChn[4],
-                               outChn=dcChn[1],
-                               actFunc=actFunc,
-                               negative_slope=negative_slope)
-      self$d2 <- geodl:::doubleConvBlk(inChn=dcChn[1]+enChn[3],
-                               outChn=dcChn[2],
-                               actFunc=actFunc,
-                               negative_slope=negative_slope)
-      self$d3 <- geodl:::doubleConvBlk(inChn=dcChn[2]+enChn[2],
-                               outChn=dcChn[3],
-                               actFunc=actFunc,
-                               negative_slope=negative_slope)
-      self$d4 <- geodl:::doubleConvBlk(inChn=dcChn[3]+enChn[1],
-                               outChn=dcChn[4],
-                               actFunc=actFunc,
-                               negative_slope=negative_slope)
-    }
-
-    if(useASPP == FALSE & useRes == FALSE){
-      self$btn <- geodl:::bottleneck(inChn=enChn[4],
-                             outChn=btnChn,
-                             actFunc=actFunc,
-                             negative_slope=negative_slope)
-    }else if(useASPP == FALSE & useRes == TRUE){
-      self$btn <- geodl:::bottleneckR(inChn=enChn[4],
-                              outChn=btnChn,
-                              actFunc=actFunc,
-                              negative_slope=negative_slope)
-    }else if(useASPP == TRUE & useRes == FALSE){
-      self$btn <- geodl:::asppBlk(inChn=enChn[4],
-                          outChn=btnChn,
-                          dilChn=dilChn,
-                          dilRates=dilRates,
-                          actFunc=actFunc,
-                          negative_slope=negative_slope)
-    }else{
-      self$btn <- geodl:::asppBlkR(inChn=enChn[4],
-                           outChn=btnChn,
-                           dilChn=dilChn,
-                           dilRates=dilRates,
-                           actFunc=actFunc,
-                           negative_slope=negative_slope)
-    }
-
-    self$cbam1 <- geodl:::cbamBlk(inChn=enChn[1],
-                           ratio=cbamRatio,
-                           kernelSize=cbamKernelSize)
-    self$cbam2 <- geodl:::cbamBlk(inChn=enChn[2],
-                           ratio=cbamRatio,
-                           kernelSize=cbamKernelSize)
-    self$cbam3 <- geodl:::cbamBlk(inChn=enChn[3],
-                           ratio=cbamRatio,
-                           kernelSize=cbamKernelSize)
-    self$cbam4 <- geodl:::cbamBlk(inChn=enChn[4],
-                           ratio=cbamRatio,
-                           kernelSize=cbamKernelSize)
-
-    self$c4 <- geodl:::classifierBlk(inChn=dcChn[4],
-                             nCls=nCls)
-
-    if(useDS == TRUE){
-      self$upSamp2 <- torch::nn_upsample(scale_factor=2,
-                                        mode="bilinear",
-                                        align_corners=TRUE)
-      self$upSamp4 <- torch::nn_upsample(scale_factor=4,
-                                        mode="bilinear",
-                                        align_corners=TRUE)
-      self$upSamp8 <- torch::nn_upsample(scale_factor=8,
-                                        mode="bilinear",
-                                        align_corners=TRUE)
-      self$c3 <- geodl:::classifierBlk(inChn=dcChn[3],
-                               nCls=nCls)
-      self$c2 <- geodl:::classifierBlk(inChn=dcChn[2],
-                               nCls=nCls)
-      self$c1 <- geodl:::classifierBlk(inChn=dcChn[1],
-                               nCls=nCls)
-    }
-  },
-
-  forward = function(x){
-
-    e1x <- self$e1(x)
-    e1xMP <- torch::nnf_max_pool2d(e1x,
-                                   kernel_size=c(2,2),
-                                   stride=2,
-                                   padding=0)
-
-    e2x <- self$e2(e1xMP)
-    e2xMP <- torch::nnf_max_pool2d(e2x,
-                                   kernel_size=c(2,2),
-                                   stride=2,
-                                   padding=0)
-
-    e3x <- self$e3(e2xMP)
-    e3xMP <- torch::nnf_max_pool2d(e3x,
-                                   kernel_size=c(2,2),
-                                   stride=2,
-                                   padding=0)
-
-    e4x <- self$e4(e3xMP)
-    e4xMP <- torch::nnf_max_pool2d(e4x,
-                                   kernel_size=c(2,2),
-                                   stride=2,
-                                   padding=0)
-
-    btnx <- self$btn(e4xMP)
-
-    e4x <- self$cbam4(e4x)
-    e3x <- self$cbam3(e3x)
-    e2x <- self$cbam2(e2x)
-    e1x <- self$cbam1(e1x)
-
-    d1Upx <- self$dUp1(btnx)
-    d1Cat <- torch::torch_cat(list(d1Upx, e4x), dim=2)
-    d1x <- self$d1(d1Cat)
-
-    d2Upx <- self$dUp2(d1x)
-    d2Cat <- torch::torch_cat(list(d2Upx, e3x), dim=2)
-    d2x <- self$d2(d2Cat)
-
-    d3Upx <- self$dUp3(d2x)
-    d3Cat <- torch::torch_cat(list(d3Upx, e2x), dim=2)
-    d3x <- self$d3(d3Cat)
-
-    d4Upx <- self$dUp4(d3x)
-    d4Cat <- torch::torch_cat(list(d4Upx, e1x), dim=2)
-    d4x <- self$d4(d4Cat)
-
-    c4x <- self$c4(d4x)
-
-    if(self$useDS == TRUE){
-      d3xUp <- self$upSamp2(d3x)
-      d2xUp <- self$upSamp4(d2x)
-      d1xUp <- self$upSamp8(d1x)
-      c3x <- self$c3(d3xUp)
-      c2x <- self$c2(d2xUp)
-      c1x <- self$c1(d1xUp)
-      return(list(c4x, c3x, c2x, c1x))
-    }else{
-      return(c4x)
-    }
-  },
-
-  get_param_groups = function(stageLRs = self$stageLRs) {
-    if (is.null(stageLRs)) {
-      return(list(list(params = unname(self$parameters))))
-    }
-    if (length(stageLRs) != 9L) {
-      stop("stageLRs must be a numeric vector of length 9 for defineCBAMUNet: ",
-           "encoder stages e1-e4 (with CBAM), bottleneck, decoder stages d1-d4")
-    }
-    list(
-      list(params = .collect_params(self$e1, self$cbam1),              lr = stageLRs[1]),
-      list(params = .collect_params(self$e2, self$cbam2),              lr = stageLRs[2]),
-      list(params = .collect_params(self$e3, self$cbam3),              lr = stageLRs[3]),
-      list(params = .collect_params(self$e4, self$cbam4),              lr = stageLRs[4]),
-      list(params = .collect_params(self$btn),                         lr = stageLRs[5]),
-      list(params = .collect_params(self$dUp1, self$d1),               lr = stageLRs[6]),
-      list(params = .collect_params(self$dUp2, self$d2),               lr = stageLRs[7]),
-      list(params = .collect_params(self$dUp3, self$d3),               lr = stageLRs[8]),
-      list(params = .collect_params(self$dUp4, self$d4, self$c4,
-                                    if (self$useDS) self$c1,
-                                    if (self$useDS) self$c2,
-                                    if (self$useDS) self$c3),          lr = stageLRs[9])
-    )
-  },
-
-  load_weights = function(path, encoderOnly = FALSE, freezeEncoder = FALSE) {
-    state <- torch::torch_load(path)
-    if (encoderOnly) {
-      pfx  <- c("e1.", "e2.", "e3.", "e4.", "cbam1.", "cbam2.", "cbam3.", "cbam4.")
-      keep <- vapply(names(state), function(k) any(startsWith(k, pfx)), logical(1L))
-      self$load_state_dict(state[keep], strict = FALSE)
-    } else {
-      self$load_state_dict(state)
-    }
-    if (freezeEncoder) self$freeze_encoder(TRUE)
-    invisible(self)
-  },
-
-  freeze_encoder = function(freeze = TRUE) {
-    for (mod in list(self$e1, self$e2, self$e3, self$e4,
-                     self$cbam1, self$cbam2, self$cbam3, self$cbam4))
-      for (p in mod$parameters) p$requires_grad_(!freeze)
-    invisible(self)
-  }
-)
-
