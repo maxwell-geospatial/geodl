@@ -1059,6 +1059,131 @@ plotTrainingSchedule <- function(stageLRs,
   invisible(out)
 }
 
+#' addCoordNoise
+#'
+#' Add random positional noise to point geometries.
+#'
+#' Perturbs the coordinates of an \code{sf} POINT object by a random offset
+#' drawn from one of three spatial noise models: a uniform disc (uniform
+#' over the area of a circle of radius \code{amount}), independent uniform
+#' noise on each axis (uniform over a square of half-width \code{amount}),
+#' or independent Gaussian noise on each axis with standard deviation
+#' \code{amount}.
+#'
+#' @param x An \code{sf} object containing only \code{POINT} geometries.
+#' @param amount Numeric scalar controlling the noise magnitude, in the
+#'   units of \code{x}'s CRS (e.g. meters for a projected CRS). Interpreted
+#'   as the disc radius for \code{method = "disc"}, the half-width of the
+#'   uniform range for \code{method = "uniform"}, and the standard deviation
+#'   for \code{method = "gaussian"}.
+#' @param method Character string specifying the noise model:
+#'   \code{"disc"} (default; uniform over a circular area), \code{"uniform"}
+#'   (independent uniform noise on X and Y), or \code{"gaussian"}
+#'   (independent Gaussian noise on X and Y).
+#' @param seed Optional integer to seed the random number generator for
+#'   reproducible noise. Default \code{NULL} (no seeding).
+#' @returns An \code{sf} object with the same attributes as \code{x} but with
+#'   perturbed point coordinates.
+#' @export
+addCoordNoise <- function(x, amount,
+                          method = c("disc", "uniform", "gaussian"),
+                          seed = NULL) {
+  method <- match.arg(method)
+  if (!inherits(x, "sf")) stop("`x` must be an sf object.")
+
+  geom_types <- unique(as.character(sf::st_geometry_type(x)))
+  if (!all(geom_types == "POINT")) {
+    stop("`x` must contain only POINT geometries.")
+  }
+  if (isTRUE(sf::st_is_longlat(x))) {
+    warning("CRS is geographic; `amount` is in degrees, not meters.")
+  }
+
+  if (!is.null(seed)) set.seed(seed)
+  n <- nrow(x)
+  coords <- sf::st_coordinates(x)
+
+  if (method == "uniform") {
+    dx <- stats::runif(n, -amount, amount)
+    dy <- stats::runif(n, -amount, amount)
+  } else if (method == "gaussian") {
+    dx <- stats::rnorm(n, 0, amount)
+    dy <- stats::rnorm(n, 0, amount)
+  } else { # "disc": uniform over circle area, not a square
+    theta <- stats::runif(n, 0, 2 * pi)
+    r <- amount * sqrt(stats::runif(n, 0, 1))
+    dx <- r * cos(theta)
+    dy <- r * sin(theta)
+  }
+
+  new_coords <- coords
+  new_coords[, "X"] <- coords[, "X"] + dx
+  new_coords[, "Y"] <- coords[, "Y"] + dy
+
+  sf::st_geometry(x) <- sf::st_sfc(
+    lapply(seq_len(n), function(i) sf::st_point(new_coords[i, c("X", "Y")])),
+    crs = sf::st_crs(x)
+  )
+  x
+}
+
+#' setSeed
+#'
+#' Set a global random seed for reproducible geodl workflows.
+#'
+#' A geodl/torch training pipeline draws from two independent random number
+#' generator (RNG) streams: R's base RNG and torch's own RNG.
+#' \code{setSeed()} seeds both from a single value so that dataset
+#' shuffling, data augmentation, model weight initialization, and the
+#' training loop all produce identical results across runs.
+#'
+#' The following sources of randomness are covered:
+#' \describe{
+#'   \item{Dataset shuffling}{\code{torch::dataloader(..., shuffle = TRUE)}
+#'     and any \code{dplyr::sample_n()}-based shuffling (e.g.
+#'     \code{makeChipsDF(shuffle = TRUE)}) read from R's base RNG.}
+#'   \item{Data augmentation}{\code{defineSegDataSet()} and
+#'     \code{defineDynamicSegDataSet()} choose which augmentations to apply
+#'     and their magnitudes with base R functions (\code{runif()},
+#'     \code{sample()}, \code{dplyr::sample_n()}), which read from R's base
+#'     RNG.}
+#'   \item{Model weight initialization}{All \code{defineXXX} model
+#'     constructors (e.g. \code{defineUNet}, \code{defineDLab}) rely on
+#'     torch's default layer initializers, which draw from torch's RNG.}
+#'   \item{Training loop}{Any stochastic operations inside \code{luz::fit()}
+#'     (e.g. dropout, if present in a given architecture) draw from torch's
+#'     RNG.}
+#' }
+#'
+#' \strong{Call this before} creating the dataset, dataloader, and model,
+#' and before calling \code{luz::fit()} — any random draws that occur
+#' before seeding will not be reproducible.
+#'
+#' When \code{torch::dataloader()} is used with \code{num_workers > 0},
+#' torch automatically reseeds each worker subprocess (with both
+#' \code{set.seed()} and \code{torch::torch_manual_seed()}) from the parent
+#' process's RNG state at the time the workers are spawned. As long as
+#' \code{setSeed()} is called once before the dataloader is created, and
+#' \code{num_workers} is held constant between runs, worker seeding is
+#' deterministic and requires no further action.
+#'
+#' Full determinism on GPU is still subject to caveats outside this
+#' function's control: some cuDNN convolution algorithms are inherently
+#' non-deterministic regardless of RNG seeding, and torch's R bindings do
+#' not currently expose a "deterministic algorithms" toggle. For strict
+#' bit-for-bit reproducibility, training on CPU remains the most reliable
+#' option.
+#'
+#' @param seed Single integer random seed.
+#' @returns Invisibly returns \code{seed} (as an integer).
+#' @export
+setSeed <- function(seed) {
+  seed <- as.integer(seed)
+  set.seed(seed)
+  torch::torch_manual_seed(seed)
+  invisible(seed)
+}
+
 cropTensor <- function(inT, crpFactor){
   startCR <- crpFactor+1
   endCR <- inT$size(3) - crpFactor

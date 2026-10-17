@@ -109,7 +109,7 @@ makeDynamicChip <- function(chipIn,
 #' enhance the saturation by a factor of 2.
 #' @return A dataset object that can be provided to torch::dataloader().
 #' @export
-defineDynmamicSegDataSet <- torch::dataset(
+defineDynamicSegDataSet <- torch::dataset(
 
   name = "defineDynamicSegDataSet",
 
@@ -255,3 +255,9 @@ defineDynmamicSegDataSet <- torch::dataset(
     return(nrow(self$chipsSF))
   }
 )
+
+#' @rdname defineDynamicSegDataSet
+#' @details `defineDynmamicSegDataSet()` is a misspelled alias retained for
+#' backward compatibility. Use `defineDynamicSegDataSet()` instead.
+#' @export
+defineDynmamicSegDataSet <- defineDynamicSegDataSet
