@@ -13,28 +13,16 @@ knitr::opts_chunk$set(
 )
 ```
 
-# geodl <img src="vignettes/figure/geodlHex.png" align="right" width="132" />
+# geodl <img src="man/figures/logo.png" align="right" width="132" alt="geodl hex logo" />
 
 <!-- badges: start -->
 <!-- badges: end -->
 
-This package provides tools for semantic segmentation of geospatial data using convolutional neural network-based deep learning. Utility functions allow for creating masks, image chips, data frames listing image chips in a directory, and DataSets for use within DataLoaders. Additional functions are provided to serve as checks during the data preparation and training process. 
+geodl provides tools for geospatial semantic segmentation using convolutional neural network-based deep learning, built on torch and terra. It includes several configurable UNet-family model architectures, utilities for preparing and augmenting image chips, loss functions and training metrics for use with luz, and functions for generating spatial predictions and assessing accuracy. Models can be trained using a CUDA-enabled GPU and do not require a Python environment.
 
-Full details about the package are documented in a [preprint article](https://doi.org/10.31223/X53M6T) available on EarthArXiv.
+Full details are described in:
 
-A UNet architecture can be defined with 4 blocks in the encoder, a bottleneck block, and 4 blocks in the decoder. The UNet can accept a variable number of input channels, and the user can define the number of feature maps produced in each encoder and decoder block and the bottleneck. Users can also choose to (1) replace all ReLU activation functions with leaky ReLU or swish, (2) implement attention gates along the skip connections, (3) implement squeeze and excitation modules within the encoder blocks, (4) add residual connections within all blocks, (5) replace the bottleneck with a modified atrous spatial pyramid pooling (ASPP) module, and/or (6) implement deep supervision using predictions generated at each stage in the decoder. A second UNet architecture is implemented with a MobileNet-v2 backbone. 
-
-A unified focal loss framework is implemented after:
-
-Yeung, M., Sala, E., Schönlieb, C.B. and Rundo, L., 2022. Unified focal loss: Generalising dice and cross entropy-based losses to handle class imbalanced medical image segmentation. *Computerized Medical Imaging and Graphics*, 95, p.102026.
-
-We have also implemented assessment metrics using the luz package including overall accuracy, F1-score, recall, and precision. 
-
-Trained models can be used to predict to spatial data without the need to generate chips from larger spatial extents. Functions are available for performing accuracy assessment. 
-
-The package relies on torch for implementing deep learning, which does not require the installation of a Python environment. Raster geospatial data are handled with terra. Models can be trained using a CUDA-enabled GPU; however, multi-GPU training is not supported by torch in R. Both binary and multiclass models can be trained. 
-
-This package is still experimental and is a work-in-progress. 
+Maxwell, A.E., Farhadpour, S., Das, S. and Yang, Y., 2024. geodl: An R package for geospatial deep learning semantic segmentation using torch and terra. *PLoS One*, 19(12), p.e0315127. [https://doi.org/10.1371/journal.pone.0315127](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0315127)
 
 ## Installation
 
@@ -46,6 +34,8 @@ You can install the development version of geodl from
 devtools::install_github("maxwell-geospatial/geodl")
 ```
 
-## Example
+## Documentation
 
-Please see the preprint article and articles/vignettes for details and example workflows and explanations. 
+Full documentation, including a function reference, is available at the [pkgdown website](https://www.wvview.org/geodl/index.html).
+
+Chapters [22](https://www.wvview.org/gslr/c22geodlData.html), [23](https://www.wvview.org/gslr/c23geodlModels.html), [24](https://www.wvview.org/gslr/c24geodlBinary.html), and [25](https://www.wvview.org/gslr/c25geodlMulticlass.html) of the free and openly available online text [*Geospatial Supervised Learning using R*](https://www.wvview.org/gslr/index.html) provide detailed workflows and explanations.

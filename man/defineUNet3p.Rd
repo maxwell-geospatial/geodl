@@ -111,14 +111,14 @@ Each of the four encoder blocks and the bottleneck can independently use one of
 three block implementations via \code{encBlocks} and \code{btnBlock}, matching
 \code{\link{defineUNet}}:
 \itemize{
-  \item \code{"double"} - the standard double 3x3 convolution block (default).
-        Becomes a residual double convolution block when \code{useRes = TRUE}.
-  \item \code{"dws"} - a double convolution block whose second 3x3 convolution
-        is replaced with a depthwise separable convolution (\code{dwsDoubleConv}).
-        Becomes a residual variant (\code{dwsDoubleConvR}) when \code{useRes = TRUE}.
-  \item \code{"convnext"} - a ConvNeXt-style block (\code{doubleConvBlkCNX});
-        always residual and always GELU, so \code{useRes} and \code{actFunc} do
-        not affect these blocks.
+\item \code{"double"} - the standard double 3x3 convolution block (default).
+Becomes a residual double convolution block when \code{useRes = TRUE}.
+\item \code{"dws"} - a double convolution block whose second 3x3 convolution
+is replaced with a depthwise separable convolution (\code{dwsDoubleConv}).
+Becomes a residual variant (\code{dwsDoubleConvR}) when \code{useRes = TRUE}.
+\item \code{"convnext"} - a ConvNeXt-style block (\code{doubleConvBlkCNX});
+always residual and always GELU, so \code{useRes} and \code{actFunc} do
+not affect these blocks.
 }
 \code{btnBlock} additionally accepts \code{"aspp"} for an atrous spatial pyramid
 pooling bottleneck, which also respects \code{useRes} (\code{asppBlk} vs.

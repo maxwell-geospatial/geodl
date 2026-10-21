@@ -32,6 +32,34 @@ defineDynamicSegDataSet(
   hueFactor = c(-0.2, 0.2),
   saturationFactor = c(0.8, 1.2)
 )
+
+defineDynmamicSegDataSet(
+  chipsSF,
+  chipSize = 512,
+  cellSize = 2,
+  normalize = FALSE,
+  rescaleFactor = 1,
+  mskRescale = 1,
+  mskAdd = 0,
+  bands = c(1, 2, 3),
+  bMns = 1,
+  bSDs = 1,
+  doAugs = FALSE,
+  maxAugs = 0,
+  probVFlip = 0,
+  probHFlip = 0,
+  probRotate = 0,
+  probBrightness = 0,
+  probContrast = 0,
+  probGamma = 0,
+  probHue = 0,
+  probSaturation = 0,
+  brightFactor = c(0.8, 1.2),
+  contrastFactor = c(0.8, 1.2),
+  gammaFactor = c(0.8, 1.2, 1),
+  hueFactor = c(-0.2, 0.2),
+  saturationFactor = c(0.8, 1.2)
+)
 }
 \arguments{
 \item{chipsSF}{sf object created by makeDynamicChipsSF().}
@@ -147,4 +175,7 @@ saturation will not be applied to the masks since alignment is not impacted by t
 transformations. Predictor variables are generated with three dimensions
 (channel/variable, width, height) regardless of the number of channels/variables.
 Masks are generated as three dimensional tensors (class index, width, height).
+
+\code{defineDynmamicSegDataSet()} is a misspelled alias retained for
+backward compatibility. Use \code{defineDynamicSegDataSet()} instead.
 }

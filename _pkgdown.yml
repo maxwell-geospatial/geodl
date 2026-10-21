@@ -1,0 +1,147 @@
+url: https://maxwell-geospatial.github.io/geodl/
+
+template:
+  bootstrap: 5
+  bootswatch: flatly
+
+home:
+  title: geodl
+  links:
+  - text: Browse source code
+    href: https://github.com/maxwell-geospatial/geodl
+
+navbar:
+  structure:
+    left: [reference, book, news]
+    right: [search, github]
+  components:
+    book:
+      text: Book Chapters
+      menu:
+      - text: "Geospatial Supervised Learning using R"
+        href: https://www.wvview.org/gslr/index.html
+      - text: "-------"
+      - text: "22. Semantic Segmentation: Data Preparation"
+        href: https://www.wvview.org/gslr/c22geodlData.html
+      - text: "23. Semantic Segmentation: Models and Assessment"
+        href: https://www.wvview.org/gslr/c23geodlModels.html
+      - text: "24. Workflows: Binary Classification"
+        href: https://www.wvview.org/gslr/c24geodlBinary.html
+      - text: "25. Workflows: Multiclass Classification"
+        href: https://www.wvview.org/gslr/c25geodlMulticlass.html
+    github:
+      icon: fab fa-github fa-lg
+      href: https://github.com/maxwell-geospatial/geodl
+      aria-label: GitHub
+
+reference:
+- title: Terrain Derivatives
+  desc: >
+    Compute land surface parameters (LSPs) from a digital terrain model and
+    build multi-band terrain visualizations, using either terra or torch.
+  contents:
+  - makeSlope
+  - makeAspect
+  - makeCrv
+  - makeTPI
+  - makeTRI
+  - makeHillshade
+  - makeTerrainVisTerra
+  - makeTerrainVisTorch
+
+- title: Chip Generation and Inspection
+  desc: >
+    Generate masks and image/mask chips from larger rasters, list and describe
+    chips, and visually check chips prior to training.
+  contents:
+  - makeMasks
+  - makeChips
+  - makeChipsMultiClass
+  - makeChipsDF
+  - makeBoundaryDistance
+  - describeChips
+  - viewChips
+  - addCoordNoise
+
+- title: Dynamic Chip Generation
+  desc: >
+    Generate chips on-the-fly from points and larger rasters during training
+    instead of writing chips to disk beforehand.
+  contents:
+  - makeDynamicChipsSF
+  - saveDynamicChips
+  - checkDynamicChips
+
+- title: Datasets and DataLoaders
+  desc: >
+    torch dataset subclasses for geospatial semantic segmentation and
+    functions for inspecting a mini-batch.
+  contents:
+  - defineSegDataSet
+  - defineDynamicSegDataSet
+  - defineDynmamicSegDataSet
+  - describeBatch
+  - viewBatch
+  - viewBatchPreds
+  - viewDist
+
+- title: Model Architectures
+  desc: >
+    Configurable UNet-family semantic segmentation architectures as
+    torch::nn_module() subclasses.
+  contents:
+  - defineUNet
+  - defineUNet3p
+  - defineMobileUNet
+  - defineResNetUNet
+  - defineEfficientUNetB2
+  - defineDLab
+  - defineTerrainSeg
+  - countParams
+
+- title: Loss Functions
+  desc: Unified focal loss and regression loss implementations for luz.
+  contents:
+  - defineUnifiedFocalLoss
+  - defineUnifiedFocalLossDS
+  - defineRegressionLoss
+  - make_ds_weights
+
+- title: Training Metrics
+  desc: luz_metric() implementations for semantic segmentation.
+  contents:
+  - luz_metric_overall_accuracy
+  - luz_metric_f1score
+  - luz_metric_recall
+  - luz_metric_precision
+
+- title: Training Callbacks
+  desc: luz_callback() implementations for staged training, EMA, and logging.
+  contents:
+  - callback_save_model_state_dict
+  - callback_per_stage_optimizer
+  - callback_freeze_stages
+  - callback_unfreeze_stages
+  - callback_ema
+  - callback_ds_weight_decay
+  - callback_reconfigure_loss
+  - callback_training_log
+
+- title: Reproducibility
+  desc: Seed R and torch RNG streams for reproducible workflows.
+  contents:
+  - setSeed
+
+- title: Prediction and Accuracy Assessment
+  desc: >
+    Generate spatial predictions from a trained model and assess accuracy
+    from rasters, dataloaders, or tabular reference/predicted values.
+  contents:
+  - predictSpatial
+  - assessDL
+  - assessRaster
+  - assessPnts
+
+- title: Training Diagnostics
+  contents:
+  - plotTrainingSchedule

@@ -40,12 +40,12 @@ Imports:
     rlang,
     sf
 License: GPL (>= 3)
-URL: https://github.com/maxwell-geospatial/geodl, https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0315127, https://wvview.org/gslr/index.html
+URL: https://github.com/maxwell-geospatial/geodl, https://maxwell-geospatial.github.io/geodl/, https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0315127, https://wvview.org/gslr/index.html
 BugReports: https://github.com/maxwell-geospatial/geodl/issues
 NeedsCompilation: no
 Encoding: UTF-8
-RoxygenNote: 7.3.3
 Roxygen: list(markdown = TRUE)
 Suggests: 
     knitr,
     rmarkdown
+Config/roxygen2/version: 8.1.0

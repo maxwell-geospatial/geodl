@@ -56,12 +56,18 @@ export(viewBatch)
 export(viewBatchPreds)
 export(viewChips)
 export(viewDist)
-importFrom(graphics,layout)
-importFrom(graphics,par)
-importFrom(luz,luz_callback)
-importFrom(luz,luz_metric)
-importFrom(stats,predict)
-importFrom(stats,rnorm)
+importFrom(graphics,
+  layout,
+  par
+)
+importFrom(luz,
+  luz_callback,
+  luz_metric
+)
+importFrom(stats,
+  predict,
+  rnorm
+)
 importFrom(terra,map.pal)
 importFrom(torch,torch_float32)
 importFrom(utils,stack)

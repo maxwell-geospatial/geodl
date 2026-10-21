@@ -9,6 +9,7 @@ assessPnts(
   predicted,
   multiclass = TRUE,
   mappings = levels(as.factor(reference)),
+  aliases = NULL,
   decimals = 4
 )
 }
@@ -26,6 +27,11 @@ as the factor levels so that they are correctly matched to the correct category.
 If no mappings are provided, then the factor levels are used by default. For a
 binary classification, it is assumed that the first class is "Background" and
 the second class is "Positive".}
+
+\item{aliases}{Optional vector of display names used to label the output (confusion
+matrix row/column names, class name lists, and metric name vectors). Must be the
+same length as \code{mappings} and provided in the same order. If NULL (default),
+the \code{mappings} values are used as labels.}
 
 \item{decimals}{Number of decimal places to return for assessment metrics. Default is 4.}
 }
@@ -67,6 +73,19 @@ metsOut <- assessPnts(reference=inDF$ref,
                      decimals=4)
 
 print(metsOut)
+
+#Multiclass example with aliases to rename output labels
+inDF2 <- data.frame(ref  = sample(c("cls_a", "cls_b", "cls_c"), 1000, replace=TRUE),
+                    pred = sample(c("cls_a", "cls_b", "cls_c"), 1000, replace=TRUE))
+
+metsOut2 <- assessPnts(reference=inDF2$ref,
+                       predicted=inDF2$pred,
+                       multiclass=TRUE,
+                       mappings = c("cls_a", "cls_b", "cls_c"),
+                       aliases  = c("Class A", "Class B", "Class C"),
+                       decimals=4)
+
+print(metsOut2)
 
 #Binary example
 
