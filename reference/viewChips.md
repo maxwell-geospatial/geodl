@@ -1,0 +1,165 @@
+# viewChips
+
+Plot a grid of image and/or mask chips
+
+## Usage
+
+``` r
+viewChips(
+  chpDF,
+  folder,
+  nSamps = 16,
+  mode = "both",
+  justPositive = FALSE,
+  cCnt = 4,
+  rCnt = 4,
+  r = 1,
+  g = 2,
+  b = 3,
+  rescale = FALSE,
+  rescaleVal = 1,
+  cCodes,
+  cNames,
+  cColors,
+  useSeed = FALSE,
+  seed = 42
+)
+```
+
+## Arguments
+
+- chpDF:
+
+  Data frame of chip paths created with the makeChipsDF() function.
+
+- folder:
+
+  Full path or path relative to the working directory to the folder
+  containing the image chips and associated masks. You must include the
+  final forward slash in the path (e.g., "C:/data/chips/").
+
+- nSamps:
+
+  Number of samples to include in the grid. The default is 16.
+
+- mode:
+
+  Either "image", "mask" or "both". If "image", a grid is produced for
+  the image chips only. If "mask", a grid is produced for just the
+  masks. If "both", grids are produced for both the image chips and
+  masks. Default is "both".
+
+- justPositive:
+
+  TRUE or FALSE. If makeChips() was executed using the "Divided" mode,
+  you can choose to only show chips that contained some pixels mapped to
+  the positive class. The default is FALSE. This should be left to the
+  default or set to FALSE if chips were generated using a method other
+  than "Divided".
+
+- cCnt:
+
+  Number of columns in the grid. Row X Column count must sum to the
+  number of samples being displayed (nSamps). Default is 4.
+
+- rCnt:
+
+  Number of rows in the grid. Row X Column count must sum to the number
+  of samples being displayed (nSamps). Default is 4.
+
+- r:
+
+  Band number to map to the red channel. Default is 1 or the first
+  channel. For gray scale or single-band images, assign the same index
+  to all three bands.
+
+- g:
+
+  Band number to map to the green channel. Default is 2 or the second
+  channel. For gray scale or single-band images, assign the same index
+  to all three bands.
+
+- b:
+
+  Band number to map to the blue channel. Default is 3 or the third
+  channel. For gray scale or single-band images, assign the same index
+  to all three bands.
+
+- rescale:
+
+  TRUE or FALSE. Whether or not to rescale image data. Default is FALSE
+  or no rescaling.
+
+- rescaleVal:
+
+  If rescale is TRUE, value used to rescale data. For example, 255 could
+  be used to rescale the chips from 0 to 1 to 0 to 255.
+
+- cCodes:
+
+  class indices as a vector of integer values equal in length to the
+  number of classes.
+
+- cNames:
+
+  Vector of class names. Class names must be provided.
+
+- cColors:
+
+  Vector of colors (named colors, hex codes, or rgb()). Color used to
+  visualize each class is matched based on position in the vector.
+  Colors must be provided.
+
+- useSeed:
+
+  TRUE or FALSE. Whether or not to set a random seed to make result
+  reproducible (i.e., obtain the same samples). If FALSE, seed is
+  ignored. Default is FALSE.
+
+- seed:
+
+  Random seed value. Default is 42. This is ignored if useSeed is FALSE.
+
+## Value
+
+Plot of image chip grid (if mode = "image"); plot of mask chip grid (if
+mode ="mask"); plot of image and mask chip grids (if model = "both").
+
+## Details
+
+This function generates a plot of image chips and/or image masks. It
+serves as a means to visualize chips generated with the makeChips() or
+makeChipsMultiClass() function. It can be used as a check to make sure
+chips were generated as expected.
+
+## Examples
+
+``` r
+if (FALSE) { # \dontrun{
+viewChips(chpDF=chpDF,
+          folder= "FOLDER CONTAINING CHIPS",
+          nSamps = 16,
+          mode = "both",
+          justPositive = FALSE,
+          cCnt = 4,
+          rCnt = 4,
+          r = 1,
+          g = 2,
+          b = 3,
+          rescale = FALSE,
+          rescaleVal = 1,
+          cCodes=c(0,1,2,3,4),
+          cNames=c("Background",
+                   "Building",
+                   "Woodland",
+                   "Water",
+                   "Road"),
+          cColor=c("gray",
+                   "darksalmon",
+                    "forestgreen",
+                    "lightblue",
+                    "black"),
+          useSeed = FALSE,
+          seed = 42)
+} # }
+```

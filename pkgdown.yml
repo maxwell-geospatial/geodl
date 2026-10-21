@@ -1,0 +1,8 @@
+pandoc: 3.8.3
+pkgdown: 2.2.1
+pkgdown_sha: ~
+articles: {}
+last_built: 2026-10-21T00:54Z
+urls:
+  reference: https://maxwell-geospatial.github.io/geodl/reference
+  article: https://maxwell-geospatial.github.io/geodl/articles
